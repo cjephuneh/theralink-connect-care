@@ -19,6 +19,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
+import { cn } from '@/lib/utils';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,15 +59,67 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/therapists" className="text-gray-600 hover:text-thera-600 transition-colors">
-              Find Therapists
-            </Link>
-            <Link to="/how-it-works" className="text-gray-600 hover:text-thera-600 transition-colors">
-              How It Works
-            </Link>
-            <Link to="/contact" className="text-gray-600 hover:text-thera-600 transition-colors">
-              Contact Us
-            </Link>
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger>Find Help</NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                      <li className="row-span-3">
+                        <NavigationMenuLink asChild>
+                          <a
+                            className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-thera-50 to-thera-100 p-6 no-underline outline-none focus:shadow-md"
+                            href="/ai-matching"
+                          >
+                            <div className="mb-2 mt-4 text-lg font-medium text-thera-900">
+                              AI Therapist Matching
+                            </div>
+                            <p className="text-sm leading-tight text-thera-700">
+                              Answer a few questions and let our AI find your perfect therapist match based on your needs.
+                            </p>
+                          </a>
+                        </NavigationMenuLink>
+                      </li>
+                      <li>
+                        <Link to="/therapists" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                          <div className="text-sm font-medium leading-none">Browse Therapists</div>
+                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                            Search our directory of qualified professionals
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/how-it-works" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                          <div className="text-sm font-medium leading-none">How It Works</div>
+                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                            Learn about our therapy process and approach
+                          </p>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/blog" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                          <div className="text-sm font-medium leading-none">Mental Health Blog</div>
+                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                            Articles and resources on mental wellness
+                          </p>
+                        </Link>
+                      </li>
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/about" className="text-gray-600 hover:text-thera-600 transition-colors">
+                    About Us
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/contact" className="text-gray-600 hover:text-thera-600 transition-colors">
+                    Contact Us
+                  </Link>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+            
             {user ? (
               <div className="flex items-center space-x-4">
                 <DropdownMenu>
@@ -127,11 +188,32 @@ const Header = () => {
               Find Therapists
             </Link>
             <Link 
+              to="/ai-matching" 
+              className="block py-2 text-gray-600 hover:text-thera-600"
+              onClick={closeMenu}
+            >
+              AI Therapist Matching
+            </Link>
+            <Link 
               to="/how-it-works" 
               className="block py-2 text-gray-600 hover:text-thera-600"
               onClick={closeMenu}
             >
               How It Works
+            </Link>
+            <Link 
+              to="/blog" 
+              className="block py-2 text-gray-600 hover:text-thera-600"
+              onClick={closeMenu}
+            >
+              Blog
+            </Link>
+            <Link 
+              to="/about" 
+              className="block py-2 text-gray-600 hover:text-thera-600"
+              onClick={closeMenu}
+            >
+              About Us
             </Link>
             <Link 
               to="/contact" 

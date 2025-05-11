@@ -23,6 +23,10 @@ import BookingPaymentPage from "./pages/BookingPaymentPage";
 import BookingComplete from "./pages/BookingComplete";
 import HowItWorks from "./pages/HowItWorks";
 import ContactPage from "./pages/ContactPage";
+import AIMatchingPage from "./pages/AIMatchingPage";
+import AIMatchingResults from "./pages/AIMatchingResults";
+import BlogPage from "./pages/BlogPage";
+import AboutPage from "./pages/AboutPage";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -61,6 +65,10 @@ const App = () => (
               <Route path="dashboard" element={<ClientDashboard />} />
               <Route path="how-it-works" element={<HowItWorks />} />
               <Route path="contact" element={<ContactPage />} />
+              <Route path="ai-matching" element={<AIMatchingPage />} />
+              <Route path="ai-matching/results" element={<AIMatchingResults />} />
+              <Route path="blog" element={<BlogPage />} />
+              <Route path="about" element={<AboutPage />} />
               <Route path="*" element={<NotFound />} />
             </Route>
 

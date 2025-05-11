@@ -31,13 +31,13 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/how-it-works" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
-                  How It Works
+                <Link to="/ai-matching" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
+                  AI Therapist Matching
                 </Link>
               </li>
               <li>
-                <Link to="/pricing" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
-                  Pricing
+                <Link to="/how-it-works" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
+                  How It Works
                 </Link>
               </li>
             </ul>
@@ -52,12 +52,12 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/resources" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
+                <Link to="/blog" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
                   Self-Help Resources
                 </Link>
               </li>
               <li>
-                <Link to="/crisis" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
+                <Link to="/contact" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
                   Crisis Support
                 </Link>
               </li>
@@ -73,7 +73,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/for-therapists" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
+                <Link to="/contact" className="text-gray-600 text-sm hover:text-thera-600 transition-colors">
                   For Therapists
                 </Link>
               </li>
