@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertCircle, Bell, Calendar, CreditCard, Globe, Laptop, Lock, Mail, Save, Shield, Smartphone, Download, Video, Badge } from "lucide-react";
+import { AlertCircle, Bell, Calendar, CreditCard, Globe, Laptop, Lock, Mail, Save, Shield, Smartphone, Download, Video } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
