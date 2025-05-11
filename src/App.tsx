@@ -41,6 +41,12 @@ import TherapistMessages from "./pages/therapist/TherapistMessages";
 import TherapistDocuments from "./pages/therapist/TherapistDocuments";
 import TherapistAccount from "./pages/therapist/TherapistAccount";
 import TherapistSettings from "./pages/therapist/TherapistSettings";
+import TherapistReviews from "./pages/therapist/TherapistReviews";
+import TherapistAnalytics from "./pages/therapist/TherapistAnalytics";
+import SessionNotes from "./pages/therapist/SessionNotes";
+
+// Admin Pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +94,14 @@ const App = () => (
               <Route path="documents" element={<TherapistDocuments />} />
               <Route path="account" element={<TherapistAccount />} />
               <Route path="settings" element={<TherapistSettings />} />
+              <Route path="reviews" element={<TherapistReviews />} />
+              <Route path="analytics" element={<TherapistAnalytics />} />
+              <Route path="session-notes" element={<SessionNotes />} />
+            </Route>
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={<TherapistLayout />}>
+              <Route path="dashboard" element={<AdminDashboard />} />
             </Route>
           </Routes>
         </BrowserRouter>

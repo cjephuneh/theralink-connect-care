@@ -48,23 +48,29 @@ const BookingPaymentPage = () => {
 
         if (appointmentError) throw appointmentError;
         
-        // Then fetch the therapist details separately
+        // Get the therapist details
         const { data: therapistData, error: therapistError } = await supabase
           .from('therapists')
-          .select(`
-            hourly_rate,
-            profiles:id(full_name)
-          `)
+          .select(`hourly_rate`)
           .eq('id', appointmentData.therapist_id)
           .single();
           
         if (therapistError) throw therapistError;
+        
+        // Get the therapist's profile information
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select(`full_name`)
+          .eq('id', appointmentData.therapist_id)
+          .single();
+          
+        if (profileError) throw profileError;
 
-        if (appointmentData && therapistData) {
+        if (appointmentData && therapistData && profileData) {
           const appointmentInfo: AppointmentData = {
             id: appointmentData.id,
             therapist_id: appointmentData.therapist_id,
-            therapist_name: therapistData.profiles.full_name,
+            therapist_name: profileData.full_name || 'Unnamed Therapist',
             date: new Date(appointmentData.start_time).toLocaleDateString(),
             time: new Date(appointmentData.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             hourly_rate: therapistData.hourly_rate,
