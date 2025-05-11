@@ -153,7 +153,7 @@ const AdminContent = () => {
         id: '3',
         title: 'Coping with Grief and Loss',
         excerpt: 'Strategies for managing grief and processing loss in healthy ways.',
-        content: 'Grief is a natural response to loss. Whether you're dealing with the death of a loved one...',
+        content: "Grief is a natural response to loss. Whether you're dealing with the death of a loved one...",
         category: 'Emotional Wellness',
         author: 'Dr. Emily Rodriguez',
         publishDate: '2025-05-10',
