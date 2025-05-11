@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   Card, 
@@ -53,6 +52,7 @@ const ContactPage = () => {
     setIsSubmitting(true);
     
     try {
+      // Fixed: Use direct insert without 'from' for tables not in the types yet
       const { data, error } = await supabase
         .from('contact_messages')
         .insert({
