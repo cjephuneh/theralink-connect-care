@@ -122,6 +122,7 @@ const TherapistListing = () => {
   const [availability, setAvailability] = useState("");
   const [therapists, setTherapists] = useState<Therapist[]>(mockTherapists);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // All unique specialties from the mock data
   const allSpecialties = Array.from(
@@ -132,6 +133,15 @@ const TherapistListing = () => {
   const allLanguages = Array.from(
     new Set(mockTherapists.flatMap(therapist => therapist.languages))
   ).sort();
+
+  // Simulate fetching data
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Filter therapists based on search and filters
   useEffect(() => {
@@ -186,10 +196,11 @@ const TherapistListing = () => {
   return (
     <div className="w-full animation-fade-in">
       {/* Hero Banner */}
-      <div className="w-full bg-gradient-to-r from-primary to-primary/80 text-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-14">
+      <div className="w-full bg-gradient-to-r from-primary to-secondary text-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="max-w-3xl">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">Find Your Ideal Therapist</h1>
+            <span className="bg-white/20 backdrop-blur-sm text-white text-sm px-4 py-1.5 rounded-full mb-6 inline-block">Find Your Match</span>
+            <h1 className="text-3xl md:text-5xl font-bold mb-4">Find Your Ideal Therapist</h1>
             <p className="text-lg opacity-90">
               Browse our network of experienced, licensed therapists and find the perfect match for your needs.
             </p>
@@ -197,10 +208,10 @@ const TherapistListing = () => {
         </div>
       </div>
       
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex flex-col gap-6">
           {/* Search and Filters */}
-          <div className="bg-card rounded-xl shadow-sm border border-border">
+          <div className="bg-card rounded-xl shadow-sm border border-border/50">
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="relative col-span-1 md:col-span-2">
@@ -302,16 +313,43 @@ const TherapistListing = () => {
           <div className="mt-2">
             <p className="text-muted-foreground mb-6">{therapists.length} therapists found</p>
             
-            {therapists.length === 0 ? (
-              <div className="bg-card p-8 rounded-xl shadow-sm border border-border text-center">
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Card key={i} className="overflow-hidden rounded-xl">
+                    <div className="w-full h-52 bg-muted animate-pulse"></div>
+                    <CardContent className="p-6">
+                      <div className="h-6 bg-muted animate-pulse rounded-full w-3/4 mb-2"></div>
+                      <div className="h-4 bg-muted animate-pulse rounded-full w-1/2 mb-6"></div>
+                      
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        <span className="bg-muted animate-pulse h-6 w-16 rounded-full"></span>
+                        <span className="bg-muted animate-pulse h-6 w-20 rounded-full"></span>
+                        <span className="bg-muted animate-pulse h-6 w-14 rounded-full"></span>
+                      </div>
+                      
+                      <div className="h-16 bg-muted animate-pulse rounded mb-4"></div>
+                    </CardContent>
+                    
+                    <div className="p-6 pt-0 flex gap-2">
+                      <div className="h-10 bg-muted animate-pulse rounded w-full"></div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : therapists.length === 0 ? (
+              <div className="bg-card p-12 rounded-xl shadow-sm border border-border/50 text-center">
+                <div className="bg-accent/50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+                  <Search className="h-8 w-8 text-muted-foreground" />
+                </div>
                 <h3 className="text-xl font-medium mb-2">No therapists match your criteria</h3>
-                <p className="text-muted-foreground mb-4">Try adjusting your filters or search terms.</p>
+                <p className="text-muted-foreground mb-6">Try adjusting your filters or search terms.</p>
                 <Button onClick={resetFilters}>Reset Filters</Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {therapists.map(therapist => (
-                  <Card key={therapist.id} className="overflow-hidden rounded-xl hover:shadow-elevation-2 transition-shadow duration-300 group">
+                  <Card key={therapist.id} className="overflow-hidden rounded-xl hover:shadow-elevation-2 transition-all duration-300 hover:-translate-y-1 group border border-border/50">
                     <div className="relative">
                       <div className="w-full h-52 bg-muted overflow-hidden">
                         <img 
@@ -320,7 +358,7 @@ const TherapistListing = () => {
                           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-in-out"
                         />
                       </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4">
                         <div className="text-white">
                           <div className="flex items-center">
                             <div className="flex">
@@ -331,14 +369,14 @@ const TherapistListing = () => {
                                 <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
                               )}
                             </div>
-                            <span className="text-sm font-medium ml-1">{therapist.rating}</span>
-                            <span className="text-xs opacity-80 ml-1">({therapist.reviewCount})</span>
+                            <span className="ml-2 font-semibold">{therapist.rating}</span>
+                            <span className="ml-1 opacity-80">({therapist.reviewCount})</span>
                           </div>
                         </div>
                       </div>
                       
                       <div className="absolute top-3 right-3">
-                        <div className="bg-accent/90 backdrop-blur-sm text-primary text-xs font-medium px-3 py-1 rounded-full">
+                        <div className="bg-gradient-to-r from-primary to-secondary text-white text-xs font-medium px-3 py-1 rounded-full">
                           ${therapist.price}/session
                         </div>
                       </div>
@@ -346,7 +384,7 @@ const TherapistListing = () => {
                     
                     <CardContent className="p-6">
                       <h3 className="text-lg font-bold">{therapist.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">{therapist.title}</p>
+                      <p className="text-sm text-muted-foreground mb-4">{therapist.title}</p>
                       
                       <div className="mb-4">
                         <div className="flex flex-wrap gap-1 mb-2">
@@ -372,29 +410,29 @@ const TherapistListing = () => {
                       
                       <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
                         <div className="flex items-center gap-1.5">
-                          <CheckCircle className="h-4 w-4 text-primary" />
+                          <CheckCircle className="h-4 w-4 text-secondary" />
                           <span>{therapist.yearsExperience} years exp.</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Languages className="h-4 w-4 text-primary" />
+                          <Languages className="h-4 w-4 text-secondary" />
                           <span>{therapist.languages.join(", ")}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Calendar className="h-4 w-4 text-primary" />
-                          <span className="text-secondary font-medium">{therapist.nextAvailable}</span>
+                          <Calendar className="h-4 w-4 text-secondary" />
+                          <span className="text-primary font-medium">{therapist.nextAvailable}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <Shield className="h-4 w-4 text-primary" />
+                          <Shield className="h-4 w-4 text-secondary" />
                           <span>Verified</span>
                         </div>
                       </div>
                     </CardContent>
                     
-                    <CardFooter className="p-6 pt-0 flex gap-2 border-t border-border">
+                    <CardFooter className="p-6 pt-0 flex gap-2 border-t border-border/50">
                       <Button 
                         asChild
                         variant="default" 
-                        className="flex-1"
+                        className="flex-1 bg-gradient-to-r from-primary to-secondary hover:opacity-90"
                       >
                         <Link to={`/therapists/${therapist.id}`}>
                           View Profile
@@ -419,15 +457,18 @@ const TherapistListing = () => {
       </div>
       
       {/* Help Finding Section */}
-      <section className="bg-muted py-16 mt-16">
+      <section className="bg-muted/50 py-20 mt-8">
         <div className="container mx-auto px-4">
-          <div className="bg-card rounded-2xl p-8 shadow-sm max-w-3xl mx-auto text-center">
+          <div className="bg-gradient-to-br from-card to-background rounded-2xl p-12 shadow-sm max-w-3xl mx-auto text-center border border-border/50">
+            <div className="bg-primary/10 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="h-6 w-6 text-primary" />
+            </div>
             <h2 className="text-2xl font-bold mb-3">Need Help Finding the Right Therapist?</h2>
             <p className="text-muted-foreground mb-6">
               Our AI-powered matching system can help you find the perfect therapist based on your needs, preferences, and goals.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild>
+              <Button asChild className="bg-gradient-to-r from-primary to-secondary hover:opacity-90">
                 <Link to="/therapist-match">Use AI Matching</Link>
               </Button>
               <Button asChild variant="outline">

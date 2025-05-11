@@ -9,83 +9,92 @@ import {
   MessageCircle, 
   Video, 
   Users, 
-  Check
+  Check,
+  ChevronRight,
+  ArrowRight,
+  Sparkles
 } from "lucide-react";
 
 const Index = () => {
   return (
     <div className="w-full overflow-hidden">
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 flex flex-col lg:flex-row items-center gap-12">
-        <div className="lg:w-1/2 space-y-6 animation-fade-in">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-            Your journey to <span className="gradient-text">better mental health</span> starts here
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground">
-            Connect with licensed therapists for video sessions, secure messaging, and personalized care. 
-            Experience therapy on your terms.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-white">
-              <Link to="/therapists">Find Your Therapist</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/how-it-works">How It Works</Link>
-            </Button>
-          </div>
-          
-          <div className="flex items-center gap-4 pt-6 text-sm">
-            <div className="flex -space-x-2">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="w-8 h-8 rounded-full border-2 border-background overflow-hidden">
-                  <img 
-                    src={`https://images.unsplash.com/photo-${1490080372${i}9}-1a6131e1798${i}?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80`} 
-                    alt="User"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
+      <section className="relative overflow-hidden py-24 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+        <div className="absolute inset-0 -z-10 bg-dot-pattern bg-dot-small opacity-[0.03] dark:opacity-[0.05]"></div>
+        <div className="container mx-auto px-4 flex flex-col lg:flex-row items-center gap-12">
+          <div className="lg:w-1/2 space-y-6 animation-fade-in">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
+              Your journey to <span className="gradient-text">better mental health</span> starts here
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground">
+              Connect with licensed therapists for video sessions, secure messaging, and personalized care. 
+              Experience therapy on your terms.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Button asChild size="lg" className="group bg-primary hover:bg-primary/90 text-white">
+                <Link to="/therapists" className="flex items-center">
+                  Find Your Therapist
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link to="/how-it-works">How It Works</Link>
+              </Button>
             </div>
-            <div className="flex items-center">
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+            
+            <div className="flex items-center gap-4 pt-6 text-sm">
+              <div className="flex -space-x-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-background overflow-hidden">
+                    <img 
+                      src={`https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80&auto=format&fit=crop&w=100&q=80`} 
+                      alt="User"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 ))}
               </div>
-              <span className="ml-2 font-semibold">4.9</span>
-              <span className="ml-1 text-muted-foreground">(2.4k+ reviews)</span>
+              <div className="flex items-center">
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star key={star} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                  ))}
+                </div>
+                <span className="ml-2 font-semibold">4.9</span>
+                <span className="ml-1 text-muted-foreground">(2.4k+ reviews)</span>
+              </div>
             </div>
           </div>
-        </div>
-        
-        <div className="lg:w-1/2 relative animation-slide-up">
-          <div className="aspect-square w-full max-w-[500px] mx-auto relative">
-            <div className="absolute inset-0 bg-gradient-radial from-primary/20 to-transparent rounded-full animate-pulse-subtle"></div>
-            <img 
-              src="https://images.unsplash.com/photo-1573497620053-ea5300f94f21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
-              alt="Therapist talking to patient"
-              className="rounded-2xl w-full h-full object-cover card-shadow z-10 relative"
-            />
-            
-            {/* Floating elements */}
-            <div className="absolute top-5 -left-10 card-glass rounded-xl p-3 shadow-glass animate-float z-20">
-              <div className="flex items-center gap-2">
-                <Video className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium">Video Sessions</span>
+          
+          <div className="lg:w-1/2 relative animation-slide-up">
+            <div className="aspect-square w-full max-w-[500px] mx-auto relative">
+              <div className="absolute inset-0 bg-gradient-radial from-primary/20 to-transparent rounded-full animate-pulse-subtle"></div>
+              <img 
+                src="https://images.unsplash.com/photo-1573497620053-ea5300f94f21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80"
+                alt="Therapist talking to patient"
+                className="rounded-2xl w-full h-full object-cover card-shadow z-10 relative"
+              />
+              
+              {/* Floating elements */}
+              <div className="absolute top-5 -left-10 card-glass rounded-xl p-3 shadow-glass animate-float z-20">
+                <div className="flex items-center gap-2">
+                  <Video className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium">Video Sessions</span>
+                </div>
               </div>
-            </div>
-            
-            <div className="absolute -bottom-5 left-20 card-glass rounded-xl p-3 shadow-glass animate-float z-20" style={{ animationDelay: '1s' }}>
-              <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-secondary" />
-                <span className="text-sm font-medium">HIPAA Compliant</span>
+              
+              <div className="absolute -bottom-5 left-20 card-glass rounded-xl p-3 shadow-glass animate-float z-20" style={{ animationDelay: '1s' }}>
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-secondary" />
+                  <span className="text-sm font-medium">HIPAA Compliant</span>
+                </div>
               </div>
-            </div>
-            
-            <div className="absolute top-1/2 -right-10 card-glass rounded-xl p-3 shadow-glass animate-float z-20" style={{ animationDelay: '2s' }}>
-              <div className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium">Secure Messaging</span>
+              
+              <div className="absolute top-1/2 -right-10 card-glass rounded-xl p-3 shadow-glass animate-float z-20" style={{ animationDelay: '2s' }}>
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium">Secure Messaging</span>
+                </div>
               </div>
             </div>
           </div>
@@ -93,9 +102,10 @@ const Index = () => {
       </section>
       
       {/* Features Section */}
-      <section className="bg-muted py-20">
+      <section className="py-24 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="bg-primary/10 text-primary text-sm px-4 py-1.5 rounded-full inline-block mb-4">Our Services</span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why choose TheraLink?</h2>
             <p className="text-lg text-muted-foreground">
               We combine technology with human expertise to provide the best mental health support available online.
@@ -105,41 +115,41 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
-                icon: <Users className="h-8 w-8 text-primary" />,
+                icon: <Users className="h-8 w-8 text-white" />,
                 title: "Licensed Therapists",
                 description: "Connect with certified professionals who specialize in various mental health areas."
               },
               {
-                icon: <Calendar className="h-8 w-8 text-primary" />,
+                icon: <Calendar className="h-8 w-8 text-white" />,
                 title: "Flexible Scheduling",
                 description: "Book sessions that fit your schedule, with options for different time zones."
               },
               {
-                icon: <MessageCircle className="h-8 w-8 text-primary" />,
+                icon: <MessageCircle className="h-8 w-8 text-white" />,
                 title: "Secure Messaging",
                 description: "Stay connected with your therapist between sessions via encrypted messaging."
               },
               {
-                icon: <Video className="h-8 w-8 text-primary" />,
+                icon: <Video className="h-8 w-8 text-white" />,
                 title: "Video Sessions",
                 description: "Enjoy face-to-face therapy from the comfort of your home."
               },
               {
-                icon: <Shield className="h-8 w-8 text-primary" />,
+                icon: <Shield className="h-8 w-8 text-white" />,
                 title: "Privacy First",
                 description: "Your data is protected with end-to-end encryption and HIPAA compliance."
               },
               {
-                icon: <Heart className="h-8 w-8 text-primary" />,
+                icon: <Heart className="h-8 w-8 text-white" />,
                 title: "Personalized Care",
                 description: "Receive tailored treatment plans that address your specific needs."
               }
             ].map((feature, index) => (
               <div 
                 key={index} 
-                className="bg-card rounded-2xl p-6 card-shadow hover:shadow-elevation-3 transition-shadow"
+                className="bg-card rounded-2xl p-8 card-shadow hover:shadow-elevation-3 transition-all duration-300 hover:-translate-y-1 group"
               >
-                <div className="bg-accent rounded-full w-14 h-14 flex items-center justify-center mb-4">
+                <div className="bg-gradient-to-br from-primary to-secondary rounded-full w-16 h-16 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
@@ -151,15 +161,16 @@ const Index = () => {
       </section>
       
       {/* How It Works */}
-      <section className="container mx-auto px-4 py-20">
+      <section className="container mx-auto px-4 py-24">
         <div className="text-center max-w-3xl mx-auto mb-16">
+          <span className="bg-secondary/10 text-secondary text-sm px-4 py-1.5 rounded-full inline-block mb-4">Process</span>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">How TheraLink Works</h2>
           <p className="text-lg text-muted-foreground">
             Connect with a therapist in three simple steps
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-16 max-w-5xl mx-auto">
           {[
             {
               step: "01",
@@ -177,9 +188,14 @@ const Index = () => {
               description: "Connect with your therapist via secure video call or messaging at your scheduled time."
             }
           ].map((step, index) => (
-            <div key={index} className="relative">
-              <div className="text-6xl font-bold text-primary/10 absolute -top-6 left-0">{step.step}</div>
-              <div className="pt-8">
+            <div key={index} className="relative bg-card rounded-2xl p-8 border border-border/50 hover:border-primary/20 transition-colors duration-300 hover:shadow-md">
+              <div className="text-7xl font-bold text-primary/10 absolute -top-10 -left-3">{step.step}</div>
+              <div className="pt-4 relative z-10">
+                <div className="w-12 h-12 flex items-center justify-center bg-primary/10 text-primary rounded-full mb-4">
+                  {index === 0 && <Users className="h-5 w-5" />}
+                  {index === 1 && <Calendar className="h-5 w-5" />}
+                  {index === 2 && <Video className="h-5 w-5" />}
+                </div>
                 <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
                 <p className="text-muted-foreground">{step.description}</p>
               </div>
@@ -187,17 +203,22 @@ const Index = () => {
           ))}
         </div>
         
-        <div className="text-center mt-12">
-          <Button asChild size="lg">
-            <Link to="/therapists">Find Your Therapist Now</Link>
+        <div className="text-center mt-16">
+          <Button asChild size="lg" className="group">
+            <Link to="/therapists" className="flex items-center">
+              Find Your Therapist Now
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
           </Button>
         </div>
       </section>
       
       {/* Testimonials */}
-      <section className="bg-accent py-20">
+      <section className="bg-accent/30 py-24 relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-dot-pattern bg-dot-small opacity-[0.03] dark:opacity-[0.05]"></div>
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="bg-primary/10 text-primary text-sm px-4 py-1.5 rounded-full inline-block mb-4">Testimonials</span>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Clients Say</h2>
             <p className="text-lg text-muted-foreground">
               Real stories from people whose lives changed with TheraLink
@@ -224,13 +245,13 @@ const Index = () => {
             ].map((testimonial, index) => (
               <div 
                 key={index} 
-                className="bg-card rounded-2xl p-6 card-shadow relative"
+                className="bg-card rounded-2xl p-8 card-shadow relative hover:shadow-elevation-3 transition-all duration-300"
               >
-                <div className="text-5xl text-primary/20 absolute top-4 left-4">"</div>
+                <div className="text-6xl text-primary/20 absolute top-4 left-4">"</div>
                 <div className="pt-8 pb-4">
                   <p className="text-foreground italic relative z-10">{testimonial.quote}</p>
                 </div>
-                <div className="border-t border-border pt-4 mt-2">
+                <div className="border-t border-border/50 pt-4 mt-2">
                   <p className="font-medium">{testimonial.name}</p>
                   <div className="flex mt-1">
                     {Array.from({ length: testimonial.rating }).map((_, i) => (
@@ -245,34 +266,34 @@ const Index = () => {
       </section>
       
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="bg-card rounded-3xl overflow-hidden card-shadow">
-          <div className="relative">
-            <div className="absolute inset-0 gradient-bg opacity-90"></div>
-            <div className="relative z-10 p-12 text-white">
-              <div className="max-w-3xl mx-auto text-center">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to begin your mental health journey?</h2>
-                <p className="text-lg opacity-90 mb-8">
-                  Take the first step towards better mental health today. Our licensed therapists are ready to support you.
-                </p>
-                
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button asChild size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
-                    <Link to="/therapists">Find a Therapist</Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                    <Link to="/signup">Create an Account</Link>
-                  </Button>
-                </div>
-                
-                <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mt-8 text-sm">
-                  {['HIPAA Compliant', 'Secure & Encrypted', 'Licensed Professionals', 'Flexible Scheduling'].map((item, i) => (
-                    <div key={i} className="flex items-center gap-1">
-                      <Check className="h-4 w-4" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
+      <section className="container mx-auto px-4 py-24">
+        <div className="bg-gradient-to-br from-primary to-secondary rounded-3xl overflow-hidden card-shadow relative">
+          <div className="relative z-10 p-12 text-white">
+            <div className="max-w-3xl mx-auto text-center">
+              <div className="inline-flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-full p-3 mb-8">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to begin your mental health journey?</h2>
+              <p className="text-lg opacity-90 mb-8">
+                Take the first step towards better mental health today. Our licensed therapists are ready to support you.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
+                  <Link to="/therapists">Find a Therapist</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                  <Link to="/signup">Create an Account</Link>
+                </Button>
+              </div>
+              
+              <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mt-8 text-sm">
+                {['HIPAA Compliant', 'Secure & Encrypted', 'Licensed Professionals', 'Flexible Scheduling'].map((item, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <Check className="h-4 w-4" />
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

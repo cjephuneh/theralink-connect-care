@@ -97,7 +97,12 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground scroll-smooth;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
   }
 }
 
@@ -136,7 +141,7 @@
   }
   
   .card-glass {
-    @apply bg-white/70 dark:bg-gray-950/70 backdrop-blur-md border border-white/20 dark:border-gray-800/20;
+    @apply bg-white/70 dark:bg-gray-950/70 backdrop-blur-md border border-white/20 dark:border-gray-800/20 shadow-glass;
   }
   
   .animation-fade-in {
@@ -153,6 +158,18 @@
   
   .aspect-portrait {
     @apply aspect-[3/4];
+  }
+  
+  .shimmer {
+    @apply relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-shimmer before:bg-shimmer;
+  }
+  
+  .section-padding {
+    @apply py-16 md:py-24;
+  }
+  
+  .button-gradient {
+    @apply bg-gradient-to-r from-primary to-secondary text-white hover:opacity-90 transition-opacity;
   }
 }
 

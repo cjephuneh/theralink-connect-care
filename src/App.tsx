@@ -17,6 +17,7 @@ import VideoChat from "./pages/VideoChat";
 import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
 import BookingPage from "./pages/BookingPage";
+import BookingComplete from "./pages/BookingComplete";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="therapists" element={<TherapistListing />} />
             <Route path="therapists/:id" element={<TherapistProfile />} />
             <Route path="therapists/:therapistId/book" element={<BookingPage />} />
+            <Route path="booking/complete/:therapistId/:date/:time" element={<BookingComplete />} />
             <Route path="chat/:therapistId" element={<ChatPage />} />
             <Route path="video/:therapistId" element={<VideoChat />} />
             <Route path="dashboard" element={<ClientDashboard />} />

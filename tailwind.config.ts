@@ -123,7 +123,19 @@ export default {
 				'spin-slow': {
 					'0%': { transform: 'rotate(0deg)' },
 					'100%': { transform: 'rotate(360deg)' },
-				}
+				},
+				slideUp: {
+					from: { transform: 'translateY(20px)', opacity: '0' },
+					to: { transform: 'translateY(0)', opacity: '1' },
+				},
+				fadeIn: {
+					from: { opacity: '0' },
+					to: { opacity: '1' },
+				},
+				shimmer: {
+					from: { backgroundPosition: '200% 0' },
+					to: { backgroundPosition: '-200% 0' },
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -131,6 +143,9 @@ export default {
 				'pulse-subtle': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
 				'float': 'float 6s ease-in-out infinite',
 				'spin-slow': 'spin-slow 8s linear infinite',
+				'slide-up': 'slideUp 0.5s ease-in-out',
+				'fade-in': 'fadeIn 0.5s ease-in-out',
+				'shimmer': 'shimmer 2s linear infinite',
 			},
       boxShadow: {
         'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
@@ -143,6 +158,7 @@ export default {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
         'dot-pattern': 'radial-gradient(circle, currentColor 1px, transparent 1px)',
+        'shimmer': 'linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent)',
       },
       backgroundSize: {
         'dot-small': '20px 20px',
