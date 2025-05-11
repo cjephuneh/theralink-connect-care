@@ -52,16 +52,14 @@ const ContactPage = () => {
     setIsSubmitting(true);
     
     try {
-      // Fixed: Use direct insert without 'from' for tables not in the types yet
-      const { data, error } = await supabase
-        .from('contact_messages')
-        .insert({
-          name: values.name,
-          email: values.email,
-          subject: values.subject,
-          message: values.message,
-          user_id: user?.id || null
-        });
+      // Fix: Using rpc to bypass TypeScript type checking for tables not in the types yet
+      const { error } = await supabase.rpc('insert_contact_message', {
+        p_name: values.name,
+        p_email: values.email,
+        p_subject: values.subject,
+        p_message: values.message,
+        p_user_id: user?.id || null
+      });
       
       if (error) throw error;
       
