@@ -1,5 +1,22 @@
 
 project_id = "oavljdrqfzliikfncrdd"
 
-[functions.paystack]
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+
+[studio]
+port = 54323
+
+[inbucket]
+port = 54324
+
+[storage]
+file_size_limit = "50MiB"
+
+[functions.insert_contact_message]
 verify_jwt = true

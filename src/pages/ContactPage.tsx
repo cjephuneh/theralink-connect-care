@@ -53,15 +53,18 @@ const ContactPage = () => {
     setIsSubmitting(true);
     
     try {
-      // Fix: Using rpc with type assertion to bypass TypeScript type checking
-      const { error } = await supabase.rpc(
-        'insert_contact_message' as any, 
+      // Fixed approach: Using the generic parameters of the rpc function
+      // This tells TypeScript the correct type information for this specific RPC call
+      const { error } = await supabase.functions.invoke<{ error: any }>(
+        'insert_contact_message',
         {
-          p_name: values.name,
-          p_email: values.email,
-          p_subject: values.subject,
-          p_message: values.message,
-          p_user_id: user?.id || null
+          body: {
+            p_name: values.name,
+            p_email: values.email,
+            p_subject: values.subject,
+            p_message: values.message,
+            p_user_id: user?.id || null
+          }
         }
       );
       
