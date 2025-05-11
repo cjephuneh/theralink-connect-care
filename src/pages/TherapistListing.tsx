@@ -5,13 +5,10 @@ import { Input } from "@/components/ui/input";
 import { 
   Card, 
   CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
+  CardFooter,
 } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star, Search, Calendar, MessageCircle, Video } from "lucide-react";
+import { Star, Search, Calendar, MessageCircle, Video, Filter, MapPin, Languages, CheckCircle, Shield } from "lucide-react";
 import { Link } from 'react-router-dom';
 
 // Mock therapist data (in real app, this would come from a backend API)
@@ -124,6 +121,7 @@ const TherapistListing = () => {
   const [language, setLanguage] = useState("");
   const [availability, setAvailability] = useState("");
   const [therapists, setTherapists] = useState<Therapist[]>(mockTherapists);
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
 
   // All unique specialties from the mock data
   const allSpecialties = Array.from(
@@ -186,214 +184,259 @@ const TherapistListing = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">Find Your Therapist</h1>
-          <p className="text-gray-600 md:text-lg">
-            Browse our network of licensed therapists and find the perfect match for your needs.
-          </p>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search by name or specialty"
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            
-            <Select value={specialty} onValueChange={setSpecialty}>
-              <SelectTrigger>
-                <SelectValue placeholder="Specialty" />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Fix: Changed from empty string to "all" */}
-                <SelectItem value="all">All Specialties</SelectItem>
-                {allSpecialties.map(spec => (
-                  <SelectItem key={spec} value={spec}>{spec}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger>
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Fix: Changed from empty string to "all" */}
-                <SelectItem value="all">All Languages</SelectItem>
-                {allLanguages.map(lang => (
-                  <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={availability} onValueChange={setAvailability}>
-              <SelectTrigger>
-                <SelectValue placeholder="Availability" />
-              </SelectTrigger>
-              <SelectContent>
-                {/* Fix: Changed from empty string to "all" */}
-                <SelectItem value="all">Any Availability</SelectItem>
-                <SelectItem value="Today">Available Today</SelectItem>
-                <SelectItem value="This Week">Available This Week</SelectItem>
-              </SelectContent>
-            </Select>
+    <div className="w-full animation-fade-in">
+      {/* Hero Banner */}
+      <div className="w-full bg-gradient-to-r from-primary to-primary/80 text-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl md:text-4xl font-bold mb-4">Find Your Ideal Therapist</h1>
+            <p className="text-lg opacity-90">
+              Browse our network of experienced, licensed therapists and find the perfect match for your needs.
+            </p>
           </div>
-          
-          {/* Applied filters */}
-          {(searchQuery || specialty || language || availability) && (
-            <div className="flex items-center mt-4 pt-4 border-t border-gray-100">
-              <span className="text-sm text-gray-500 mr-2">Active filters:</span>
-              {searchQuery && (
-                <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-2">
-                  Search: {searchQuery}
-                </span>
-              )}
-              {specialty && specialty !== "all" && (
-                <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-2">
-                  {specialty}
-                </span>
-              )}
-              {language && language !== "all" && (
-                <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-2">
-                  {language}
-                </span>
-              )}
-              {availability && availability !== "all" && (
-                <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-2">
-                  {availability}
-                </span>
-              )}
-              <Button 
-                variant="link" 
-                className="text-sm text-thera-600 hover:text-thera-700"
-                onClick={resetFilters}
-              >
-                Clear all
-              </Button>
-            </div>
-          )}
         </div>
-
-        {/* Results */}
-        <div className="mt-2">
-          <p className="text-gray-600 mb-4">{therapists.length} therapists found</p>
-          
-          {therapists.length === 0 ? (
-            <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
-              <h3 className="text-xl font-medium mb-2">No therapists match your criteria</h3>
-              <p className="text-gray-600 mb-4">Try adjusting your filters or search terms.</p>
-              <Button onClick={resetFilters}>Reset Filters</Button>
+      </div>
+      
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col gap-6">
+          {/* Search and Filters */}
+          <div className="bg-card rounded-xl shadow-sm border border-border">
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="relative col-span-1 md:col-span-2">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, specialty or keyword"
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                
+                <div className="md:hidden">
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex justify-between items-center"
+                    onClick={() => setIsFilterVisible(!isFilterVisible)}
+                  >
+                    <span>Filter Results</span> 
+                    <Filter className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+                
+                <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 md:col-span-2 ${isFilterVisible ? '' : 'hidden md:grid'}`}>
+                  <Select value={specialty} onValueChange={setSpecialty}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Specialty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Specialties</SelectItem>
+                      {allSpecialties.map(spec => (
+                        <SelectItem key={spec} value={spec}>{spec}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Languages</SelectItem>
+                      {allLanguages.map(lang => (
+                        <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={availability} onValueChange={setAvailability}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Availability" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any Availability</SelectItem>
+                      <SelectItem value="Today">Available Today</SelectItem>
+                      <SelectItem value="This Week">Available This Week</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Applied filters */}
+              {(searchQuery || specialty || language || availability) && (
+                <div className="flex flex-wrap items-center mt-4 pt-4 border-t border-border">
+                  <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
+                  {searchQuery && (
+                    <span className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full mr-2 mb-2">
+                      Search: {searchQuery}
+                    </span>
+                  )}
+                  {specialty && specialty !== "all" && (
+                    <span className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full mr-2 mb-2">
+                      {specialty}
+                    </span>
+                  )}
+                  {language && language !== "all" && (
+                    <span className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full mr-2 mb-2">
+                      {language}
+                    </span>
+                  )}
+                  {availability && availability !== "all" && (
+                    <span className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full mr-2 mb-2">
+                      {availability}
+                    </span>
+                  )}
+                  <Button 
+                    variant="link" 
+                    className="text-sm text-primary hover:text-primary/80 mb-2"
+                    onClick={resetFilters}
+                  >
+                    Clear all
+                  </Button>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {therapists.map(therapist => (
-                <Card key={therapist.id} className="overflow-hidden">
-                  <CardHeader className="p-0">
+          </div>
+
+          {/* Results */}
+          <div className="mt-2">
+            <p className="text-muted-foreground mb-6">{therapists.length} therapists found</p>
+            
+            {therapists.length === 0 ? (
+              <div className="bg-card p-8 rounded-xl shadow-sm border border-border text-center">
+                <h3 className="text-xl font-medium mb-2">No therapists match your criteria</h3>
+                <p className="text-muted-foreground mb-4">Try adjusting your filters or search terms.</p>
+                <Button onClick={resetFilters}>Reset Filters</Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {therapists.map(therapist => (
+                  <Card key={therapist.id} className="overflow-hidden rounded-xl hover:shadow-elevation-2 transition-shadow duration-300 group">
                     <div className="relative">
-                      <div className="w-full h-40 bg-gray-100 flex items-center justify-center overflow-hidden">
+                      <div className="w-full h-52 bg-muted overflow-hidden">
                         <img 
                           src={therapist.image} 
                           alt={therapist.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-in-out"
                         />
                       </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                         <div className="text-white">
-                          <h3 className="text-lg font-bold">{therapist.name}</h3>
-                          <p className="text-sm opacity-90">{therapist.title}</p>
+                          <div className="flex items-center">
+                            <div className="flex">
+                              {Array.from({ length: Math.floor(therapist.rating) }).map((_, i) => (
+                                <Star key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                              ))}
+                              {therapist.rating % 1 > 0 && (
+                                <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                              )}
+                            </div>
+                            <span className="text-sm font-medium ml-1">{therapist.rating}</span>
+                            <span className="text-xs opacity-80 ml-1">({therapist.reviewCount})</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="absolute top-3 right-3">
+                        <div className="bg-accent/90 backdrop-blur-sm text-primary text-xs font-medium px-3 py-1 rounded-full">
+                          ${therapist.price}/session
                         </div>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="flex items-center mb-3">
-                      <div className="flex">
-                        {Array.from({ length: Math.floor(therapist.rating) }).map((_, i) => (
-                          <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
-                        ))}
-                        {therapist.rating % 1 > 0 && (
-                          <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                        )}
-                      </div>
-                      <span className="text-sm font-medium ml-1">{therapist.rating}</span>
-                      <span className="text-sm text-gray-500 ml-1">({therapist.reviewCount} reviews)</span>
-                    </div>
                     
-                    <div className="mb-3">
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {therapist.specialties.slice(0, 3).map(specialty => (
-                          <span 
-                            key={specialty} 
-                            className="bg-thera-50 text-thera-700 text-xs px-2 py-1 rounded-full"
-                          >
-                            {specialty}
-                          </span>
-                        ))}
-                        {therapist.specialties.length > 3 && (
-                          <span className="bg-gray-50 text-gray-500 text-xs px-2 py-1 rounded-full">
-                            +{therapist.specialties.length - 3} more
-                          </span>
-                        )}
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-bold">{therapist.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">{therapist.title}</p>
+                      
+                      <div className="mb-4">
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {therapist.specialties.slice(0, 3).map(specialty => (
+                            <span 
+                              key={specialty} 
+                              className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full"
+                            >
+                              {specialty}
+                            </span>
+                          ))}
+                          {therapist.specialties.length > 3 && (
+                            <span className="bg-muted text-muted-foreground text-xs px-2 py-1 rounded-full">
+                              +{therapist.specialties.length - 3} more
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                      
+                      <div className="text-sm text-muted-foreground mb-4">
+                        <p className="line-clamp-2">{therapist.about}</p>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle className="h-4 w-4 text-primary" />
+                          <span>{therapist.yearsExperience} years exp.</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Languages className="h-4 w-4 text-primary" />
+                          <span>{therapist.languages.join(", ")}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-4 w-4 text-primary" />
+                          <span className="text-secondary font-medium">{therapist.nextAvailable}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Shield className="h-4 w-4 text-primary" />
+                          <span>Verified</span>
+                        </div>
+                      </div>
+                    </CardContent>
                     
-                    <div className="text-sm text-gray-600 mb-3">
-                      <p>{therapist.about.substring(0, 100)}...</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
-                      <div>
-                        <span className="text-gray-500">Experience:</span>
-                        <p className="font-medium">{therapist.yearsExperience} years</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Languages:</span>
-                        <p className="font-medium">{therapist.languages.join(", ")}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Next available:</span>
-                        <p className="font-medium text-mint-600">{therapist.nextAvailable}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Session fee:</span>
-                        <p className="font-medium">${therapist.price}/session</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0 flex gap-2">
-                    <Button 
-                      asChild
-                      variant="default" 
-                      className="flex-1 bg-thera-600 hover:bg-thera-700"
-                    >
-                      <Link to={`/therapists/${therapist.id}`}>
-                        View Profile
-                      </Link>
-                    </Button>
-                    <Button 
-                      asChild
-                      variant="outline" 
-                      className="flex-1"
-                    >
-                      <Link to={`/therapists/${therapist.id}/book`}>
-                        Book Session
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
+                    <CardFooter className="p-6 pt-0 flex gap-2 border-t border-border">
+                      <Button 
+                        asChild
+                        variant="default" 
+                        className="flex-1"
+                      >
+                        <Link to={`/therapists/${therapist.id}`}>
+                          View Profile
+                        </Link>
+                      </Button>
+                      <Button 
+                        asChild
+                        variant="outline" 
+                        className="flex-1"
+                      >
+                        <Link to={`/therapists/${therapist.id}/book`}>
+                          Book Session
+                        </Link>
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+      
+      {/* Help Finding Section */}
+      <section className="bg-muted py-16 mt-16">
+        <div className="container mx-auto px-4">
+          <div className="bg-card rounded-2xl p-8 shadow-sm max-w-3xl mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-3">Need Help Finding the Right Therapist?</h2>
+            <p className="text-muted-foreground mb-6">
+              Our AI-powered matching system can help you find the perfect therapist based on your needs, preferences, and goals.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button asChild>
+                <Link to="/therapist-match">Use AI Matching</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/contact">Contact Support</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

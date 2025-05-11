@@ -1,6 +1,6 @@
 
 import { Toaster } from "@/components/ui/toaster";
-import { SonnerToaster } from "@/components/ui/index";
+import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -16,6 +16,7 @@ import ChatPage from "./pages/ChatPage";
 import VideoChat from "./pages/VideoChat";
 import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
+import BookingPage from "./pages/BookingPage";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route index element={<Index />} />
             <Route path="therapists" element={<TherapistListing />} />
             <Route path="therapists/:id" element={<TherapistProfile />} />
+            <Route path="therapists/:therapistId/book" element={<BookingPage />} />
             <Route path="chat/:therapistId" element={<ChatPage />} />
             <Route path="video/:therapistId" element={<VideoChat />} />
             <Route path="dashboard" element={<ClientDashboard />} />

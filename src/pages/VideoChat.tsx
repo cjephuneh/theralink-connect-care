@@ -13,7 +13,17 @@ import {
   VideoOff,
   Phone,
   MessageCircle,
-  Clock
+  Clock,
+  Shield,
+  Calendar,
+  Settings,
+  HelpCircle,
+  Volume2,
+  Volume1,
+  VolumeX,
+  ScreenShare,
+  Laptop,
+  UserPlus,
 } from "lucide-react";
 
 // Mock therapist data
@@ -45,6 +55,9 @@ const VideoChat = () => {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [sessionTime, setSessionTime] = useState(0);
   const [waitTime, setWaitTime] = useState(0);
+  const [volume, setVolume] = useState(2); // 0: muted, 1: low, 2: normal
+  const [screenShareActive, setScreenShareActive] = useState(false);
+  const [networkQuality, setNetworkQuality] = useState(3); // 1-3 scale
   
   // Mock timing interval for session duration
   useEffect(() => {
@@ -110,12 +123,53 @@ const VideoChat = () => {
     setAudioEnabled(!audioEnabled);
   };
   
+  // Toggle screen share
+  const toggleScreenShare = () => {
+    setScreenShareActive(!screenShareActive);
+  };
+  
+  // Cycle through volume settings
+  const cycleVolume = () => {
+    setVolume(prev => (prev + 1) % 3);
+  };
+  
+  // Get volume icon based on current volume
+  const getVolumeIcon = () => {
+    switch(volume) {
+      case 0: return <VolumeX className="h-5 w-5" />;
+      case 1: return <Volume1 className="h-5 w-5" />;
+      case 2: return <Volume2 className="h-5 w-5" />;
+      default: return <Volume2 className="h-5 w-5" />;
+    }
+  };
+  
+  // Network quality indicator
+  const getNetworkIndicator = () => {
+    const bars = [];
+    for (let i = 1; i <= 3; i++) {
+      bars.push(
+        <div 
+          key={i} 
+          className={`h-${i+1} w-1 rounded-full ${i <= networkQuality ? 'bg-secondary' : 'bg-gray-300'}`}
+        />
+      );
+    }
+    return (
+      <div className="flex items-end gap-0.5">
+        {bars}
+      </div>
+    );
+  };
+  
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12 flex justify-center items-center">
+      <div className="container mx-auto px-4 py-12 flex justify-center items-center animation-fade-in">
         <div className="w-full max-w-4xl h-96 flex items-center justify-center">
-          <div className="animate-pulse-subtle">
-            <p className="text-gray-500">Loading video session...</p>
+          <div className="flex flex-col items-center animate-pulse-subtle">
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+              <Video className="h-8 w-8 text-primary/40" />
+            </div>
+            <p className="text-muted-foreground">Loading video session...</p>
           </div>
         </div>
       </div>
@@ -124,10 +178,10 @@ const VideoChat = () => {
   
   if (!therapist) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="bg-white p-8 rounded-xl shadow-sm text-center">
+      <div className="container mx-auto px-4 py-12 animation-fade-in">
+        <div className="bg-card p-8 rounded-xl shadow-sm text-center">
           <h2 className="text-2xl font-bold mb-4">Therapist Not Found</h2>
-          <p className="text-gray-600 mb-6">We couldn't find the therapist you're looking for.</p>
+          <p className="text-muted-foreground mb-6">We couldn't find the therapist you're looking for.</p>
           <Button asChild>
             <Link to="/therapists">Back to Therapist Directory</Link>
           </Button>
@@ -137,44 +191,58 @@ const VideoChat = () => {
   }
   
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 animation-fade-in">
       <div className="max-w-5xl mx-auto">
-        <Card className="overflow-hidden">
-          <div className="bg-thera-700 text-white p-4 flex items-center justify-between">
+        <Card className="overflow-hidden rounded-xl card-shadow">
+          <div className="bg-primary text-white p-4 flex items-center justify-between backdrop-blur-sm">
             <div className="flex items-center">
               <img 
                 src={therapist.image} 
                 alt={therapist.name}
-                className="w-10 h-10 rounded-full object-cover mr-3"
+                className="w-10 h-10 rounded-full object-cover mr-3 border-2 border-white/20"
               />
               <div>
                 <h1 className="font-bold">Video Session with {therapist.name}</h1>
-                <p className="text-xs opacity-80">End-to-end encrypted • HIPAA compliant</p>
+                <div className="flex items-center gap-3 text-xs opacity-80">
+                  <span className="flex items-center gap-1">
+                    <Shield className="h-3 w-3" /> End-to-end encrypted
+                  </span>
+                  <span className="flex items-center gap-1">
+                    {getNetworkIndicator()} {networkQuality === 3 ? 'Excellent' : networkQuality === 2 ? 'Good' : 'Poor'} connection
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center">
+            <div className="flex items-center gap-3">
               {callActive && (
-                <div className="bg-red-500/20 px-3 py-1 rounded-full flex items-center">
+                <div className="bg-primary-foreground/10 px-3 py-1 rounded-full flex items-center">
                   <Clock className="h-3 w-3 mr-1" />
                   <span className="text-xs">{formatTime(sessionTime)}</span>
                 </div>
               )}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="hover:bg-white/10 text-white"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
             </div>
           </div>
           
           <CardContent className="p-0">
-            <div className="relative bg-gray-900 w-full" style={{ height: '70vh' }}>
+            <div className="relative bg-gray-950 w-full" style={{ height: '70vh' }}>
               {/* Main video area */}
               <div className="absolute inset-0 flex items-center justify-center">
                 {!callActive && !connecting ? (
                   <div className="text-center text-white">
-                    <div className="bg-thera-600/20 p-10 rounded-xl backdrop-blur-sm">
+                    <div className="bg-primary/20 p-10 rounded-xl backdrop-blur-sm max-w-lg">
                       <h2 className="text-2xl font-bold mb-2">Ready to connect with {therapist.name}?</h2>
-                      <p className="text-gray-200 mb-6">
+                      <p className="text-white/80 mb-6">
                         Make sure your camera and microphone are working before starting the session.
                       </p>
                       <Button
-                        className="bg-thera-600 hover:bg-thera-700 text-white"
+                        className="bg-white text-primary hover:bg-white/90"
                         onClick={startCall}
                       >
                         <Video className="h-5 w-5 mr-2" />
@@ -184,28 +252,40 @@ const VideoChat = () => {
                   </div>
                 ) : connecting ? (
                   <div className="text-center text-white">
-                    <div className="bg-thera-600/20 p-10 rounded-xl backdrop-blur-sm animate-pulse-subtle">
+                    <div className="bg-primary/20 p-10 rounded-xl backdrop-blur-sm animate-pulse-subtle max-w-lg">
+                      <div className="rounded-full w-24 h-24 mx-auto mb-4 bg-white/10 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full border-4 border-t-primary border-r-primary/50 border-b-primary/30 border-l-primary/10 animate-spin"></div>
+                      </div>
                       <h2 className="text-2xl font-bold mb-2">Connecting to {therapist.name}...</h2>
-                      <p className="text-gray-200">
+                      <p className="text-white/80">
                         Wait time: {formatTime(waitTime)}
                       </p>
                     </div>
                   </div>
                 ) : (
                   // Therapist video (main)
-                  <div className="w-full h-full">
+                  <div className="w-full h-full relative">
                     <img 
                       src={therapist.image}
                       alt={therapist.name}
                       className="w-full h-full object-cover"
                     />
+                    {screenShareActive && (
+                      <div className="absolute inset-0 bg-white p-8 flex items-center justify-center z-10">
+                        <div className="text-center">
+                          <Laptop className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+                          <p className="text-xl font-medium">Screen Sharing Active</p>
+                          <p className="text-gray-500">You are sharing your screen</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
               
               {/* Self-view (smaller) */}
               {callActive && (
-                <div className="absolute bottom-4 right-4 w-48 h-36 bg-gray-800 rounded-lg overflow-hidden border-2 border-thera-500 shadow-lg">
+                <div className="absolute top-4 right-4 w-52 h-40 bg-gray-800 rounded-lg overflow-hidden border border-primary/50 shadow-lg">
                   {videoEnabled ? (
                     <div className="bg-gray-700 w-full h-full flex items-center justify-center text-white">
                       <p>Your camera view</p>
@@ -219,13 +299,13 @@ const VideoChat = () => {
               )}
               
               {/* Control bar */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-6">
                 <div className="flex items-center justify-center gap-4">
                   <Button
                     variant={audioEnabled ? "outline" : "destructive"}
                     size="icon"
-                    onClick={toggleAudio}
                     className={audioEnabled ? "bg-white/10 hover:bg-white/20 border-white/30 text-white" : ""}
+                    onClick={toggleAudio}
                   >
                     {audioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
                   </Button>
@@ -233,10 +313,28 @@ const VideoChat = () => {
                   <Button
                     variant={videoEnabled ? "outline" : "destructive"}
                     size="icon"
-                    onClick={toggleVideo}
                     className={videoEnabled ? "bg-white/10 hover:bg-white/20 border-white/30 text-white" : ""}
+                    onClick={toggleVideo}
                   >
                     {videoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="bg-white/10 hover:bg-white/20 border-white/30 text-white"
+                    onClick={toggleScreenShare}
+                  >
+                    <ScreenShare className={`h-5 w-5 ${screenShareActive ? 'text-primary' : ''}`} />
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="bg-white/10 hover:bg-white/20 border-white/30 text-white"
+                    onClick={cycleVolume}
+                  >
+                    {getVolumeIcon()}
                   </Button>
                   
                   {callActive && (
@@ -245,7 +343,7 @@ const VideoChat = () => {
                       size="icon"
                       onClick={endCall}
                     >
-                      <Phone className="h-5 w-5" />
+                      <Phone className="h-5 w-5 rotate-225" />
                     </Button>
                   )}
                   
@@ -258,25 +356,57 @@ const VideoChat = () => {
                       <MessageCircle className="h-5 w-5" />
                     </Link>
                   </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="bg-white/10 hover:bg-white/20 border-white/30 text-white"
+                  >
+                    <UserPlus className="h-5 w-5" />
+                  </Button>
                 </div>
+              </div>
+              
+              {/* Help button */}
+              <div className="absolute top-4 left-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/10 hover:bg-white/20 border-white/30 text-white text-xs"
+                >
+                  <HelpCircle className="h-3 w-3 mr-1" /> Help
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <div className="mt-6 bg-white p-6 rounded-xl shadow-sm">
+        <div className="mt-6 bg-card p-6 rounded-xl shadow-sm">
           <h2 className="text-xl font-bold mb-4">Session Information</h2>
-          <div className="space-y-2">
-            <p className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-thera-600" />
-              <span>50-minute session</span>
-            </p>
-            <p className="text-sm text-gray-600">
-              After your session, you can continue the conversation through secure messaging or schedule a follow-up appointment.
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <p className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-5 w-5 text-primary" />
+                <span>50-minute session</span>
+              </p>
+              <p className="flex items-center gap-2 text-muted-foreground">
+                <Calendar className="h-5 w-5 text-primary" />
+                <span>May 15, 2025 • 2:00 PM</span>
+              </p>
+              <p className="flex items-center gap-2 text-muted-foreground">
+                <Shield className="h-5 w-5 text-primary" />
+                <span>End-to-end encrypted, HIPAA compliant</span>
+              </p>
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              <p>
+                After your session, you can continue the conversation through secure messaging or schedule a follow-up appointment.
+              </p>
+            </div>
           </div>
           
-          <div className="mt-6 pt-6 border-t border-gray-100 flex flex-wrap gap-3">
+          <div className="mt-6 pt-6 border-t border-border flex flex-wrap gap-3">
             <Button
               asChild
               variant="outline"
