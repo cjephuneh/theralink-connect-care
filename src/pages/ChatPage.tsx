@@ -21,7 +21,8 @@ import {
   MoreVertical,
   Phone,
   Lock,
-  ArrowLeftCircle
+  ArrowLeftCircle,
+  MessageCircle
 } from "lucide-react";
 
 // Mock therapist data

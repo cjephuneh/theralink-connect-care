@@ -8,7 +8,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star, Search, Calendar, MessageCircle, Video, Filter, MapPin, Languages, CheckCircle, Shield } from "lucide-react";
+import { Star, Search, Calendar, MessageCircle, Video, Filter, MapPin, Languages, CheckCircle, Shield, Sparkles } from "lucide-react";
 import { Link } from 'react-router-dom';
 
 // Mock therapist data (in real app, this would come from a backend API)
