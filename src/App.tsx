@@ -27,6 +27,10 @@ import AIMatchingPage from "./pages/AIMatchingPage";
 import AIMatchingResults from "./pages/AIMatchingResults";
 import BlogPage from "./pages/BlogPage";
 import AboutPage from "./pages/AboutPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import HIPAAPage from "./pages/HIPAAPage";
+import TherapistOnboardingPage from "./pages/TherapistOnboardingPage";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -75,6 +79,10 @@ const App = () => (
               <Route path="ai-matching/results" element={<AIMatchingResults />} />
               <Route path="blog" element={<BlogPage />} />
               <Route path="about" element={<AboutPage />} />
+              <Route path="terms" element={<TermsPage />} />
+              <Route path="privacy" element={<PrivacyPolicyPage />} />
+              <Route path="hipaa" element={<HIPAAPage />} />
+              <Route path="for-therapists" element={<TherapistOnboardingPage />} />
               <Route path="*" element={<NotFound />} />
             </Route>
 
