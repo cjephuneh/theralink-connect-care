@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { 
   Card, 
@@ -52,14 +53,17 @@ const ContactPage = () => {
     setIsSubmitting(true);
     
     try {
-      // Fix: Using rpc to bypass TypeScript type checking for tables not in the types yet
-      const { error } = await supabase.rpc('insert_contact_message', {
-        p_name: values.name,
-        p_email: values.email,
-        p_subject: values.subject,
-        p_message: values.message,
-        p_user_id: user?.id || null
-      });
+      // Fix: Using rpc with type assertion to bypass TypeScript type checking
+      const { error } = await supabase.rpc(
+        'insert_contact_message' as any, 
+        {
+          p_name: values.name,
+          p_email: values.email,
+          p_subject: values.subject,
+          p_message: values.message,
+          p_user_id: user?.id || null
+        }
+      );
       
       if (error) throw error;
       
