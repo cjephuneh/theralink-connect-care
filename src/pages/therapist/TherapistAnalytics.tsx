@@ -4,111 +4,77 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Users, DollarSign, Clock } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { format } from 'date-fns';
 
 const TherapistAnalytics = () => {
-  const [sessionsData, setSessionsData] = useState<any[]>([]);
-  const [earningsData, setEarningsData] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    totalSessions: 0,
-    totalClients: 0,
-    totalEarnings: 0,
-    averageRating: 0,
-    completionRate: 0,
-  });
+  const [appointmentStats, setAppointmentStats] = useState<any[]>([]);
+  const [sessionTypeData, setSessionTypeData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchAnalyticsData = async () => {
+    const fetchAnalytics = async () => {
       if (!user) return;
-
+      
       try {
-        // Fetch all appointments for this therapist
+        // Fetch appointments for this therapist
         const { data: appointments, error: appointmentsError } = await supabase
           .from('appointments')
           .select('*')
           .eq('therapist_id', user.id);
-
+          
         if (appointmentsError) throw appointmentsError;
-
-        // Fetch all successful transactions for this therapist
-        const { data: transactions, error: transactionsError } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('therapist_id', user.id)
-          .eq('status', 'success');
-
-        if (transactionsError) throw transactionsError;
-
-        // Fetch all reviews for this therapist
-        const { data: reviews, error: reviewsError } = await supabase
-          .from('reviews')
-          .select('*')
-          .eq('therapist_id', user.id);
-
-        if (reviewsError) throw reviewsError;
-
-        // Get unique client IDs
-        const uniqueClients = new Set(appointments?.map(app => app.client_id) || []);
         
-        // Calculate completion rate
-        const completedSessions = appointments?.filter(app => app.status === 'completed').length || 0;
-        const totalSessions = appointments?.length || 0;
-        const completionRate = totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0;
-        
-        // Calculate average rating
-        const totalRating = reviews?.reduce((sum, review) => sum + review.rating, 0) || 0;
-        const averageRating = reviews?.length ? totalRating / reviews.length : 0;
-        
-        // Calculate total earnings
-        const totalEarnings = transactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
-
-        // Prepare sessions data for chart (last 7 days)
-        const last7Days = Array.from({length: 7}, (_, i) => {
-          const d = new Date();
-          d.setDate(d.getDate() - i);
-          return d.toISOString().split('T')[0]; // YYYY-MM-DD format
-        }).reverse();
-
-        const sessionsChartData = last7Days.map(date => {
-          const count = appointments?.filter(app => 
-            new Date(app.start_time).toISOString().split('T')[0] === date
-          ).length || 0;
+        // Process appointment data for statistics
+        if (appointments) {
+          // Group appointments by month
+          const monthlyData: Record<string, number> = {};
+          appointments.forEach(appointment => {
+            const month = format(new Date(appointment.start_time), 'MMM yyyy');
+            if (!monthlyData[month]) {
+              monthlyData[month] = 0;
+            }
+            monthlyData[month]++;
+          });
           
-          return {
-            date: new Date(date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}),
-            sessions: count
-          };
-        });
-
-        // Prepare earnings data for chart (last 7 days)
-        const earningsChartData = last7Days.map(date => {
-          const dailyEarnings = transactions?.filter(tx => 
-            new Date(tx.created_at).toISOString().split('T')[0] === date
-          ).reduce((sum, tx) => sum + tx.amount, 0) || 0;
+          // Convert to array for chart
+          const chartData = Object.entries(monthlyData).map(([month, count]) => ({
+            month,
+            appointments: count
+          }));
           
-          return {
-            date: new Date(date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'}),
-            earnings: dailyEarnings
-          };
-        });
-
-        setSessionsData(sessionsChartData);
-        setEarningsData(earningsChartData);
-        setStats({
-          totalSessions,
-          totalClients: uniqueClients.size,
-          totalEarnings,
-          averageRating,
-          completionRate
-        });
-
+          // Sort by date
+          chartData.sort((a, b) => {
+            const dateA = new Date(a.month);
+            const dateB = new Date(b.month);
+            return dateA.getTime() - dateB.getTime();
+          });
+          
+          setAppointmentStats(chartData);
+          
+          // Group appointments by session type
+          const sessionTypes: Record<string, number> = {};
+          appointments.forEach(appointment => {
+            const type = appointment.session_type || 'Unknown';
+            if (!sessionTypes[type]) {
+              sessionTypes[type] = 0;
+            }
+            sessionTypes[type]++;
+          });
+          
+          // Convert to array for pie chart
+          const pieChartData = Object.entries(sessionTypes).map(([name, value]) => ({
+            name,
+            value
+          }));
+          
+          setSessionTypeData(pieChartData);
+        }
+        
       } catch (error) {
-        console.error('Error fetching analytics:', error);
+        console.error('Error fetching analytics data:', error);
         toast({
           title: 'Error',
           description: 'Failed to load analytics data',
@@ -118,104 +84,111 @@ const TherapistAnalytics = () => {
         setIsLoading(false);
       }
     };
-
-    fetchAnalyticsData();
+    
+    fetchAnalytics();
   }, [user, toast]);
+  
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading analytics...</div>;
+    return <div className="flex justify-center items-center h-64">Loading analytics data...</div>;
   }
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-6">Performance Analytics</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <h1 className="text-2xl font-bold mb-6">Analytics Dashboard</h1>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{stats.totalSessions}</p>
+            <p className="text-2xl font-bold">{appointmentStats.reduce((sum, item) => sum + item.appointments, 0)}</p>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Unique Clients</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Most Popular Session Type</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{stats.totalClients}</p>
+            <p className="text-2xl font-bold">
+              {sessionTypeData.length > 0 
+                ? sessionTypeData.reduce((prev, current) => (prev.value > current.value) ? prev : current).name
+                : 'N/A'}
+            </p>
           </CardContent>
         </Card>
         
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Average Monthly Sessions</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">₦{stats.totalEarnings.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{stats.completionRate.toFixed(1)}%</p>
+            <p className="text-2xl font-bold">
+              {appointmentStats.length > 0 
+                ? (appointmentStats.reduce((sum, item) => sum + item.appointments, 0) / appointmentStats.length).toFixed(1)
+                : '0'}
+            </p>
           </CardContent>
         </Card>
       </div>
-
-      <Tabs defaultValue="sessions" className="mt-6">
-        <TabsList className="mb-4">
-          <TabsTrigger value="sessions">Sessions</TabsTrigger>
-          <TabsTrigger value="earnings">Earnings</TabsTrigger>
-        </TabsList>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Monthly Appointments</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={appointmentStats}
+                margin={{
+                  top: 5,
+                  right: 30,
+                  left: 20,
+                  bottom: 5,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="appointments" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
         
-        <TabsContent value="sessions">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sessions (Last 7 Days)</CardTitle>
-            </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={sessionsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="sessions" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="earnings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Earnings (Last 7 Days)</CardTitle>
-            </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={earningsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`₦${value}`, 'Earnings']} />
-                  <Bar dataKey="earnings" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Session Types</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={sessionTypeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {sessionTypeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

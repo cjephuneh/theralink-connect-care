@@ -36,6 +36,13 @@ interface SessionNote {
   appointment_date: string;
 }
 
+interface AppointmentWithClient {
+  id: string;
+  start_time: string;
+  client_id: string;
+  client_name: string;
+}
+
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   content: z.string().min(1, "Content is required"),
@@ -44,7 +51,7 @@ const formSchema = z.object({
 
 const SessionNotes = () => {
   const [notes, setNotes] = useState<SessionNote[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<AppointmentWithClient[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -67,41 +74,66 @@ const SessionNotes = () => {
         // Fetch all notes for this therapist
         const { data: notesData, error: notesError } = await supabase
           .from('session_notes')
-          .select(`
-            *,
-            profiles:client_id (full_name),
-            appointments:appointment_id (start_time)
-          `)
+          .select('*')
           .eq('therapist_id', user.id)
           .order('created_at', { ascending: false });
 
         if (notesError) throw notesError;
 
-        // Transform data
-        const formattedNotes = notesData?.map(note => ({
-          ...note,
-          client_name: note.profiles?.full_name || 'Unknown Client',
-          appointment_date: note.appointments ? new Date(note.appointments.start_time).toLocaleDateString() : 'N/A'
-        })) || [];
+        // Fetch client names for the notes
+        const notesWithClientNames = await Promise.all(
+          (notesData || []).map(async (note) => {
+            // Get client name
+            const { data: clientData } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', note.client_id)
+              .single();
+            
+            // Get appointment date
+            const { data: appointmentData } = await supabase
+              .from('appointments')
+              .select('start_time')
+              .eq('id', note.appointment_id)
+              .single();
+            
+            return {
+              ...note,
+              client_name: clientData?.full_name || 'Unknown Client',
+              appointment_date: appointmentData ? new Date(appointmentData.start_time).toLocaleDateString() : 'N/A'
+            } as SessionNote;
+          })
+        );
 
-        setNotes(formattedNotes);
+        setNotes(notesWithClientNames);
 
         // Fetch completed appointments for this therapist (for creating new notes)
         const { data: appointmentsData, error: appointmentsError } = await supabase
           .from('appointments')
-          .select(`
-            id, 
-            start_time,
-            client_id,
-            profiles:client_id (full_name)
-          `)
+          .select('id, start_time, client_id')
           .eq('therapist_id', user.id)
           .eq('status', 'completed')
           .order('start_time', { ascending: false });
 
         if (appointmentsError) throw appointmentsError;
         
-        setAppointments(appointmentsData || []);
+        // Get client names for appointments
+        const appointmentsWithClientNames = await Promise.all(
+          (appointmentsData || []).map(async (appointment) => {
+            const { data: clientData } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', appointment.client_id)
+              .single();
+            
+            return {
+              ...appointment,
+              client_name: clientData?.full_name || 'Unknown Client'
+            } as AppointmentWithClient;
+          })
+        );
+        
+        setAppointments(appointmentsWithClientNames);
       } catch (error) {
         console.error('Error fetching session notes:', error);
         toast({
@@ -142,20 +174,16 @@ const SessionNotes = () => {
           title: values.title,
           content: values.content,
         })
-        .select(`
-          *,
-          profiles:client_id (full_name),
-          appointments:appointment_id (start_time)
-        `)
+        .select()
         .single();
 
       if (error) throw error;
 
-      // Add the new note to the state
-      const newNote = {
+      // Add the new note to the state with client name and appointment date
+      const newNote: SessionNote = {
         ...data,
-        client_name: data.profiles?.full_name || 'Unknown Client',
-        appointment_date: data.appointments ? new Date(data.appointments.start_time).toLocaleDateString() : 'N/A'
+        client_name: appointment.client_name,
+        appointment_date: new Date(appointment.start_time).toLocaleDateString()
       };
       
       setNotes(prev => [newNote, ...prev]);
@@ -223,7 +251,7 @@ const SessionNotes = () => {
                           <option value="">Select an appointment</option>
                           {appointments.map(appointment => (
                             <option key={appointment.id} value={appointment.id}>
-                              {new Date(appointment.start_time).toLocaleString()} - {appointment.profiles?.full_name}
+                              {new Date(appointment.start_time).toLocaleString()} - {appointment.client_name}
                             </option>
                           ))}
                         </select>

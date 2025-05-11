@@ -116,6 +116,61 @@ export type Database = {
         }
         Relationships: []
       }
+      session_notes: {
+        Row: {
+          appointment_id: string | null
+          client_id: string | null
+          content: string
+          created_at: string
+          id: string
+          therapist_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          therapist_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          therapist_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_notes_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_notes_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       therapists: {
         Row: {
           availability: Json | null

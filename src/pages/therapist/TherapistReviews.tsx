@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Star } from 'lucide-react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import ReviewCard from '@/components/reviews/ReviewCard';
 
 interface Review {
   id: string;
@@ -20,7 +20,7 @@ interface Review {
 const TherapistReviews = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,21 +36,30 @@ const TherapistReviews = () => {
             therapist_id,
             rating,
             comment,
-            created_at,
-            profiles:client_id (full_name)
+            created_at
           `)
           .eq('therapist_id', user.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        // Transform the data to match our Review interface
-        const formattedReviews = data?.map((review) => ({
-          ...review,
-          client_name: review.profiles?.full_name || 'Anonymous Client'
-        })) || [];
+        // Get client names for reviews
+        const reviewsWithClientNames = await Promise.all(
+          (data || []).map(async (review) => {
+            const { data: clientData } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', review.client_id)
+              .single();
+            
+            return {
+              ...review,
+              client_name: clientData?.full_name || 'Anonymous Client'
+            };
+          })
+        );
 
-        setReviews(formattedReviews);
+        setReviews(reviewsWithClientNames);
       } catch (error) {
         console.error('Error fetching reviews:', error);
         toast({
@@ -109,25 +118,14 @@ const TherapistReviews = () => {
       ) : (
         <div className="grid gap-4">
           {reviews.map((review) => (
-            <Card key={review.id}>
-              <CardHeader className="pb-2">
-                <div className="flex justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback>{review.client_name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-base">{review.client_name}</CardTitle>
-                      <CardDescription>{new Date(review.created_at).toLocaleDateString()}</CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex">{renderStars(review.rating)}</div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm">{review.comment}</p>
-              </CardContent>
-            </Card>
+            <ReviewCard
+              key={review.id}
+              id={review.id}
+              clientName={review.client_name}
+              rating={review.rating}
+              comment={review.comment}
+              date={new Date(review.created_at).toLocaleDateString()}
+            />
           ))}
         </div>
       )}
