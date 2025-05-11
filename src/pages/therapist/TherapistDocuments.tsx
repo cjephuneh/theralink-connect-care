@@ -1,12 +1,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Search, Filter, FolderPlus, Upload, Plus, MoreHorizontal, Download, Eye, Edit, Trash2, FileImage, FileCheck, FileLock } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,416 +11,526 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  Download,
+  File,
+  FileText,
+  Filter,
+  FolderIcon,
+  Grid,
+  List,
+  MoreVertical,
+  Plus,
+  Search,
+  Share2,
+  Star,
+  Upload,
+} from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Mock document data
 const documents = [
   {
     id: 1,
-    name: "Intake Assessment - Sarah Johnson.pdf",
-    type: "assessment",
-    client: "Sarah Johnson",
-    sharedWithClient: true,
-    date: "2025-05-01",
-    size: "1.2 MB",
-    icon: FileCheck
+    name: "Client Intake Form.pdf",
+    type: "PDF",
+    size: "245 KB",
+    modified: "May 10, 2025",
+    client: {
+      name: "Sarah Johnson",
+      avatar: "/placeholder.svg",
+    },
+    category: "Forms",
+    starred: true,
   },
   {
     id: 2,
-    name: "Progress Notes - Michael Chen - Session 4.pdf",
-    type: "notes",
-    client: "Michael Chen",
-    sharedWithClient: false,
-    date: "2025-04-28",
-    size: "520 KB",
-    icon: FileText
+    name: "Therapy Agreement.docx",
+    type: "DOCX",
+    size: "128 KB",
+    modified: "May 8, 2025",
+    client: null,
+    category: "Templates",
+    starred: false,
   },
   {
     id: 3,
-    name: "Anxiety Worksheet.pdf",
-    type: "worksheet",
-    client: null,
-    sharedWithClient: false,
-    date: "2025-04-15",
-    size: "850 KB",
-    icon: FileText
+    name: "Session Notes - Michael Chen.pdf",
+    type: "PDF",
+    size: "312 KB",
+    modified: "May 5, 2025",
+    client: {
+      name: "Michael Chen",
+      avatar: "/placeholder.svg",
+    },
+    category: "Notes",
+    starred: true,
   },
   {
     id: 4,
-    name: "Treatment Plan - Emily Davis.pdf",
-    type: "plan",
-    client: "Emily Davis",
-    sharedWithClient: true,
-    date: "2025-04-10",
-    size: "760 KB",
-    icon: FileCheck
+    name: "Anxiety Assessment.pdf",
+    type: "PDF",
+    size: "156 KB",
+    modified: "Apr 28, 2025",
+    client: {
+      name: "Emily Davis",
+      avatar: "/placeholder.svg",
+    },
+    category: "Assessments",
+    starred: false,
   },
   {
     id: 5,
-    name: "CBT Techniques Reference.pdf",
-    type: "resource",
+    name: "Consent for Telehealth.pdf",
+    type: "PDF",
+    size: "98 KB",
+    modified: "Apr 25, 2025",
     client: null,
-    sharedWithClient: false,
-    date: "2025-03-22",
-    size: "1.5 MB",
-    icon: FileText
+    category: "Forms",
+    starred: false,
   },
   {
     id: 6,
-    name: "HIPAA Compliance Certificate.pdf",
-    type: "certificate",
-    client: null,
-    sharedWithClient: false,
-    date: "2025-01-15",
-    size: "950 KB",
-    icon: FileLock
+    name: "Depression Screening.pdf",
+    type: "PDF",
+    size: "134 KB",
+    modified: "Apr 20, 2025",
+    client: {
+      name: "David Wilson",
+      avatar: "/placeholder.svg",
+    },
+    category: "Assessments",
+    starred: false,
   },
   {
     id: 7,
-    name: "Stress Management Diagram.jpg",
-    type: "image",
+    name: "Session Notes - Emily Davis.pdf",
+    type: "PDF",
+    size: "287 KB",
+    modified: "Apr 15, 2025",
+    client: {
+      name: "Emily Davis",
+      avatar: "/placeholder.svg",
+    },
+    category: "Notes",
+    starred: false,
+  },
+  {
+    id: 8,
+    name: "HIPAA Notice.pdf",
+    type: "PDF",
+    size: "178 KB",
+    modified: "Apr 10, 2025",
     client: null,
-    sharedWithClient: true,
-    date: "2025-02-18",
-    size: "1.8 MB",
-    icon: FileImage
-  }
+    category: "Forms",
+    starred: true,
+  },
 ];
 
-// Category data for the filter
+// Document categories
 const categories = [
-  { value: "all", label: "All Documents" },
-  { value: "assessment", label: "Assessments" },
-  { value: "notes", label: "Session Notes" },
-  { value: "plan", label: "Treatment Plans" },
-  { value: "worksheet", label: "Worksheets" },
-  { value: "resource", label: "Resources" },
-  { value: "certificate", label: "Certificates" }
+  { name: "All Documents", count: documents.length },
+  { name: "Forms", count: documents.filter(d => d.category === "Forms").length },
+  { name: "Notes", count: documents.filter(d => d.category === "Notes").length },
+  { name: "Assessments", count: documents.filter(d => d.category === "Assessments").length },
+  { name: "Templates", count: documents.filter(d => d.category === "Templates").length },
 ];
+
+// Get file icon based on type
+const getFileIcon = (type: string) => {
+  switch (type) {
+    case "PDF":
+      return <FileText className="h-8 w-8 text-red-500" />;
+    case "DOCX":
+      return <FileText className="h-8 w-8 text-blue-500" />;
+    default:
+      return <File className="h-8 w-8 text-gray-500" />;
+  }
+};
 
 const TherapistDocuments = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("All Documents");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [starredFilter, setStarredFilter] = useState(false);
   
+  // Filter documents based on search query, category, and starred status
   const filteredDocuments = documents.filter(doc => {
-    const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (doc.client && doc.client.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = selectedCategory === "all" || doc.type === selectedCategory;
+    // Search filter
+    const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return matchesSearch && matchesCategory;
+    // Category filter
+    const matchesCategory = selectedCategory === "All Documents" || doc.category === selectedCategory;
+    
+    // Starred filter
+    const matchesStarred = !starredFilter || doc.starred;
+    
+    return matchesSearch && matchesCategory && matchesStarred;
   });
-
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Documents</h1>
-          <p className="text-muted-foreground mt-1">Manage your clinical documents and resources.</p>
+          <p className="text-muted-foreground mt-1">Manage your forms, templates, and client documents.</p>
         </div>
-        <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> New Document
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Create New Document</DialogTitle>
-                <DialogDescription>
-                  Select the type of document you want to create or upload.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <Button variant="outline" className="justify-start h-auto py-4">
-                  <div className="flex items-center">
-                    <FileText className="h-5 w-5 mr-4 text-primary" />
-                    <div className="text-left">
-                      <div className="font-medium">Create New Document</div>
-                      <div className="text-sm text-muted-foreground">Start with a blank document or template</div>
-                    </div>
-                  </div>
-                </Button>
-                
-                <Button variant="outline" className="justify-start h-auto py-4">
-                  <div className="flex items-center">
-                    <Upload className="h-5 w-5 mr-4 text-primary" />
-                    <div className="text-left">
-                      <div className="font-medium">Upload Document</div>
-                      <div className="text-sm text-muted-foreground">Upload an existing document from your device</div>
-                    </div>
-                  </div>
-                </Button>
-                
-                <Button variant="outline" className="justify-start h-auto py-4">
-                  <div className="flex items-center">
-                    <FolderPlus className="h-5 w-5 mr-4 text-primary" />
-                    <div className="text-left">
-                      <div className="font-medium">Create Folder</div>
-                      <div className="text-sm text-muted-foreground">Organize your documents into folders</div>
-                    </div>
-                  </div>
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
+        <div className="flex gap-2">
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Upload className="mr-2 h-4 w-4" /> Upload
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Upload Document</DialogTitle>
                 <DialogDescription>
-                  Upload a document from your device.
+                  Upload a document to your secure document storage.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-accent/50 transition-colors">
-                  <Upload className="h-8 w-8 mb-4 mx-auto text-muted-foreground" />
-                  <p className="font-medium">Click to upload or drag and drop</p>
+                <div className="border-2 border-dashed rounded-md p-8 text-center">
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                  <p className="mt-2 font-medium">Drag and drop files here</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    PDF, DOC, DOCX, JPG or PNG (max. 10MB)
+                    or click to browse
                   </p>
+                  <Input
+                    type="file"
+                    className="w-full h-full opacity-0 absolute inset-0 cursor-pointer"
+                  />
                 </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="client">Associate with client (optional)</Label>
-                  <Input id="client" placeholder="Select client" />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Input id="category" placeholder="Select category" />
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Input type="checkbox" id="share" className="w-4 h-4" />
-                  <Label htmlFor="share">Share with client</Label>
+                <div className="text-sm text-muted-foreground">
+                  <p>Supported formats: PDF, DOCX, JPG, PNG. Max size: 5MB</p>
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled>Upload Document</Button>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+                <Button type="submit">Upload</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> New Document
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Document</DialogTitle>
+                <DialogDescription>
+                  Create a new document from a template or from scratch.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+                    <CardContent className="p-6 text-center">
+                      <FileText className="h-12 w-12 mx-auto text-blue-500 mb-4" />
+                      <h3 className="font-medium">Client Intake Form</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Standard intake form for new clients
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+                    <CardContent className="p-6 text-center">
+                      <FileText className="h-12 w-12 mx-auto text-green-500 mb-4" />
+                      <h3 className="font-medium">Session Notes</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Template for therapy session notes
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+                    <CardContent className="p-6 text-center">
+                      <FileText className="h-12 w-12 mx-auto text-purple-500 mb-4" />
+                      <h3 className="font-medium">Treatment Plan</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Client treatment plan template
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+                    <CardContent className="p-6 text-center">
+                      <File className="h-12 w-12 mx-auto text-gray-500 mb-4" />
+                      <h3 className="font-medium">Blank Document</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Create a document from scratch
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="md:w-1/4 lg:w-1/5">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Categories</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-1">
-                {categories.map(category => (
-                  <Button
-                    key={category.value}
-                    variant={selectedCategory === category.value ? "default" : "ghost"}
-                    className="w-full justify-start"
-                    onClick={() => setSelectedCategory(category.value)}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Left Sidebar */}
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle>Categories</CardTitle>
+          </CardHeader>
+          <CardContent className="px-2">
+            <div className="space-y-1">
+              {categories.map((category) => (
+                <Button
+                  key={category.name}
+                  variant={selectedCategory === category.name ? "secondary" : "ghost"}
+                  className="w-full justify-start"
+                  onClick={() => setSelectedCategory(category.name)}
+                >
+                  <FolderIcon className="mr-2 h-4 w-4" />
+                  {category.name}
+                  <Badge variant="outline" className="ml-auto">
+                    {category.count}
+                  </Badge>
+                </Button>
+              ))}
+            </div>
+            <Separator className="my-4" />
+            <Button
+              variant={starredFilter ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setStarredFilter(!starredFilter)}
+            >
+              <Star className={`mr-2 h-4 w-4 ${starredFilter ? "fill-yellow-400 text-yellow-400" : ""}`} />
+              Starred
+              <Badge variant="outline" className="ml-auto">
+                {documents.filter(d => d.starred).length}
+              </Badge>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Main Content */}
+        <Card className="md:col-span-3">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <CardTitle>{selectedCategory}</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                  className={viewMode === "list" ? "bg-accent" : ""}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setViewMode("grid")}
+                  className={viewMode === "grid" ? "bg-accent" : ""}
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+                <Separator orientation="vertical" className="h-6" />
+                <Button variant="outline" size="icon">
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search documents..." 
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {filteredDocuments.length === 0 ? (
+              <div className="text-center p-8">
+                <Search className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <h3 className="font-medium">No documents found</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Try adjusting your search or filters
+                </p>
+              </div>
+            ) : viewMode === "list" ? (
+              <div className="rounded-md border">
+                <div className="hidden md:grid grid-cols-12 p-4 text-sm font-medium text-muted-foreground">
+                  <div className="col-span-5">Name</div>
+                  <div className="col-span-3">Client</div>
+                  <div className="col-span-2">Modified</div>
+                  <div className="col-span-1">Size</div>
+                  <div className="col-span-1"></div>
+                </div>
+                <Separator />
+                {filteredDocuments.map((doc) => (
+                  <div 
+                    key={doc.id} 
+                    className="grid grid-cols-12 p-4 items-center hover:bg-accent/50 transition-colors"
                   >
-                    {category.label}
-                  </Button>
+                    <div className="col-span-12 md:col-span-5 flex items-center gap-3 mb-2 md:mb-0">
+                      <div className="flex-shrink-0">
+                        {getFileIcon(doc.type)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate">{doc.name}</p>
+                          {doc.starred && (
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground md:hidden">
+                          {doc.modified} · {doc.size}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="col-span-6 md:col-span-3">
+                      {doc.client ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-7 w-7">
+                            <AvatarImage src={doc.client.avatar} />
+                            <AvatarFallback>{doc.client.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm hidden md:inline">{doc.client.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </div>
+                    
+                    <div className="col-span-3 md:col-span-2 hidden md:block">
+                      <span className="text-sm">{doc.modified}</span>
+                    </div>
+                    
+                    <div className="col-span-2 md:col-span-1 hidden md:block">
+                      <span className="text-sm">{doc.size}</span>
+                    </div>
+                    
+                    <div className="col-span-6 md:col-span-1 flex justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem>
+                            <Download className="mr-2 h-4 w-4" /> Download
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Share2 className="mr-2 h-4 w-4" /> Share
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Star className="mr-2 h-4 w-4" /> {doc.starred ? "Unstar" : "Star"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="md:w-3/4 lg:w-4/5">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <CardTitle>{categories.find(c => c.value === selectedCategory)?.label || "All Documents"}</CardTitle>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <div className="relative flex-1 sm:flex-initial">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search documents..." 
-                      className="pl-8 w-full"
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <Button variant="outline" size="icon">
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <CardDescription>
-                {filteredDocuments.length} {filteredDocuments.length === 1 ? "document" : "documents"} found
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="grid" className="w-full">
-                <div className="flex justify-end mb-4">
-                  <TabsList>
-                    <TabsTrigger value="grid">Grid</TabsTrigger>
-                    <TabsTrigger value="table">Table</TabsTrigger>
-                  </TabsList>
-                </div>
-                
-                <TabsContent value="grid" className="mt-0">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredDocuments.map((doc) => (
-                      <Card key={doc.id} className="overflow-hidden">
-                        <div className="bg-muted/30 p-6 flex flex-col items-center justify-center">
-                          <doc.icon className="h-12 w-12 text-muted-foreground" />
-                        </div>
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate text-sm">{doc.name}</p>
-                              {doc.client && (
-                                <p className="text-muted-foreground text-xs mt-1">Client: {doc.client}</p>
-                              )}
-                              <div className="flex items-center mt-2 text-xs text-muted-foreground">
-                                <span>{formatDate(doc.date)}</span>
-                                <span className="mx-1">•</span>
-                                <span>{doc.size}</span>
-                              </div>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="mr-2 h-4 w-4" /> View
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Download className="mr-2 h-4 w-4" /> Download
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Edit className="mr-2 h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  {doc.sharedWithClient ? (
-                                    <>
-                                      <FileLock className="mr-2 h-4 w-4" /> Make Private
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FileCheck className="mr-2 h-4 w-4" /> Share with Client
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive">
-                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredDocuments.map((doc) => (
+                  <Card key={doc.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                    <CardContent className="p-0">
+                      <div className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0">
+                            {getFileIcon(doc.type)}
                           </div>
-                          {doc.sharedWithClient && (
-                            <Badge variant="outline" className="mt-2 text-xs bg-muted/50">
-                              Shared with client
-                            </Badge>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="table" className="mt-0">
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[300px]">Name</TableHead>
-                          <TableHead>Client</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Size</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredDocuments.map((doc) => (
-                          <TableRow key={doc.id}>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center">
-                                <doc.icon className="h-5 w-5 mr-2 text-muted-foreground" />
-                                <span>{doc.name}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>{doc.client || "—"}</TableCell>
-                            <TableCell>{formatDate(doc.date)}</TableCell>
-                            <TableCell>{doc.size}</TableCell>
-                            <TableCell>
-                              {doc.sharedWithClient ? (
-                                <Badge variant="outline" className="bg-muted/50">Shared</Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-muted/10">Private</Badge>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 justify-between">
+                              <p className="font-medium truncate">{doc.name}</p>
+                              {doc.starred && (
+                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 flex-shrink-0" />
                               )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>
-                                    <Eye className="mr-2 h-4 w-4" /> View
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem>
-                                    <Download className="mr-2 h-4 w-4" /> Download
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem>
-                                    <Edit className="mr-2 h-4 w-4" /> Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem>
-                                    {doc.sharedWithClient ? (
-                                      <>
-                                        <FileLock className="mr-2 h-4 w-4" /> Make Private
-                                      </>
-                                    ) : (
-                                      <>
-                                        <FileCheck className="mr-2 h-4 w-4" /> Share with Client
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem className="text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {doc.category} · {doc.size}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {doc.client ? (
+                              <>
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={doc.client.avatar} />
+                                  <AvatarFallback>{doc.client.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs truncate max-w-[100px]">{doc.client.name}</span>
+                              </>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">No client</span>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">{doc.modified}</span>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="p-2 flex justify-between">
+                        <Button variant="ghost" size="sm" className="text-xs">
+                          <Download className="h-3 w-3 mr-1" /> Download
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem>
+                              <Download className="mr-2 h-4 w-4" /> Download
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Share2 className="mr-2 h-4 w-4" /> Share
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Star className="mr-2 h-4 w-4" /> {doc.starred ? "Unstar" : "Star"}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
