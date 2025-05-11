@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -76,12 +74,13 @@ const AIMatchingPage = () => {
     
     try {
       // In a real application, we would send this data to a backend or make a direct query
-      // Here, we'll simulate AI matching with a delay and simple query
+      // Here, we'll simulate AI matching with a delay and query the therapists table
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const experienceThreshold = values.experienceLevel;
       const specialization = values.concernType !== "other" ? values.concernType : undefined;
       
+      // Fixed query to avoid the foreign key relationship error
       let query = supabase
         .from('therapists')
         .select(`
@@ -89,8 +88,7 @@ const AIMatchingPage = () => {
           years_experience, 
           specialization, 
           hourly_rate,
-          rating,
-          profiles:id(full_name, profile_image_url)
+          rating
         `)
         .gte('years_experience', experienceThreshold);
         
@@ -103,13 +101,29 @@ const AIMatchingPage = () => {
       if (error) throw error;
       
       if (therapists && therapists.length > 0) {
+        // Now fetch profile information separately for each therapist
+        const therapistsWithProfiles = await Promise.all(
+          therapists.map(async (therapist) => {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('full_name, profile_image_url')
+              .eq('id', therapist.id)
+              .single();
+              
+            return {
+              ...therapist,
+              profile: profileData
+            };
+          })
+        );
+        
         // Store matched therapists in session storage for display on results page
-        sessionStorage.setItem('matchedTherapists', JSON.stringify(therapists));
+        sessionStorage.setItem('matchedTherapists', JSON.stringify(therapistsWithProfiles));
         navigate('/ai-matching/results');
         
         toast({
           title: "Match Found!",
-          description: `We've found ${therapists.length} therapists that match your preferences.`,
+          description: `We've found ${therapistsWithProfiles.length} therapists that match your preferences.`,
         });
       } else {
         toast({

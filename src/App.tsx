@@ -51,6 +51,11 @@ import SessionNotes from "./pages/therapist/SessionNotes";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminTherapists from "./pages/admin/AdminTherapists";
+import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminAppointments from "./pages/admin/AdminAppointments";
+import AdminContent from "./pages/admin/AdminContent";
 
 const queryClient = new QueryClient();
 
@@ -110,6 +115,11 @@ const App = () => (
             {/* Admin Routes */}
             <Route path="/admin" element={<TherapistLayout />}>
               <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="therapists" element={<AdminTherapists />} />
+              <Route path="transactions" element={<AdminTransactions />} />
+              <Route path="appointments" element={<AdminAppointments />} />
+              <Route path="content" element={<AdminContent />} />
             </Route>
           </Routes>
         </BrowserRouter>

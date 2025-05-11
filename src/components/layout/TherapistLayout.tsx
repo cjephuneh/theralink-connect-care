@@ -15,7 +15,10 @@ import {
   User,
   FileCheck,
   Star,
-  UserCog
+  UserCog,
+  Wallet,
+  BookOpen,
+  FileDigit
 } from "lucide-react";
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,7 +28,7 @@ const TherapistLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -53,6 +56,24 @@ const TherapistLayout = () => {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/');
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout Failed",
+        description: "There was a problem logging out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Define nav items based on user role
   const therapistNavItems = [
     { path: '/therapist/dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -70,8 +91,9 @@ const TherapistLayout = () => {
     { path: '/admin/dashboard', label: 'Dashboard', icon: BarChart3 },
     { path: '/admin/users', label: 'Manage Users', icon: Users },
     { path: '/admin/therapists', label: 'Manage Therapists', icon: UserCog },
-    { path: '/admin/appointments', label: 'All Appointments', icon: Calendar },
-    { path: '/admin/messages', label: 'All Messages', icon: MessageCircle },
+    { path: '/admin/appointments', label: 'Appointments', icon: Calendar },
+    { path: '/admin/transactions', label: 'Transactions', icon: Wallet },
+    { path: '/admin/content', label: 'Content Management', icon: BookOpen },
     { path: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -132,7 +154,7 @@ const TherapistLayout = () => {
           <Button
             variant="ghost"
             className={`w-full flex items-center justify-${isCollapsed ? 'center' : 'start'} text-sidebar-foreground hover:bg-sidebar-accent/50`}
-            onClick={() => navigate('/')}
+            onClick={handleLogout}
           >
             <LogOut className="h-5 w-5" />
             {!isCollapsed && <span className="ml-2">Log Out</span>}
