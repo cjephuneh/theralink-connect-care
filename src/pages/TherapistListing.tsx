@@ -151,19 +151,19 @@ const TherapistListing = () => {
       );
     }
     
-    if (specialty) {
+    if (specialty && specialty !== "all") {
       filtered = filtered.filter(
         therapist => therapist.specialties.includes(specialty)
       );
     }
     
-    if (language) {
+    if (language && language !== "all") {
       filtered = filtered.filter(
         therapist => therapist.languages.includes(language)
       );
     }
     
-    if (availability) {
+    if (availability && availability !== "all") {
       if (availability === "Today") {
         filtered = filtered.filter(
           therapist => therapist.nextAvailable === "Today"
@@ -213,7 +213,8 @@ const TherapistListing = () => {
                 <SelectValue placeholder="Specialty" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Specialties</SelectItem>
+                {/* Fix: Changed from empty string to "all" */}
+                <SelectItem value="all">All Specialties</SelectItem>
                 {allSpecialties.map(spec => (
                   <SelectItem key={spec} value={spec}>{spec}</SelectItem>
                 ))}
@@ -225,7 +226,8 @@ const TherapistListing = () => {
                 <SelectValue placeholder="Language" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Languages</SelectItem>
+                {/* Fix: Changed from empty string to "all" */}
+                <SelectItem value="all">All Languages</SelectItem>
                 {allLanguages.map(lang => (
                   <SelectItem key={lang} value={lang}>{lang}</SelectItem>
                 ))}
@@ -237,7 +239,8 @@ const TherapistListing = () => {
                 <SelectValue placeholder="Availability" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Any Availability</SelectItem>
+                {/* Fix: Changed from empty string to "all" */}
+                <SelectItem value="all">Any Availability</SelectItem>
                 <SelectItem value="Today">Available Today</SelectItem>
                 <SelectItem value="This Week">Available This Week</SelectItem>
               </SelectContent>
@@ -253,17 +256,17 @@ const TherapistListing = () => {
                   Search: {searchQuery}
                 </span>
               )}
-              {specialty && (
+              {specialty && specialty !== "all" && (
                 <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-2">
                   {specialty}
                 </span>
               )}
-              {language && (
+              {language && language !== "all" && (
                 <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-2">
                   {language}
                 </span>
               )}
-              {availability && (
+              {availability && availability !== "all" && (
                 <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-2">
                   {availability}
                 </span>
