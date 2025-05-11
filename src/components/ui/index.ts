@@ -92,8 +92,9 @@ export * from "./textarea";
 
 // Toast
 export * from "./toast";
-export * from "./toaster";
-export * from "./sonner";
+export { Toaster } from "./toaster";
+// Rename the Toaster from sonner to avoid name collision
+export { Toaster as SonnerToaster } from "./sonner";
 
 // Toggle
 export * from "./toggle";
