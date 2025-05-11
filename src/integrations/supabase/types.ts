@@ -116,6 +116,48 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          client_id: string
+          comment: string
+          created_at: string
+          id: string
+          rating: number
+          therapist_id: string
+        }
+        Insert: {
+          client_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          rating: number
+          therapist_id: string
+        }
+        Update: {
+          client_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          therapist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_notes: {
         Row: {
           appointment_id: string | null
