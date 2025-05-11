@@ -18,7 +18,8 @@ import {
   Phone,
   Video,
   Info,
-  Star
+  Star,
+  X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
