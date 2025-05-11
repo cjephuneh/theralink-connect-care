@@ -34,32 +34,41 @@ const BookingPaymentPage = () => {
       if (!appointmentId) return;
       
       try {
-        const { data, error } = await supabase
+        // First fetch the appointment details
+        const { data: appointmentData, error: appointmentError } = await supabase
           .from('appointments')
           .select(`
             id,
             therapist_id,
             start_time,
-            session_type,
-            therapists:therapist_id(
-              hourly_rate,
-              profiles:id(full_name)
-            )
+            session_type
           `)
           .eq('id', appointmentId)
           .single();
 
-        if (error) throw error;
+        if (appointmentError) throw appointmentError;
+        
+        // Then fetch the therapist details separately
+        const { data: therapistData, error: therapistError } = await supabase
+          .from('therapists')
+          .select(`
+            hourly_rate,
+            profiles:id(full_name)
+          `)
+          .eq('id', appointmentData.therapist_id)
+          .single();
+          
+        if (therapistError) throw therapistError;
 
-        if (data) {
+        if (appointmentData && therapistData) {
           const appointmentInfo: AppointmentData = {
-            id: data.id,
-            therapist_id: data.therapist_id,
-            therapist_name: data.therapists.profiles.full_name,
-            date: new Date(data.start_time).toLocaleDateString(),
-            time: new Date(data.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            hourly_rate: data.therapists.hourly_rate,
-            session_type: data.session_type
+            id: appointmentData.id,
+            therapist_id: appointmentData.therapist_id,
+            therapist_name: therapistData.profiles.full_name,
+            date: new Date(appointmentData.start_time).toLocaleDateString(),
+            time: new Date(appointmentData.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            hourly_rate: therapistData.hourly_rate,
+            session_type: appointmentData.session_type
           };
           
           setAppointmentData(appointmentInfo);
