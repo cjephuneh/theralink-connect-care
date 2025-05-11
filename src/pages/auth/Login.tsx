@@ -7,26 +7,40 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loginType, setLoginType] = useState<"client" | "therapist">("client");
+  const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
+  const { signIn, user } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate(loginType === "therapist" ? "/therapist/dashboard" : "/dashboard");
+    }
+  }, [user, navigate, loginType]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    // In a real app, this would connect to an authentication service
-    console.log("Logging in with", { email, password, loginType });
-    
-    // Navigate to the appropriate dashboard
-    if (loginType === "therapist") {
-      navigate("/therapist/dashboard");
-    } else {
-      navigate("/dashboard");
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (!error) {
+        // Navigation will happen via the useEffect when user state updates
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -81,6 +95,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -98,18 +113,24 @@ const Login = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
-              <Button type="submit" className="w-full">
-                Sign In
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
 
@@ -126,7 +147,7 @@ const Login = () => {
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-4">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" disabled={isLoading}>
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -135,7 +156,7 @@ const Login = () => {
                   </svg>
                   Google
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" disabled={isLoading}>
                   <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M9.5 3.5H5.5C4.4 3.5 3.5 4.4 3.5 5.5V18.5C3.5 19.6 4.4 20.5 5.5 20.5H18.5C19.6 20.5 20.5 19.6 20.5 18.5V5.5C20.5 4.4 19.6 3.5 18.5 3.5H14.5V3.5C14.5 3.2 14.3 3 14 3H10C9.7 3 9.5 3.2 9.5 3.5V3.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path>
                     <path d="M7 8.5H17M7 12H17M7 15.5H12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path>

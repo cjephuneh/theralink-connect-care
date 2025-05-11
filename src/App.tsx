@@ -4,6 +4,7 @@ import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 // Layouts
 import Layout from "@/components/layout/Layout";
@@ -18,8 +19,10 @@ import VideoChat from "./pages/VideoChat";
 import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
 import BookingPage from "./pages/BookingPage";
+import BookingPaymentPage from "./pages/BookingPaymentPage";
 import BookingComplete from "./pages/BookingComplete";
 import HowItWorks from "./pages/HowItWorks";
+import ContactPage from "./pages/ContactPage";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -39,45 +42,49 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <SonnerToaster />
-      <BrowserRouter>
-        <Routes>
-          {/* Client Routes */}
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Index />} />
-            <Route path="therapists" element={<TherapistListing />} />
-            <Route path="therapists/:id" element={<TherapistProfile />} />
-            <Route path="therapists/:therapistId/book" element={<BookingPage />} />
-            <Route path="booking/complete/:therapistId/:date/:time" element={<BookingComplete />} />
-            <Route path="chat/:therapistId" element={<ChatPage />} />
-            <Route path="video/:therapistId" element={<VideoChat />} />
-            <Route path="dashboard" element={<ClientDashboard />} />
-            <Route path="how-it-works" element={<HowItWorks />} />
-            <Route path="*" element={<NotFound />} />
-          </Route>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <SonnerToaster />
+        <BrowserRouter>
+          <Routes>
+            {/* Client Routes */}
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Index />} />
+              <Route path="therapists" element={<TherapistListing />} />
+              <Route path="therapists/:id" element={<TherapistProfile />} />
+              <Route path="therapists/:therapistId/book" element={<BookingPage />} />
+              <Route path="payment/:appointmentId" element={<BookingPaymentPage />} />
+              <Route path="booking/complete/:therapistId/:date/:time" element={<BookingComplete />} />
+              <Route path="chat/:therapistId" element={<ChatPage />} />
+              <Route path="video/:therapistId" element={<VideoChat />} />
+              <Route path="dashboard" element={<ClientDashboard />} />
+              <Route path="how-it-works" element={<HowItWorks />} />
+              <Route path="contact" element={<ContactPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
 
-          {/* Auth Routes */}
-          <Route path="/auth">
-            <Route path="login" element={<Login />} />
-            <Route path="register" element={<Register />} />
-            <Route path="forgot-password" element={<ForgotPassword />} />
-          </Route>
+            {/* Auth Routes */}
+            <Route path="/auth">
+              <Route path="login" element={<Login />} />
+              <Route path="register" element={<Register />} />
+              <Route path="forgot-password" element={<ForgotPassword />} />
+            </Route>
 
-          {/* Therapist Routes */}
-          <Route path="/therapist" element={<TherapistLayout />}>
-            <Route path="dashboard" element={<TherapistDashboard />} />
-            <Route path="appointments" element={<TherapistAppointments />} />
-            <Route path="clients" element={<TherapistClients />} />
-            <Route path="messages" element={<TherapistMessages />} />
-            <Route path="documents" element={<TherapistDocuments />} />
-            <Route path="account" element={<TherapistAccount />} />
-            <Route path="settings" element={<TherapistSettings />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+            {/* Therapist Routes */}
+            <Route path="/therapist" element={<TherapistLayout />}>
+              <Route path="dashboard" element={<TherapistDashboard />} />
+              <Route path="appointments" element={<TherapistAppointments />} />
+              <Route path="clients" element={<TherapistClients />} />
+              <Route path="messages" element={<TherapistMessages />} />
+              <Route path="documents" element={<TherapistDocuments />} />
+              <Route path="account" element={<TherapistAccount />} />
+              <Route path="settings" element={<TherapistSettings />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

@@ -1,29 +1,40 @@
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { 
   User,
   MessageCircle,
-  Calendar,
-  Star,
   Menu,
   X,
+  LogOut,
+  CreditCard,
 } from "lucide-react";
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  // For demo purposes, we'll assume the user is not logged in initially
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
 
-  // Toggle login status for demo purposes
-  const toggleLogin = () => {
-    setIsLoggedIn(!isLoggedIn);
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
     closeMenu();
   };
+
+  const isTherapist = profile?.role === 'therapist';
 
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
@@ -45,27 +56,45 @@ const Header = () => {
             <Link to="/how-it-works" className="text-gray-600 hover:text-thera-600 transition-colors">
               How It Works
             </Link>
-            <Link to="/about" className="text-gray-600 hover:text-thera-600 transition-colors">
-              About Us
+            <Link to="/contact" className="text-gray-600 hover:text-thera-600 transition-colors">
+              Contact Us
             </Link>
-            {isLoggedIn ? (
+            {user ? (
               <div className="flex items-center space-x-4">
-                <Link 
-                  to="/dashboard" 
-                  className="text-gray-600 hover:text-thera-600 transition-colors"
-                >
-                  Dashboard
-                </Link>
-                <Button onClick={toggleLogin} variant="outline">
-                  Log Out
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center">
+                      <User className="h-4 w-4 mr-2" />
+                      <span>{profile?.full_name || 'My Account'}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate(isTherapist ? '/therapist/dashboard' : '/dashboard')}>
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(isTherapist ? '/therapist/messages' : '/messages')}>
+                      <MessageCircle className="h-4 w-4 mr-2" /> Messages
+                    </DropdownMenuItem>
+                    {!isTherapist && (
+                      <DropdownMenuItem onClick={() => navigate('/dashboard?tab=wallet')}>
+                        <CreditCard className="h-4 w-4 mr-2" /> Wallet
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="h-4 w-4 mr-2" /> Log Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                <Button onClick={toggleLogin} variant="outline">
+                <Button onClick={() => navigate('/auth/login')} variant="outline">
                   Log In
                 </Button>
-                <Button onClick={toggleLogin} className="bg-thera-600 hover:bg-thera-700">
+                <Button onClick={() => navigate('/auth/register')} className="bg-thera-600 hover:bg-thera-700">
                   Sign Up
                 </Button>
               </div>
@@ -105,40 +134,62 @@ const Header = () => {
               How It Works
             </Link>
             <Link 
-              to="/about" 
+              to="/contact" 
               className="block py-2 text-gray-600 hover:text-thera-600"
               onClick={closeMenu}
             >
-              About Us
+              Contact Us
             </Link>
-            {isLoggedIn ? (
+            {user ? (
               <>
                 <Link 
-                  to="/dashboard"
+                  to={isTherapist ? '/therapist/dashboard' : '/dashboard'}
                   className="block py-2 text-gray-600 hover:text-thera-600"
                   onClick={closeMenu}
                 >
                   Dashboard
                 </Link>
+                <Link 
+                  to={isTherapist ? '/therapist/messages' : '/messages'}
+                  className="block py-2 text-gray-600 hover:text-thera-600"
+                  onClick={closeMenu}
+                >
+                  Messages
+                </Link>
+                {!isTherapist && (
+                  <Link 
+                    to="/dashboard?tab=wallet"
+                    className="block py-2 text-gray-600 hover:text-thera-600"
+                    onClick={closeMenu}
+                  >
+                    Wallet
+                  </Link>
+                )}
                 <Button 
-                  onClick={toggleLogin} 
+                  onClick={handleLogout} 
                   variant="outline" 
                   className="w-full justify-start mt-2"
                 >
-                  Log Out
+                  <LogOut className="h-4 w-4 mr-2" /> Log Out
                 </Button>
               </>
             ) : (
               <>
                 <Button 
-                  onClick={toggleLogin} 
+                  onClick={() => {
+                    navigate('/auth/login');
+                    closeMenu();
+                  }} 
                   variant="outline" 
                   className="w-full justify-start mt-2"
                 >
                   Log In
                 </Button>
                 <Button 
-                  onClick={toggleLogin}
+                  onClick={() => {
+                    navigate('/auth/register');
+                    closeMenu();
+                  }}
                   className="w-full justify-start mt-2 bg-thera-600 hover:bg-thera-700"
                 >
                   Sign Up
