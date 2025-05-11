@@ -1,0 +1,107 @@
+
+import { useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import {
+  Calendar,
+  Users,
+  MessageCircle,
+  FileText,
+  Settings,
+  BarChart3,
+  Menu,
+  X,
+  LogOut,
+  User
+} from "lucide-react";
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+
+const TherapistLayout = () => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const navItems = [
+    { path: '/therapist/dashboard', label: 'Dashboard', icon: BarChart3 },
+    { path: '/therapist/appointments', label: 'Appointments', icon: Calendar },
+    { path: '/therapist/clients', label: 'Clients', icon: Users },
+    { path: '/therapist/messages', label: 'Messages', icon: MessageCircle },
+    { path: '/therapist/documents', label: 'Documents', icon: FileText },
+    { path: '/therapist/account', label: 'Account', icon: User },
+    { path: '/therapist/settings', label: 'Settings', icon: Settings },
+  ];
+
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Sidebar */}
+      <aside
+        className={`bg-sidebar-background border-r border-sidebar-border transition-all duration-300 ease-in-out fixed md:static inset-y-0 left-0 z-50 ${
+          isCollapsed ? 'w-20' : 'w-64'
+        } md:flex flex-col`}
+      >
+        {/* Sidebar Header */}
+        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+          <Link to="/therapist/dashboard" className="flex items-center space-x-2">
+            <div className="bg-thera-600 text-white p-1.5 rounded-md">
+              <span className="font-bold text-lg">T</span>
+            </div>
+            {!isCollapsed && <span className="font-bold text-lg text-sidebar-foreground">TheraLink</span>}
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="text-sidebar-foreground"
+          >
+            {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+          </Button>
+        </div>
+
+        {/* Navigation Links */}
+        <div className="flex-1 overflow-auto py-4">
+          <nav className="px-2 space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center px-3 py-2 rounded-md transition-colors ${
+                  isActive(item.path)
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                }`}
+              >
+                <item.icon className="h-5 w-5" />
+                {!isCollapsed && <span className="ml-3">{item.label}</span>}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-sidebar-border">
+          <Button
+            variant="ghost"
+            className={`w-full flex items-center justify-${isCollapsed ? 'center' : 'start'} text-sidebar-foreground hover:bg-sidebar-accent/50`}
+            onClick={() => navigate('/')}
+          >
+            <LogOut className="h-5 w-5" />
+            {!isCollapsed && <span className="ml-2">Log Out</span>}
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        <div className="container mx-auto p-4 md:p-6 lg:p-8">
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default TherapistLayout;
