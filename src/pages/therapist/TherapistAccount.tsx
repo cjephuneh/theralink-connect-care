@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, Bell, Calendar, Check, CreditCard, Globe, Lock, LogOut, Mail, MessageCircle, Pencil, Shield, Smartphone, UploadCloud, User, Video } from "lucide-react";
+import { AlertCircle, Bell, Calendar, Camera, Check, CheckCircle, CreditCard, Globe, Lock, LogOut, Mail, MessageCircle, Pencil, Shield, Smartphone, UploadCloud, User, Video } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
