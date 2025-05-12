@@ -21,12 +21,12 @@ import { MessageCircle, Send, User } from "lucide-react";
 const ClientMessages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [therapists, setTherapists] = useState([]);
-  const [messages, setMessages] = useState([]);
+  const [therapists, setTherapists] = useState<any[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [selectedTherapistId, setSelectedTherapistId] = useState(null);
+  const [selectedTherapistId, setSelectedTherapistId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch the user's therapists and messages
   useEffect(() => {
@@ -35,35 +35,36 @@ const ClientMessages = () => {
     const fetchTherapists = async () => {
       try {
         // Get therapists the client has had appointments with
-        const { data, error } = await supabase
+        // Modified query to avoid the problematic join
+        const { data: appointmentsData, error: appointmentsError } = await supabase
           .from('appointments')
-          .select(`
-            therapist_id,
-            profiles:therapist_id (id, full_name, profile_image_url)
-          `)
+          .select('therapist_id')
           .eq('client_id', user.id)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-
-        // Create a unique list of therapists
-        const uniqueTherapists = data.reduce((acc, current) => {
-          const x = acc.find(item => item.id === current.profiles.id);
-          if (!x) {
-            acc.push({
-              id: current.profiles.id,
-              full_name: current.profiles.full_name,
-              profile_image_url: current.profiles.profile_image_url
-            });
-          }
-          return acc;
-        }, []);
-
-        setTherapists(uniqueTherapists);
+        if (appointmentsError) throw appointmentsError;
         
-        // If there's at least one therapist, select them
-        if (uniqueTherapists.length > 0) {
-          setSelectedTherapistId(uniqueTherapists[0].id);
+        if (!appointmentsData || appointmentsData.length === 0) {
+          setTherapists([]);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Extract unique therapist IDs
+        const uniqueTherapistIds = [...new Set(appointmentsData.map(a => a.therapist_id))];
+        
+        // Fetch therapist profiles separately
+        const { data: therapistProfiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, profile_image_url')
+          .in('id', uniqueTherapistIds);
+          
+        if (profilesError) throw profilesError;
+        
+        if (therapistProfiles && therapistProfiles.length > 0) {
+          setTherapists(therapistProfiles);
+          // Select the first therapist by default
+          setSelectedTherapistId(therapistProfiles[0].id);
         }
       } catch (error) {
         console.error('Error fetching therapists:', error);
@@ -93,8 +94,8 @@ const ClientMessages = () => {
 
         // Mark messages from therapist as read
         const unreadMessages = data
-          .filter(msg => msg.sender_id === selectedTherapistId && !msg.is_read)
-          .map(msg => msg.id);
+          .filter((msg: any) => msg.sender_id === selectedTherapistId && !msg.is_read)
+          .map((msg: any) => msg.id);
         
         if (unreadMessages.length > 0) {
           await supabase
@@ -166,21 +167,21 @@ const ClientMessages = () => {
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
-  const formatMessageTime = (dateString) => {
+  const formatMessageTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
-  const formatMessageDate = (dateString) => {
+  const formatMessageDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric'
@@ -189,7 +190,7 @@ const ClientMessages = () => {
 
   // Group messages by date
   const groupMessagesByDate = () => {
-    const groups = {};
+    const groups: Record<string, any[]> = {};
     messages.forEach(message => {
       const date = formatMessageDate(message.created_at);
       if (!groups[date]) groups[date] = [];
@@ -233,7 +234,7 @@ const ClientMessages = () => {
             <h3 className="font-medium">Your Therapists</h3>
           </div>
           <div className="divide-y">
-            {therapists.map((therapist) => (
+            {therapists && therapists.map((therapist) => (
               <div
                 key={therapist.id}
                 className={`p-3 flex items-center cursor-pointer hover:bg-accent ${

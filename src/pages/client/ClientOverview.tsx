@@ -80,7 +80,15 @@ const ClientOverview = () => {
   }, [user, toast]);
 
   const formatDate = (dateString) => {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    // Fixed date formatting options to use literal values instead of strings
+    const options = { 
+      weekday: 'long' as const, 
+      year: 'numeric' as const, 
+      month: 'long' as const, 
+      day: 'numeric' as const, 
+      hour: '2-digit' as const, 
+      minute: '2-digit' as const 
+    };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 

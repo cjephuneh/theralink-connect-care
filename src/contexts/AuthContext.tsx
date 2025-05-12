@@ -13,6 +13,7 @@ interface AuthContextProps {
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
   updateProfile: (data: any) => Promise<{ error: any | null }>;
+  refreshProfile: () => Promise<void>; // Added this method
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -23,6 +24,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+      
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  // Added refreshProfile method that can be used by components
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener first
@@ -56,25 +83,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
-
-  const fetchProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-      
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  };
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -177,6 +185,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     signOut,
     updateProfile,
+    refreshProfile, // Added this to the context value
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
