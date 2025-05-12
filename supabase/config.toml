@@ -18,5 +18,8 @@ port = 54324
 [storage]
 file_size_limit = "50MiB"
 
+[functions.contact_message]
+verify_jwt = false
+
 [functions.insert_contact_message]
 verify_jwt = true

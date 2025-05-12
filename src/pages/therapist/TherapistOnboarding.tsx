@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -233,21 +232,22 @@ const TherapistOnboarding = () => {
 
       if (therapistError) throw therapistError;
 
-      // Insert additional information to a therapist_details table
-      // First check if the table exists, if not we'll use RPCs
-      const { error: detailsError } = await supabase.rpc('insert_therapist_details', {
-        p_therapist_id: user.id,
-        p_education: values.education,
-        p_license_number: values.license_number,
-        p_license_type: values.license_type,
-        p_therapy_approaches: values.therapy_approaches.join(', '),
-        p_languages: values.languages,
-        p_insurance_info: values.insurance_info || 'None',
-        p_session_formats: values.session_format.join(', '),
-        p_has_insurance: values.has_malpractice_insurance,
-      });
+      // Insert additional information to the therapist_details table using the RPC function
+      const { error: detailsError } = await supabase.rpc(
+        'insert_therapist_details',
+        {
+          p_therapist_id: user.id,
+          p_education: values.education,
+          p_license_number: values.license_number,
+          p_license_type: values.license_type,
+          p_therapy_approaches: values.therapy_approaches.join(', '),
+          p_languages: values.languages,
+          p_insurance_info: values.insurance_info || 'None',
+          p_session_formats: values.session_format.join(', '),
+          p_has_insurance: values.has_malpractice_insurance
+        } as any
+      );
 
-      // If RPC doesn't exist, inform the user that admin needs to run migrations
       if (detailsError) {
         console.error('Error saving therapist details:', detailsError);
         throw new Error('Additional therapist details could not be saved. Please contact admin to set up the required database tables.');

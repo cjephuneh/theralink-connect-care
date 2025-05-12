@@ -59,6 +59,39 @@ export type Database = {
           },
         ]
       }
+      contact_messages: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_read: boolean | null
+          message: string
+          name: string
+          subject: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          name: string
+          subject: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          name?: string
+          subject?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -213,6 +246,62 @@ export type Database = {
           },
         ]
       }
+      therapist_details: {
+        Row: {
+          application_status: string | null
+          created_at: string
+          education: string | null
+          has_insurance: boolean | null
+          id: string
+          insurance_info: string | null
+          languages: string | null
+          license_number: string | null
+          license_type: string | null
+          session_formats: string | null
+          therapist_id: string
+          therapy_approaches: string | null
+          updated_at: string
+        }
+        Insert: {
+          application_status?: string | null
+          created_at?: string
+          education?: string | null
+          has_insurance?: boolean | null
+          id?: string
+          insurance_info?: string | null
+          languages?: string | null
+          license_number?: string | null
+          license_type?: string | null
+          session_formats?: string | null
+          therapist_id: string
+          therapy_approaches?: string | null
+          updated_at?: string
+        }
+        Update: {
+          application_status?: string | null
+          created_at?: string
+          education?: string | null
+          has_insurance?: boolean | null
+          id?: string
+          insurance_info?: string | null
+          languages?: string | null
+          license_number?: string | null
+          license_type?: string | null
+          session_formats?: string | null
+          therapist_id?: string
+          therapy_approaches?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapist_details_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       therapists: {
         Row: {
           availability: Json | null
@@ -317,7 +406,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      insert_contact_message: {
+        Args: {
+          p_name: string
+          p_email: string
+          p_subject: string
+          p_message: string
+          p_user_id?: string
+        }
+        Returns: undefined
+      }
+      insert_therapist_details: {
+        Args: {
+          p_therapist_id: string
+          p_education: string
+          p_license_number: string
+          p_license_type: string
+          p_therapy_approaches: string
+          p_languages: string
+          p_insurance_info: string
+          p_session_formats: string
+          p_has_insurance: boolean
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

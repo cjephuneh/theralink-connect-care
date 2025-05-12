@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   Card, 
@@ -36,8 +35,8 @@ const formSchema = z.object({
 
 const ContactPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
   const { user } = useAuth();
+  const { toast } = useToast();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,44 +48,48 @@ const ContactPage = () => {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
-    
+
     try {
-      // Fixed approach: Using the generic parameters of the rpc function
-      // This tells TypeScript the correct type information for this specific RPC call
-      const { error } = await supabase.functions.invoke<{ error: any }>(
-        'insert_contact_message',
-        {
-          body: {
-            p_name: values.name,
-            p_email: values.email,
-            p_subject: values.subject,
-            p_message: values.message,
-            p_user_id: user?.id || null
-          }
-        }
-      );
-      
-      if (error) throw error;
+      // Use the contact_message edge function instead of direct RPC call
+      const response = await fetch("https://oavljdrqfzliikfncrdd.supabase.co/functions/v1/contact_message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: values.name,
+          email: values.email,
+          subject: values.subject,
+          message: values.message,
+          userId: user?.id || null
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to send message");
+      }
+
+      form.reset();
       
       toast({
         title: "Message Sent",
-        description: "We've received your message and will get back to you soon.",
+        description: "Thank you for contacting us! We'll get back to you as soon as possible.",
       });
-      
-      form.reset();
     } catch (error) {
-      console.error('Error submitting contact form:', error);
+      console.error("Error submitting contact form:", error);
       toast({
-        title: "Failed to Send",
-        description: "There was an error sending your message. Please try again later.",
+        title: "Error",
+        description: error instanceof Error ? error.message : "There was a problem sending your message. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="container mx-auto py-12 px-4 sm:px-6">
