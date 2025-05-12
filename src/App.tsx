@@ -32,6 +32,13 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import HIPAAPage from "./pages/HIPAAPage";
 import TherapistOnboardingPage from "./pages/TherapistOnboardingPage";
 
+// Client Dashboard Pages
+import ClientOverview from "./pages/client/ClientOverview";
+import ClientAppointments from "./pages/client/ClientAppointments";
+import ClientNotes from "./pages/client/ClientNotes";
+import ClientMessages from "./pages/client/ClientMessages";
+import ClientProfile from "./pages/client/ClientProfile";
+
 // Auth Pages
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
@@ -79,7 +86,6 @@ const App = () => (
               <Route path="booking/complete/:therapistId/:date/:time" element={<BookingComplete />} />
               <Route path="chat/:therapistId" element={<ChatPage />} />
               <Route path="video/:therapistId" element={<VideoChat />} />
-              <Route path="dashboard" element={<ClientDashboard />} />
               <Route path="how-it-works" element={<HowItWorks />} />
               <Route path="contact" element={<ContactPage />} />
               <Route path="ai-matching" element={<AIMatchingPage />} />
@@ -92,6 +98,18 @@ const App = () => (
               <Route path="for-therapists" element={<TherapistOnboardingPage />} />
               <Route path="*" element={<NotFound />} />
             </Route>
+
+            {/* Client Dashboard Routes */}
+            <Route path="/client" element={<ClientDashboard />}>
+              <Route path="dashboard" element={<ClientOverview />} />
+              <Route path="appointments" element={<ClientAppointments />} />
+              <Route path="notes" element={<ClientNotes />} />
+              <Route path="messages" element={<ClientMessages />} />
+              <Route path="profile" element={<ClientProfile />} />
+            </Route>
+
+            {/* Legacy dashboard route - redirects to /client/dashboard */}
+            <Route path="/dashboard" element={<ClientDashboard />} />
 
             {/* Auth Routes */}
             <Route path="/auth">
