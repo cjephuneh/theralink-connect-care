@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Calendar,
@@ -22,9 +22,10 @@ import {
   DollarSign,
   ClipboardList
 } from "lucide-react";
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const TherapistLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -34,6 +35,7 @@ const TherapistLayout = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(true);
   
   useEffect(() => {
     // Check if user is logged in and has the right role
@@ -49,9 +51,42 @@ const TherapistLayout = () => {
 
     if (profile) {
       setIsAdmin(profile.role === 'admin');
-      setIsLoading(false);
+
+      // Check if the therapist has completed onboarding
+      const checkOnboardingStatus = async () => {
+        if (profile.role === 'therapist') {
+          try {
+            const { data, error } = await supabase
+              .from('therapist_details')
+              .select('*')
+              .eq('therapist_id', user.id)
+              .single();
+            
+            // If no data or empty important fields, onboarding is incomplete
+            const isComplete = data && 
+              data.license_number && 
+              data.therapy_approaches;
+            
+            setOnboardingComplete(!!isComplete);
+            
+            // Redirect to onboarding if incomplete and not already there
+            if (!isComplete && location.pathname !== '/therapist/onboarding') {
+              toast({
+                title: "Complete Your Profile",
+                description: "Please complete your therapist profile to access all features.",
+              });
+              navigate('/therapist/onboarding');
+            }
+          } catch (error) {
+            console.error('Error checking onboarding status:', error);
+          }
+        }
+        setIsLoading(false);
+      };
+      
+      checkOnboardingStatus();
     }
-  }, [user, profile, navigate, toast]);
+  }, [user, profile, navigate, toast, location.pathname]);
 
   // Return early if still loading
   if (isLoading) {
@@ -144,6 +179,10 @@ const TherapistLayout = () => {
                   isActive(item.path)
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                } ${
+                  !onboardingComplete && item.path !== '/therapist/onboarding'
+                    ? 'opacity-50 pointer-events-none'
+                    : ''
                 }`}
               >
                 <item.icon className="h-5 w-5" />
@@ -168,6 +207,11 @@ const TherapistLayout = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
+        {!onboardingComplete && location.pathname !== '/therapist/onboarding' && (
+          <div className="bg-yellow-100 p-4 text-yellow-800 text-center">
+            Please complete your profile setup before accessing other features.
+          </div>
+        )}
         <div className="container mx-auto p-4 md:p-6 lg:p-8">
           <Outlet />
         </div>

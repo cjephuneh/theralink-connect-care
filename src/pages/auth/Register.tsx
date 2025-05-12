@@ -25,7 +25,12 @@ const Register = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate(accountType === "therapist" ? "/therapist/dashboard" : "/dashboard");
+      // Direct therapists straight to the onboarding page
+      if (accountType === "therapist") {
+        navigate("/therapist/onboarding");
+      } else {
+        navigate("/dashboard");
+      }
     }
   }, [user, navigate, accountType]);
 
