@@ -48,6 +48,8 @@ import TherapistSettings from "./pages/therapist/TherapistSettings";
 import TherapistReviews from "./pages/therapist/TherapistReviews";
 import TherapistAnalytics from "./pages/therapist/TherapistAnalytics";
 import SessionNotes from "./pages/therapist/SessionNotes";
+import TherapistEarnings from "./pages/therapist/TherapistEarnings";
+import TherapistOnboarding from "./pages/therapist/TherapistOnboarding";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -110,6 +112,8 @@ const App = () => (
               <Route path="reviews" element={<TherapistReviews />} />
               <Route path="analytics" element={<TherapistAnalytics />} />
               <Route path="session-notes" element={<SessionNotes />} />
+              <Route path="earnings" element={<TherapistEarnings />} />
+              <Route path="onboarding" element={<TherapistOnboarding />} />
             </Route>
 
             {/* Admin Routes */}

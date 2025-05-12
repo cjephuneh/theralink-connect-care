@@ -1,14 +1,13 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://theralink.online/sitemap.xml
+
+# Disallow private/auth pages
+Disallow: /auth/
+Disallow: /dashboard/
+Disallow: /therapist/
+Disallow: /admin/
+Disallow: /chat/
+Disallow: /video/
