@@ -24,16 +24,83 @@ import {
   LogOut,
   MessageCircle,
   User,
-  BarChart3
+  CreditCard,
+  BookOpen,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 
 export function ClientSidebarContent() {
   const location = useLocation();
-  const { signOut, profile } = useAuth();
+  const { signOut, profile, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [upcomingAppointments, setUpcomingAppointments] = useState(0);
+  
+  // Fetch unread messages count
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchUnreadCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('receiver_id', user.id)
+          .eq('is_read', false);
+          
+        if (error) throw error;
+        setUnreadMessages(count || 0);
+      } catch (error) {
+        console.error('Error fetching unread messages:', error);
+      }
+    };
+    
+    fetchUnreadCount();
+    
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('public:messages')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'messages',
+        filter: `receiver_id=eq.${user.id},is_read=eq.false` 
+      }, () => {
+        fetchUnreadCount();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+  
+  // Fetch upcoming appointments count
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchUpcomingAppointments = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('appointments')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', user.id)
+          .eq('status', 'scheduled')
+          .gte('start_time', new Date().toISOString());
+          
+        if (error) throw error;
+        setUpcomingAppointments(count || 0);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+      }
+    };
+    
+    fetchUpcomingAppointments();
+  }, [user]);
   
   const isActive = (path) => {
     return location.pathname === path;
@@ -69,9 +136,21 @@ export function ClientSidebarContent() {
   // Client menu items
   const menuItems = [
     { icon: Home, label: "Overview", path: "/client/dashboard" },
-    { icon: Calendar, label: "Appointments", path: "/client/appointments" },
+    { 
+      icon: Calendar, 
+      label: "Appointments", 
+      path: "/client/appointments",
+      badge: upcomingAppointments > 0 ? upcomingAppointments : null
+    },
     { icon: FileText, label: "Notes", path: "/client/notes" },
-    { icon: MessageCircle, label: "Messages", path: "/client/messages" },
+    { 
+      icon: MessageCircle, 
+      label: "Messages", 
+      path: "/client/messages",
+      badge: unreadMessages > 0 ? unreadMessages : null
+    },
+    { icon: BookOpen, label: "Resources", path: "/client/resources" },
+    { icon: CreditCard, label: "Billing", path: "/client/billing" },
     { icon: User, label: "Profile", path: "/client/profile" },
   ];
 
@@ -117,9 +196,16 @@ export function ClientSidebarContent() {
                 isActive={isActive(item.path)}
                 tooltip={item.label}
               >
-                <Link to={item.path}>
-                  <item.icon />
-                  <span>{item.label}</span>
+                <Link to={item.path} className="flex items-center justify-between w-full">
+                  <div className="flex items-center">
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <Badge variant="secondary" className="ml-2">
+                      {item.badge}
+                    </Badge>
+                  )}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
