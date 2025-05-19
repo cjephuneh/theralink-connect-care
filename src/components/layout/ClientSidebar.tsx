@@ -161,10 +161,10 @@ export function ClientSidebarContent() {
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2">
           <Link to="/" className="flex items-center space-x-2">
-            <div className="bg-thera-600 text-white p-1.5 rounded-md">
-              <span className="font-bold text-lg">T</span>
+            <div className="gradient-bg w-8 h-8 flex items-center justify-center rounded-md">
+              <span className="font-bold text-white text-lg">T</span>
             </div>
-            <span className="font-bold text-lg">TheraLink</span>
+            <span className="font-bold text-lg gradient-text">TheraLink</span>
           </Link>
         </div>
         <div className="flex justify-end p-2">
@@ -172,17 +172,17 @@ export function ClientSidebarContent() {
         </div>
       </SidebarHeader>
       
-      <SidebarContent className="mt-4">
+      <SidebarContent className="mt-2">
         {/* User Profile Section */}
-        <div className="px-4 py-3 mb-4 border rounded-md bg-muted/20">
+        <div className="px-4 py-4 mx-2 mb-5 rounded-xl bg-sidebar-accent/50 border border-sidebar-border/50 shadow-sm">
           <div className="flex items-center space-x-3">
-            <Avatar>
+            <Avatar className="h-10 w-10 border-2 border-primary/20">
               <AvatarImage src={profile?.profile_image_url} />
-              <AvatarFallback>{profile ? getInitials(profile.full_name) : 'U'}</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary">{profile ? getInitials(profile.full_name) : 'U'}</AvatarFallback>
             </Avatar>
             <div>
               <p className="font-medium">{profile?.full_name || 'Client'}</p>
-              <p className="text-xs text-muted-foreground">{profile?.email || ''}</p>
+              <p className="text-xs text-muted-foreground truncate max-w-[140px]">{profile?.email || ''}</p>
             </div>
           </div>
         </div>
@@ -195,14 +195,15 @@ export function ClientSidebarContent() {
                 asChild
                 isActive={isActive(item.path)}
                 tooltip={item.label}
+                className={isActive(item.path) ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-sidebar-accent/50'}
               >
                 <Link to={item.path} className="flex items-center justify-between w-full">
                   <div className="flex items-center">
-                    <item.icon />
+                    <item.icon className={isActive(item.path) ? "text-primary" : ""} />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <Badge variant="secondary" className="ml-2">
+                    <Badge variant={isActive(item.path) ? "default" : "secondary"} className={isActive(item.path) ? "bg-primary text-white" : "bg-muted"}>
                       {item.badge}
                     </Badge>
                   )}
@@ -214,13 +215,13 @@ export function ClientSidebarContent() {
       </SidebarContent>
       
       <SidebarFooter>
-        <div className="px-4 py-2">
+        <div className="px-2 py-2 mx-2 mb-2">
           <Button
-            variant="ghost"
-            className="w-full justify-start"
+            variant="outline"
+            className="w-full justify-start hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors"
             onClick={handleLogout}
           >
-            <LogOut className="mr-2 h-5 w-5" />
+            <LogOut className="mr-2 h-4 w-4" />
             <span>Log Out</span>
           </Button>
         </div>
@@ -236,6 +237,18 @@ export function ClientSidebar({ children }) {
         <ClientSidebarContent />
         {children}
       </div>
+      <style jsx global>{`
+        .gradient-bg {
+          background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+        }
+        .gradient-text {
+          background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          color: transparent;
+        }
+      `}</style>
     </SidebarProvider>
   );
 }

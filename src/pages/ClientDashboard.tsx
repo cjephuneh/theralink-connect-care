@@ -60,7 +60,7 @@ const ClientDashboard = () => {
           <div className="max-w-7xl mx-auto">
             <div className="grid gap-6">
               <Skeleton className="h-8 w-1/3" />
-              <Card>
+              <Card className="card-shadow">
                 <CardContent className="p-0">
                   <Skeleton className="h-[400px] w-full rounded-md" />
                 </CardContent>
@@ -80,7 +80,7 @@ const ClientDashboard = () => {
   return (
     <ClientSidebar>
       <main className="flex-1 overflow-auto bg-background">
-        <div className="container max-w-6xl mx-auto p-6">
+        <div className="container max-w-6xl mx-auto p-6 animation-fade-in">
           <Routes>
             <Route path="/dashboard" element={<ClientOverview />} />
             <Route path="/appointments" element={<ClientAppointments />} />

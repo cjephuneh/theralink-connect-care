@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, FileText, ExternalLink, Download } from "lucide-react";
+import { BookOpen, FileText, ExternalLink, Download, Library } from "lucide-react";
 
 const ClientResources = () => {
   const { user } = useAuth();
@@ -87,9 +87,14 @@ const ClientResources = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Therapy Resources</h1>
-        <p className="text-muted-foreground">Helpful materials to support your therapy journey</p>
+      <div className="flex items-center space-x-4">
+        <div className="p-2 rounded-xl bg-primary/10">
+          <Library className="h-6 w-6 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Therapy Resources</h1>
+          <p className="text-muted-foreground">Helpful materials to support your therapy journey</p>
+        </div>
       </div>
 
       <Tabs 
@@ -97,26 +102,34 @@ const ClientResources = () => {
         onValueChange={setActiveTab} 
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="articles">Articles</TabsTrigger>
-          <TabsTrigger value="worksheets">Worksheets</TabsTrigger>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="articles" className="rounded-lg">
+            <BookOpen className="mr-2 h-4 w-4" />
+            Articles
+          </TabsTrigger>
+          <TabsTrigger value="worksheets" className="rounded-lg">
+            <FileText className="mr-2 h-4 w-4" />
+            Worksheets
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="articles" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {resources.articles.map((article) => (
-              <Card key={article.id}>
-                <CardHeader>
+              <Card key={article.id} className="overflow-hidden card-shadow group hover:shadow-md transition-all duration-300 border-t-4 border-t-primary/50">
+                <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{article.title}</CardTitle>
                   </div>
-                  <CardDescription>{article.category}</CardDescription>
+                  <CardDescription className="inline-block px-2 py-1 bg-primary/10 text-primary rounded-full text-xs">
+                    {article.category}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{article.description}</p>
                 </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full" asChild>
+                <CardFooter className="bg-muted/20 pt-2">
+                  <Button variant="ghost" className="w-full group-hover:bg-primary/10 transition-colors" asChild>
                     <a href={article.url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Read Article
@@ -131,11 +144,11 @@ const ClientResources = () => {
         <TabsContent value="worksheets" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {resources.worksheets.map((worksheet) => (
-              <Card key={worksheet.id}>
-                <CardHeader>
+              <Card key={worksheet.id} className="overflow-hidden card-shadow group hover:shadow-md transition-all duration-300 border-t-4 border-t-secondary/50">
+                <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <CardTitle className="text-lg">{worksheet.title}</CardTitle>
-                    <span className="px-2 py-1 bg-muted rounded text-xs font-medium">
+                    <span className="px-2 py-1 bg-secondary/10 text-secondary rounded-full text-xs font-medium">
                       {worksheet.fileType}
                     </span>
                   </div>
@@ -143,8 +156,8 @@ const ClientResources = () => {
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{worksheet.description}</p>
                 </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full" asChild>
+                <CardFooter className="bg-muted/20 pt-2">
+                  <Button variant="ghost" className="w-full group-hover:bg-secondary/10 transition-colors" asChild>
                     <a href={worksheet.url} download>
                       <Download className="mr-2 h-4 w-4" />
                       Download
