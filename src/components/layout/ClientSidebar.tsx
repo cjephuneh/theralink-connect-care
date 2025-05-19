@@ -237,18 +237,20 @@ export function ClientSidebar({ children }) {
         <ClientSidebarContent />
         {children}
       </div>
-      <style jsx global>{`
-        .gradient-bg {
-          background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
-        }
-        .gradient-text {
-          background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          color: transparent;
-        }
-      `}</style>
+      <style>
+        {`
+          .gradient-bg {
+            background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+          }
+          .gradient-text {
+            background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+          }
+        `}
+      </style>
     </SidebarProvider>
   );
 }
