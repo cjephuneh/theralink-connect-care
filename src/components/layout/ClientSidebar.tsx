@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -187,30 +186,54 @@ export function ClientSidebarContent() {
           </div>
         </div>
         
-        {/* Main Navigation */}
+        {/* Modern Navigation */}
         <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.path}>
-              <SidebarMenuButton
-                asChild
-                isActive={isActive(item.path)}
-                tooltip={item.label}
-                className={isActive(item.path) ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-sidebar-accent/50'}
-              >
-                <Link to={item.path} className="flex items-center justify-between w-full">
-                  <div className="flex items-center">
-                    <item.icon className={isActive(item.path) ? "text-primary" : ""} />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <Badge variant={isActive(item.path) ? "default" : "secondary"} className={isActive(item.path) ? "bg-primary text-white" : "bg-muted"}>
-                      {item.badge}
-                    </Badge>
-                  )}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          <div className="px-3 mb-2">
+            <h6 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Menu</h6>
+          </div>
+          <div className="space-y-1.5 px-1.5">
+            {menuItems.map((item) => (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive(item.path)}
+                  tooltip={item.label}
+                  className={`
+                    group transition-all duration-200 rounded-lg 
+                    ${isActive(item.path) 
+                      ? 'bg-primary/15 text-primary font-medium border-l-2 border-primary shadow-sm' 
+                      : 'hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground hover:translate-x-1'}
+                  `}
+                >
+                  <Link to={item.path} className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                      <div className={`
+                        flex items-center justify-center w-8 h-8 rounded-md transition-colors 
+                        ${isActive(item.path) 
+                          ? 'text-primary' 
+                          : 'text-muted-foreground group-hover:text-primary'}
+                      `}>
+                        <item.icon size={18} strokeWidth={isActive(item.path) ? 2.5 : 2} />
+                      </div>
+                      <span className={`text-sm ${isActive(item.path) ? 'font-medium' : ''}`}>{item.label}</span>
+                    </div>
+                    {item.badge && (
+                      <Badge variant={isActive(item.path) ? "default" : "secondary"} 
+                        className={`
+                          ml-auto text-xs px-2 py-0.5 rounded-full
+                          ${isActive(item.path) 
+                            ? 'bg-primary/20 text-primary border border-primary/20' 
+                            : 'bg-muted text-muted-foreground'}
+                        `}
+                      >
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </div>
         </SidebarMenu>
       </SidebarContent>
       
@@ -218,10 +241,10 @@ export function ClientSidebarContent() {
         <div className="px-2 py-2 mx-2 mb-2">
           <Button
             variant="outline"
-            className="w-full justify-start hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors"
+            className="w-full justify-start rounded-lg hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors gap-3"
             onClick={handleLogout}
           >
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="h-4 w-4" />
             <span>Log Out</span>
           </Button>
         </div>
