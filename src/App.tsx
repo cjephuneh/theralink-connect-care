@@ -101,16 +101,8 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Route>
 
-            {/* Client Dashboard Routes */}
-            <Route path="/client" element={<ClientDashboard />}>
-              <Route path="dashboard" element={<ClientOverview />} />
-              <Route path="appointments" element={<ClientAppointments />} />
-              <Route path="notes" element={<ClientNotes />} />
-              <Route path="messages" element={<ClientMessages />} />
-              <Route path="profile" element={<ClientProfile />} />
-              <Route path="resources" element={<ClientResources />} />
-              <Route path="billing" element={<ClientBilling />} />
-            </Route>
+            {/* Client Dashboard Routes - Fix for nested routes by adding /* */}
+            <Route path="/client/*" element={<ClientDashboard />} />
 
             {/* Legacy dashboard route - redirects to /client/dashboard */}
             <Route path="/dashboard" element={<ClientDashboard />} />
@@ -122,8 +114,8 @@ const App = () => (
               <Route path="forgot-password" element={<ForgotPassword />} />
             </Route>
 
-            {/* Therapist Routes */}
-            <Route path="/therapist" element={<TherapistLayout />}>
+            {/* Therapist Routes - Add /* for nested routes */}
+            <Route path="/therapist/*" element={<TherapistLayout />}>
               <Route path="dashboard" element={<TherapistDashboard />} />
               <Route path="appointments" element={<TherapistAppointments />} />
               <Route path="clients" element={<TherapistClients />} />
@@ -138,8 +130,8 @@ const App = () => (
               <Route path="onboarding" element={<TherapistOnboarding />} />
             </Route>
 
-            {/* Admin Routes */}
-            <Route path="/admin" element={<TherapistLayout />}>
+            {/* Admin Routes - Add /* for nested routes */}
+            <Route path="/admin/*" element={<TherapistLayout />}>
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="therapists" element={<AdminTherapists />} />

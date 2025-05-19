@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -179,8 +180,8 @@ export function ClientSidebarContent() {
               <AvatarImage src={profile?.profile_image_url} />
               <AvatarFallback className="bg-primary/10 text-primary">{profile ? getInitials(profile.full_name) : 'U'}</AvatarFallback>
             </Avatar>
-            <div>
-              <p className="font-medium">{profile?.full_name || 'Client'}</p>
+            <div className="min-w-0">
+              <p className="font-medium truncate">{profile?.full_name || 'Client'}</p>
               <p className="text-xs text-muted-foreground truncate max-w-[140px]">{profile?.email || ''}</p>
             </div>
           </div>
@@ -215,7 +216,7 @@ export function ClientSidebarContent() {
                       `}>
                         <item.icon size={18} strokeWidth={isActive(item.path) ? 2.5 : 2} />
                       </div>
-                      <span className={`text-sm ${isActive(item.path) ? 'font-medium' : ''}`}>{item.label}</span>
+                      <span className={`text-sm ${isActive(item.path) ? 'font-medium' : ''} whitespace-nowrap`}>{item.label}</span>
                     </div>
                     {item.badge && (
                       <Badge variant={isActive(item.path) ? "default" : "secondary"} 
@@ -258,7 +259,9 @@ export function ClientSidebar({ children }) {
     <SidebarProvider>
       <div className="flex w-full min-h-screen">
         <ClientSidebarContent />
-        {children}
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
       </div>
       <style>
         {`

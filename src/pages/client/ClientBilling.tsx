@@ -27,6 +27,7 @@ const ClientBilling = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [therapistData, setTherapistData] = useState({});
 
   useEffect(() => {
     if (!user) return;
@@ -34,7 +35,7 @@ const ClientBilling = () => {
     const fetchTransactionData = async () => {
       setIsLoading(true);
       try {
-        // Fetch transactions
+        // Fetch transactions - modified to avoid foreign key issue
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('transactions')
           .select(`
@@ -45,13 +46,36 @@ const ClientBilling = () => {
             status,
             created_at,
             transaction_type,
-            therapist_id,
-            profiles:therapist_id (full_name)
+            therapist_id
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (transactionsError) throw transactionsError;
+        
+        // Fetch therapist profiles separately if needed
+        if (transactionsData && transactionsData.length > 0) {
+          const therapistIds = [...new Set(transactionsData
+            .filter(tx => tx.therapist_id)
+            .map(tx => tx.therapist_id))];
+            
+          if (therapistIds.length > 0) {
+            const { data: therapists } = await supabase
+              .from('profiles')
+              .select('id, full_name')
+              .in('id', therapistIds);
+              
+            if (therapists) {
+              const therapistMap = therapists.reduce((acc, therapist) => {
+                acc[therapist.id] = therapist;
+                return acc;
+              }, {});
+              
+              setTherapistData(therapistMap);
+            }
+          }
+        }
+        
         setTransactions(transactionsData || []);
 
         // Fetch wallet balance
@@ -61,7 +85,10 @@ const ClientBilling = () => {
           .eq('user_id', user.id)
           .single();
 
-        if (walletError) throw walletError;
+        if (walletError && walletError.code !== 'PGRST116') { // Ignore "no rows returned" error
+          throw walletError;
+        }
+        
         setWalletBalance(walletData?.balance || 0);
 
       } catch (error) {
@@ -100,7 +127,7 @@ const ClientBilling = () => {
   };
 
   const getTransactionStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'completed':
       case 'success':
         return "bg-green-100 text-green-800";
@@ -112,6 +139,10 @@ const ClientBilling = () => {
       default:
         return "bg-blue-100 text-blue-800";
     }
+  };
+
+  const getTherapistName = (therapist_id) => {
+    return therapistData[therapist_id]?.full_name || 'Therapist';
   };
 
   if (isLoading) {
@@ -220,7 +251,7 @@ const ClientBilling = () => {
                         <div>
                           <p className="font-medium">
                             {transaction.transaction_type === 'payment' 
-                              ? `Payment to ${transaction.profiles?.full_name || 'Therapist'}`
+                              ? `Payment to ${getTherapistName(transaction.therapist_id)}`
                               : 'Wallet Deposit'}
                           </p>
                           <p className="text-sm text-muted-foreground">{formatDate(transaction.created_at)}</p>
@@ -322,10 +353,10 @@ const ClientBilling = () => {
                   <p>{selectedTransaction.description}</p>
                 </div>
               )}
-              {selectedTransaction.profiles?.full_name && (
+              {selectedTransaction.therapist_id && (
                 <div>
                   <p className="text-sm text-muted-foreground">Therapist</p>
-                  <p>{selectedTransaction.profiles.full_name}</p>
+                  <p>{getTherapistName(selectedTransaction.therapist_id)}</p>
                 </div>
               )}
             </div>

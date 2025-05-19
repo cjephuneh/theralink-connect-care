@@ -32,7 +32,7 @@ const ClientAppointments = () => {
       try {
         const now = new Date().toISOString();
 
-        // Fetch upcoming appointments
+        // Modified query: Removed the problematic join with profiles table
         const { data: upcomingData, error: upcomingError } = await supabase
           .from('appointments')
           .select(`
@@ -42,17 +42,44 @@ const ClientAppointments = () => {
             session_type,
             status,
             notes,
-            therapist_id,
-            profiles:therapist_id (full_name, profile_image_url)
+            therapist_id
           `)
           .eq('client_id', user.id)
           .gte('start_time', now)
           .order('start_time', { ascending: true });
 
         if (upcomingError) throw upcomingError;
-        setUpcomingAppointments(upcomingData || []);
+        
+        // Fetch therapist profiles separately if needed
+        let therapistData = {};
+        if (upcomingData && upcomingData.length > 0) {
+          const therapistIds = [...new Set(upcomingData.map(apt => apt.therapist_id))];
+          
+          // Only fetch if there are therapist IDs
+          if (therapistIds.length > 0) {
+            const { data: therapists } = await supabase
+              .from('profiles')
+              .select('id, full_name, profile_image_url')
+              .in('id', therapistIds);
+              
+            if (therapists) {
+              therapistData = therapists.reduce((acc, therapist) => {
+                acc[therapist.id] = therapist;
+                return acc;
+              }, {});
+            }
+          }
+        }
+        
+        // Combine appointment data with therapist data
+        const enrichedUpcomingData = upcomingData ? upcomingData.map(apt => ({
+          ...apt,
+          therapist: therapistData[apt.therapist_id] || {}
+        })) : [];
+        
+        setUpcomingAppointments(enrichedUpcomingData);
 
-        // Fetch past appointments
+        // Fetch past appointments with the same approach
         const { data: pastData, error: pastError } = await supabase
           .from('appointments')
           .select(`
@@ -62,15 +89,21 @@ const ClientAppointments = () => {
             session_type,
             status,
             notes,
-            therapist_id,
-            profiles:therapist_id (full_name, profile_image_url)
+            therapist_id
           `)
           .eq('client_id', user.id)
           .lt('start_time', now)
           .order('start_time', { ascending: false });
 
         if (pastError) throw pastError;
-        setPastAppointments(pastData || []);
+        
+        // Combine past appointment data with therapist data
+        const enrichedPastData = pastData ? pastData.map(apt => ({
+          ...apt,
+          therapist: therapistData[apt.therapist_id] || {}
+        })) : [];
+        
+        setPastAppointments(enrichedPastData);
       } catch (error) {
         console.error('Error fetching appointments:', error);
         toast({
@@ -153,7 +186,7 @@ const ClientAppointments = () => {
                     <CardDescription>
                       <div className="flex items-center gap-2">
                         <User size={16} />
-                        <span>{appointment.profiles?.full_name || 'Therapist'}</span>
+                        <span>{appointment.therapist?.full_name || 'Therapist'}</span>
                       </div>
                     </CardDescription>
                   </CardHeader>
@@ -216,7 +249,7 @@ const ClientAppointments = () => {
                     <CardDescription>
                       <div className="flex items-center gap-2">
                         <User size={16} />
-                        <span>{appointment.profiles?.full_name || 'Therapist'}</span>
+                        <span>{appointment.therapist?.full_name || 'Therapist'}</span>
                       </div>
                     </CardDescription>
                   </CardHeader>
