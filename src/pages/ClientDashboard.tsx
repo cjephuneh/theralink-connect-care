@@ -1,20 +1,11 @@
 
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate, Routes, Route, Navigate } from "react-router-dom";
+import { useLocation, useNavigate, Outlet, Navigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { ClientSidebar } from "@/components/layout/ClientSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-
-// Client Dashboard Pages
-import ClientOverview from "@/pages/client/ClientOverview";
-import ClientAppointments from "@/pages/client/ClientAppointments";
-import ClientNotes from "@/pages/client/ClientNotes";
-import ClientMessages from "@/pages/client/ClientMessages";
-import ClientProfile from "@/pages/client/ClientProfile";
-import ClientResources from "@/pages/client/ClientResources";
-import ClientBilling from "@/pages/client/ClientBilling";
 
 const ClientDashboard = () => {
   const location = useLocation();
@@ -73,26 +64,15 @@ const ClientDashboard = () => {
   }
 
   // Redirect to dashboard overview if just accessing /client without a subpath
-  if (location.pathname === '/dashboard' || location.pathname === '/client') {
+  if (location.pathname === '/client' || location.pathname === '/dashboard') {
     return <Navigate to="/client/dashboard" replace />;
   }
 
   return (
     <ClientSidebar>
-      <main className="flex-1 overflow-auto bg-background">
-        <div className="container max-w-6xl mx-auto p-6 animation-fade-in">
-          <Routes>
-            <Route path="/dashboard" element={<ClientOverview />} />
-            <Route path="/appointments" element={<ClientAppointments />} />
-            <Route path="/notes" element={<ClientNotes />} />
-            <Route path="/messages" element={<ClientMessages />} />
-            <Route path="/profile" element={<ClientProfile />} />
-            <Route path="/resources" element={<ClientResources />} />
-            <Route path="/billing" element={<ClientBilling />} />
-            <Route path="/*" element={<Navigate to="/client/dashboard" replace />} />
-          </Routes>
-        </div>
-      </main>
+      <div className="container max-w-6xl mx-auto p-6 animation-fade-in">
+        <Outlet />
+      </div>
     </ClientSidebar>
   );
 };

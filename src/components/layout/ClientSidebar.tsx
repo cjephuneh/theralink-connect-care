@@ -103,7 +103,7 @@ export function ClientSidebarContent() {
   }, [user]);
   
   const isActive = (path) => {
-    return location.pathname === path;
+    return location.pathname.startsWith(path);
   };
 
   const getInitials = (name) => {
@@ -263,20 +263,37 @@ export function ClientSidebar({ children }) {
           {children}
         </main>
       </div>
-      <style>
-        {`
-          .gradient-bg {
-            background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+      <style>{`
+        .gradient-bg {
+          background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+        }
+        .gradient-text {
+          background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          color: transparent;
+        }
+        
+        @media (max-width: 768px) {
+          .sidebar-collapsed {
+            width: 0 !important;
+            min-width: 0 !important;
+            overflow: hidden;
           }
-          .gradient-text {
-            background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            color: transparent;
+          
+          /* Fix for mobile menu expanded state */
+          [data-state="expanded"] [data-sidebar="content"] {
+            overflow-y: auto;
+            height: 100%;
           }
-        `}
-      </style>
+          
+          /* Improve touch targets on mobile */
+          [data-sidebar="menu-button"] {
+            min-height: 44px;
+          }
+        }
+      `}</style>
     </SidebarProvider>
   );
 }

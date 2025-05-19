@@ -32,7 +32,7 @@ const ClientAppointments = () => {
       try {
         const now = new Date().toISOString();
 
-        // Modified query: Removed the problematic join with profiles table
+        // Fetch upcoming appointments
         const { data: upcomingData, error: upcomingError } = await supabase
           .from('appointments')
           .select(`
@@ -50,32 +50,33 @@ const ClientAppointments = () => {
 
         if (upcomingError) throw upcomingError;
         
-        // Fetch therapist profiles separately if needed
-        let therapistData = {};
+        // Fetch therapist profiles in a separate query
+        let enrichedUpcomingData = [];
+        
         if (upcomingData && upcomingData.length > 0) {
+          // Get unique therapist IDs
           const therapistIds = [...new Set(upcomingData.map(apt => apt.therapist_id))];
           
-          // Only fetch if there are therapist IDs
-          if (therapistIds.length > 0) {
-            const { data: therapists } = await supabase
-              .from('profiles')
-              .select('id, full_name, profile_image_url')
-              .in('id', therapistIds);
-              
-            if (therapists) {
-              therapistData = therapists.reduce((acc, therapist) => {
-                acc[therapist.id] = therapist;
-                return acc;
-              }, {});
-            }
+          // Fetch therapist profiles
+          const { data: therapists } = await supabase
+            .from('profiles')
+            .select('id, full_name, profile_image_url')
+            .in('id', therapistIds);
+            
+          // Create a lookup map for therapists
+          const therapistMap = {};
+          if (therapists) {
+            therapists.forEach(therapist => {
+              therapistMap[therapist.id] = therapist;
+            });
           }
+          
+          // Combine data
+          enrichedUpcomingData = upcomingData.map(apt => ({
+            ...apt,
+            therapist: therapistMap[apt.therapist_id] || { full_name: 'Therapist' }
+          }));
         }
-        
-        // Combine appointment data with therapist data
-        const enrichedUpcomingData = upcomingData ? upcomingData.map(apt => ({
-          ...apt,
-          therapist: therapistData[apt.therapist_id] || {}
-        })) : [];
         
         setUpcomingAppointments(enrichedUpcomingData);
 
@@ -97,11 +98,33 @@ const ClientAppointments = () => {
 
         if (pastError) throw pastError;
         
-        // Combine past appointment data with therapist data
-        const enrichedPastData = pastData ? pastData.map(apt => ({
-          ...apt,
-          therapist: therapistData[apt.therapist_id] || {}
-        })) : [];
+        // Enrich past appointments with therapist data
+        let enrichedPastData = [];
+        
+        if (pastData && pastData.length > 0) {
+          // Get unique therapist IDs
+          const therapistIds = [...new Set(pastData.map(apt => apt.therapist_id))];
+          
+          // Fetch therapist profiles
+          const { data: therapists } = await supabase
+            .from('profiles')
+            .select('id, full_name, profile_image_url')
+            .in('id', therapistIds);
+            
+          // Create a lookup map for therapists
+          const therapistMap = {};
+          if (therapists) {
+            therapists.forEach(therapist => {
+              therapistMap[therapist.id] = therapist;
+            });
+          }
+          
+          // Combine data
+          enrichedPastData = pastData.map(apt => ({
+            ...apt,
+            therapist: therapistMap[apt.therapist_id] || { full_name: 'Therapist' }
+          }));
+        }
         
         setPastAppointments(enrichedPastData);
       } catch (error) {
