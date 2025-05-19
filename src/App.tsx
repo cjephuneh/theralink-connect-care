@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 // Layouts
@@ -68,7 +68,14 @@ import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminAppointments from "./pages/admin/AdminAppointments";
 import AdminContent from "./pages/admin/AdminContent";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -101,11 +108,21 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Route>
 
-            {/* Client Dashboard Routes - Fix for nested routes by adding /* */}
-            <Route path="/client/*" element={<ClientDashboard />} />
+            {/* Client Dashboard Routes */}
+            <Route path="/client/*" element={<ClientDashboard />}>
+              <Route path="dashboard" element={<ClientOverview />} />
+              <Route path="appointments" element={<ClientAppointments />} />
+              <Route path="notes" element={<ClientNotes />} />
+              <Route path="messages" element={<ClientMessages />} />
+              <Route path="resources" element={<ClientResources />} />
+              <Route path="billing" element={<ClientBilling />} />
+              <Route path="profile" element={<ClientProfile />} />
+              <Route index element={<Navigate to="/client/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/client/dashboard" replace />} />
+            </Route>
 
             {/* Legacy dashboard route - redirects to /client/dashboard */}
-            <Route path="/dashboard" element={<ClientDashboard />} />
+            <Route path="/dashboard" element={<Navigate to="/client/dashboard" replace />} />
 
             {/* Auth Routes */}
             <Route path="/auth">
@@ -114,7 +131,7 @@ const App = () => (
               <Route path="forgot-password" element={<ForgotPassword />} />
             </Route>
 
-            {/* Therapist Routes - Add /* for nested routes */}
+            {/* Therapist Routes */}
             <Route path="/therapist/*" element={<TherapistLayout />}>
               <Route path="dashboard" element={<TherapistDashboard />} />
               <Route path="appointments" element={<TherapistAppointments />} />
@@ -128,9 +145,11 @@ const App = () => (
               <Route path="session-notes" element={<SessionNotes />} />
               <Route path="earnings" element={<TherapistEarnings />} />
               <Route path="onboarding" element={<TherapistOnboarding />} />
+              <Route index element={<Navigate to="/therapist/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/therapist/dashboard" replace />} />
             </Route>
 
-            {/* Admin Routes - Add /* for nested routes */}
+            {/* Admin Routes */}
             <Route path="/admin/*" element={<TherapistLayout />}>
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
@@ -138,6 +157,8 @@ const App = () => (
               <Route path="transactions" element={<AdminTransactions />} />
               <Route path="appointments" element={<AdminAppointments />} />
               <Route path="content" element={<AdminContent />} />
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
             </Route>
           </Routes>
         </BrowserRouter>
