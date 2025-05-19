@@ -38,6 +38,8 @@ import ClientAppointments from "./pages/client/ClientAppointments";
 import ClientNotes from "./pages/client/ClientNotes";
 import ClientMessages from "./pages/client/ClientMessages";
 import ClientProfile from "./pages/client/ClientProfile";
+import ClientResources from "./pages/client/ClientResources";
+import ClientBilling from "./pages/client/ClientBilling";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -106,6 +108,8 @@ const App = () => (
               <Route path="notes" element={<ClientNotes />} />
               <Route path="messages" element={<ClientMessages />} />
               <Route path="profile" element={<ClientProfile />} />
+              <Route path="resources" element={<ClientResources />} />
+              <Route path="billing" element={<ClientBilling />} />
             </Route>
 
             {/* Legacy dashboard route - redirects to /client/dashboard */}
