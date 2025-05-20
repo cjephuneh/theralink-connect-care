@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
 export function ClientSidebarContent() {
   const location = useLocation();
@@ -167,7 +168,8 @@ export function ClientSidebarContent() {
             <span className="font-bold text-lg gradient-text">TheraLink</span>
           </Link>
         </div>
-        <div className="flex justify-end p-2">
+        <div className="flex items-center justify-end p-2 gap-2">
+          <NotificationCenter />
           <SidebarTrigger />
         </div>
       </SidebarHeader>
