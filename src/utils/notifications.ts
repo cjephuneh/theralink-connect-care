@@ -71,6 +71,7 @@ export const useNotifications = () => {
     if (notification.action_url) {
       options.action = {
         label: "View",
+        altText: "View notification details",
         onClick: () => {
           window.location.href = notification.action_url as string;
         }
