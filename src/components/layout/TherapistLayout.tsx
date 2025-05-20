@@ -24,8 +24,9 @@ import {
 } from "lucide-react";
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TherapistNotificationBell } from './TherapistNotificationBell';
 
 const TherapistLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -207,6 +208,11 @@ const TherapistLayout = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
+        {/* Top bar with notification bell */}
+        <div className="border-b px-4 py-2 flex justify-end items-center">
+          <TherapistNotificationBell />
+        </div>
+        
         {!onboardingComplete && location.pathname !== '/therapist/onboarding' && (
           <div className="bg-yellow-100 p-4 text-yellow-800 text-center">
             Please complete your profile setup before accessing other features.
