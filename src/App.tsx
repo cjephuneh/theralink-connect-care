@@ -117,7 +117,7 @@ function AppRoutes() {
       
       {/* Client Dashboard Routes */}
       <Route path="/client" element={<ClientDashboard />}>
-        <Route path="dashboard" element={<ClientOverview />} />
+        <Route path="overview" element={<ClientOverview />} />
         <Route path="appointments" element={<ClientAppointments />} />
         <Route path="notes" element={<ClientNotes />} />
         <Route path="messages" element={<ClientMessages />} />
