@@ -13,9 +13,13 @@ export interface NotificationData {
 
 export const createNotification = async (data: NotificationData) => {
   try {
+    // Generate a UUID for the notification
+    const id = crypto.randomUUID();
+    
     const { error } = await supabase
       .from('notifications')
       .insert({
+        id,
         user_id: data.user_id,
         title: data.title,
         message: data.message,
@@ -61,7 +65,8 @@ export const useNotifications = () => {
       title: notification.title,
       description: notification.message,
       action: notification.action_url ? {
-        label: "View",
+        // Fix the property name from 'label' to children for React element
+        children: "View", // Using children instead of label
         onClick: () => window.location.href = notification.action_url!,
       } : undefined,
     });
