@@ -65,7 +65,7 @@ const ClientDashboard = () => {
 
   // Redirect to dashboard overview if just accessing /client or /client/ without a subpath
   if (location.pathname === '/client' || location.pathname === '/client/') {
-    return <Navigate to="/client/dashboard" replace />;
+    return <Navigate to="/client/overview" replace />;
   }
 
   return (
