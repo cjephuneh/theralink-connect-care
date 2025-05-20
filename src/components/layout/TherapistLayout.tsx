@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ import {
 } from "lucide-react";
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const TherapistLayout = () => {
@@ -50,17 +51,6 @@ const TherapistLayout = () => {
 
     if (profile) {
       setIsAdmin(profile.role === 'admin');
-
-      // If the user is not a therapist, redirect them to client dashboard
-      if (profile.role !== 'therapist' && profile.role !== 'admin') {
-        toast({
-          title: "Access Denied",
-          description: "You don't have permission to access the therapist dashboard.",
-          variant: "destructive",
-        });
-        navigate('/client/overview');
-        return;
-      }
 
       // Check if the therapist has completed onboarding
       const checkOnboardingStatus = async () => {

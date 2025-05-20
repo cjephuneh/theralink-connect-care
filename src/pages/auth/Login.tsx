@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -19,23 +19,13 @@ const Login = () => {
   
   const navigate = useNavigate();
   const { signIn, user } = useAuth();
-  const { toast } = useToast();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      const redirectPath = user.user_metadata?.role === 'therapist' 
-        ? "/therapist/dashboard" 
-        : "/client/overview";
-      
-      navigate(redirectPath);
-      
-      toast({
-        title: "Logged in successfully",
-        description: `Welcome back${user.user_metadata?.full_name ? ', ' + user.user_metadata.full_name : ''}!`,
-      });
+      navigate(loginType === "therapist" ? "/therapist/dashboard" : "/dashboard");
     }
-  }, [user, navigate, toast]);
+  }, [user, navigate, loginType]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,11 +39,6 @@ const Login = () => {
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again",
-        variant: "destructive"
-      });
     } finally {
       setIsLoading(false);
     }

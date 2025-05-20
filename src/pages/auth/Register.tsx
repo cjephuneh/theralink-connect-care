@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -20,24 +21,18 @@ const Register = () => {
   
   const navigate = useNavigate();
   const { signUp, user } = useAuth();
-  const { toast } = useToast();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
       // Direct therapists straight to the onboarding page
-      const redirectPath = user.user_metadata?.role === 'therapist' 
-        ? "/therapist/onboarding"
-        : "/client/overview";
-        
-      navigate(redirectPath);
-      
-      toast({
-        title: "Account created successfully",
-        description: `Welcome, ${user.user_metadata?.full_name || 'new user'}!`,
-      });
+      if (accountType === "therapist") {
+        navigate("/therapist/onboarding");
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [user, navigate, toast]);
+  }, [user, navigate, accountType]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
