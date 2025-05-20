@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 
 export interface NotificationData {
   user_id: string;
@@ -64,11 +65,11 @@ export const useNotifications = () => {
     toast({
       title: notification.title,
       description: notification.message,
-      action: notification.action_url ? {
-        // Fix the property name from 'label' to children for React element
-        children: "View", // Using children instead of label
-        onClick: () => window.location.href = notification.action_url!,
-      } : undefined,
+      action: notification.action_url ? (
+        <ToastAction altText="View" onClick={() => window.location.href = notification.action_url!}>
+          View
+        </ToastAction>
+      ) : undefined,
     });
   };
   
