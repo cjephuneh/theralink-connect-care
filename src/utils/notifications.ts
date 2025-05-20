@@ -62,23 +62,27 @@ export const useNotifications = () => {
   const { toast } = useToast();
   
   const showNotificationToast = (notification: NotificationData) => {
-    const toastOptions = {
+    // Create base toast options
+    const options: any = {
       title: notification.title,
       description: notification.message,
     };
     
+    // Conditionally add action if action_url exists
     if (notification.action_url) {
-      toastOptions['action'] = (
-        <ToastAction 
-          altText="View" 
-          onClick={() => window.location.href = notification.action_url!}
-        >
+      const handleClick = () => {
+        window.location.href = notification.action_url as string;
+      };
+      
+      options.action = (
+        <ToastAction altText="View" onClick={handleClick}>
           View
         </ToastAction>
       );
     }
     
-    toast(toastOptions);
+    // Display the toast with our options
+    toast(options);
   };
   
   return { showNotificationToast };
