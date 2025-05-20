@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Calendar, Clock, User } from "lucide-react";
+import { Calendar, Clock, User, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const ClientAppointments = () => {
@@ -28,12 +28,138 @@ const ClientAppointments = () => {
   useEffect(() => {
     if (!user) return;
 
+    // Add mock therapists to the database
+    const addMockTherapists = async () => {
+      try {
+        // Check if we already have therapists in the database
+        const { data: existingTherapists, error: checkError } = await supabase
+          .from('therapists')
+          .select('id')
+          .limit(1);
+        
+        if (checkError) throw checkError;
+        
+        // Only seed therapists if none exist
+        if (existingTherapists && existingTherapists.length === 0) {
+          const mockTherapists = [
+            {
+              id: "f47ac10b-58cc-4372-a567-0e02b2c3d479", // Generate a UUID
+              bio: "Licensed clinical psychologist with over 8 years of experience helping clients navigate life's challenges.",
+              specialization: "Anxiety, Depression, Trauma, PTSD",
+              years_experience: 8,
+              hourly_rate: 85,
+              rating: 4.9
+            },
+            {
+              id: "550e8400-e29b-41d4-a716-446655440000", // Generate a UUID
+              bio: "Licensed marriage and family therapist with over 12 years of experience helping couples and families.",
+              specialization: "Relationships, Couples Therapy, Family Conflict",
+              years_experience: 12,
+              hourly_rate: 95,
+              rating: 4.8
+            },
+            {
+              id: "6ba7b810-9dad-11d1-80b4-00c04fd430c8", // Generate a UUID
+              bio: "Clinical social worker passionate about helping individuals navigate through depression and grief.",
+              specialization: "Depression, Grief, Life Transitions, Identity",
+              years_experience: 5,
+              hourly_rate: 75,
+              rating: 5.0
+            }
+          ];
+          
+          // Add mock therapists to the database
+          for (const therapist of mockTherapists) {
+            // Add therapist profile first
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: therapist.id,
+                email: `therapist${therapist.id.substring(0, 4)}@example.com`,
+                full_name: `Dr. ${therapist.specialization.split(',')[0]} Specialist`,
+                role: 'therapist',
+                profile_image_url: `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000000)}?fit=crop&w=500&q=80`,
+              }, { onConflict: 'id' });
+              
+            if (profileError) console.error("Error creating therapist profile:", profileError);
+            
+            // Then add therapist record
+            const { error: therapistError } = await supabase
+              .from('therapists')
+              .upsert(therapist, { onConflict: 'id' });
+              
+            if (therapistError) console.error("Error creating therapist:", therapistError);
+          }
+          
+          console.log("Mock therapists added to database");
+        }
+      } catch (error) {
+        console.error("Error seeding therapists:", error);
+      }
+    };
+
+    // Create a mock appointment if needed for testing
+    const createMockAppointment = async () => {
+      try {
+        // First check if user already has appointments
+        const { data: existingAppointments, error: checkError } = await supabase
+          .from('appointments')
+          .select('id')
+          .eq('client_id', user.id)
+          .limit(1);
+          
+        if (checkError) throw checkError;
+        
+        // Only create a mock appointment if none exist
+        if (!existingAppointments || existingAppointments.length === 0) {
+          // Get a random therapist
+          const { data: randomTherapist, error: therapistError } = await supabase
+            .from('therapists')
+            .select('id')
+            .limit(1);
+            
+          if (therapistError) throw therapistError;
+          
+          if (randomTherapist && randomTherapist.length > 0) {
+            // Create a future appointment
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(10, 0, 0, 0);
+            
+            const endTime = new Date(tomorrow);
+            endTime.setMinutes(endTime.getMinutes() + 50);
+            
+            const { error: appointmentError } = await supabase
+              .from('appointments')
+              .insert({
+                client_id: user.id,
+                therapist_id: randomTherapist[0].id,
+                start_time: tomorrow.toISOString(),
+                end_time: endTime.toISOString(),
+                status: 'scheduled',
+                session_type: 'Initial Consultation'
+              });
+              
+            if (appointmentError) throw appointmentError;
+            
+            console.log("Mock appointment created");
+          }
+        }
+      } catch (error) {
+        console.error("Error creating mock appointment:", error);
+      }
+    };
+
     const fetchAppointments = async () => {
       setIsLoading(true);
       try {
+        // First ensure we have some therapists and an appointment for testing
+        await addMockTherapists();
+        await createMockAppointment();
+        
         const now = new Date().toISOString();
 
-        // Fetch upcoming appointments (without trying to join with therapist profiles)
+        // Fetch upcoming appointments
         const { data: upcomingData, error: upcomingError } = await supabase
           .from('appointments')
           .select(`
@@ -51,7 +177,7 @@ const ClientAppointments = () => {
 
         if (upcomingError) throw upcomingError;
         
-        // Fetch past appointments (without trying to join with therapist profiles)
+        // Fetch past appointments
         const { data: pastData, error: pastError } = await supabase
           .from('appointments')
           .select(`
@@ -168,7 +294,12 @@ const ClientAppointments = () => {
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading appointments...</div>;
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-2 text-muted-foreground">Loading appointments...</p>
+      </div>
+    );
   }
 
   return (
@@ -294,6 +425,52 @@ const ClientAppointments = () => {
       </Tabs>
     </div>
   );
+};
+
+// Helper functions for formatting dates and times
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long', 
+    day: 'numeric'
+  });
+};
+
+const formatTime = (dateString) => {
+  return new Date(dateString).toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// Function to cancel an appointment
+const cancelAppointment = async (appointmentId) => {
+  try {
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'cancelled' })
+      .eq('id', appointmentId);
+
+    if (error) throw error;
+
+    // Update the local state
+    setUpcomingAppointments(upcomingAppointments.map(apt => 
+      apt.id === appointmentId ? { ...apt, status: 'cancelled' } : apt
+    ));
+
+    toast({
+      title: "Appointment cancelled",
+      description: "Your appointment has been successfully cancelled",
+    });
+  } catch (error) {
+    console.error('Error cancelling appointment:', error);
+    toast({
+      title: "Failed to cancel appointment",
+      description: "Please try again later",
+      variant: "destructive",
+    });
+  }
 };
 
 export default ClientAppointments;

@@ -67,15 +67,52 @@ const BookingComplete = () => {
           hourlyRate: therapistData.hourly_rate
         });
 
-        // Show a success notification
+        // Create appointment record in database
         if (user) {
-          showNotificationToast({
-            user_id: user.id,
-            title: 'Booking Confirmed',
-            message: `Your appointment on ${decodeURIComponent(date || '')} at ${decodeURIComponent(time || '')} has been confirmed.`,
-            type: 'appointment',
-            action_url: '/client/appointments'
-          });
+          const appointmentDate = new Date(decodeURIComponent(date || ''));
+          const timeString = decodeURIComponent(time || '');
+          const [hourStr, minuteStr, ampm] = timeString.match(/(\d+):(\d+)\s*([AP]M)/i) || [0, 0, 'AM'];
+          
+          let hour = parseInt(hourStr);
+          const minute = parseInt(minuteStr);
+          
+          // Convert to 24-hour format
+          if (ampm.toUpperCase() === 'PM' && hour < 12) hour += 12;
+          if (ampm.toUpperCase() === 'AM' && hour === 12) hour = 0;
+          
+          appointmentDate.setHours(hour, minute, 0, 0);
+          const endTime = new Date(appointmentDate);
+          endTime.setMinutes(endTime.getMinutes() + 50); // 50 minute appointment
+          
+          try {
+            const { data: appointmentData, error: appointmentError } = await supabase
+              .from('appointments')
+              .insert({
+                client_id: user.id,
+                therapist_id: therapistId,
+                start_time: appointmentDate.toISOString(),
+                end_time: endTime.toISOString(),
+                status: 'scheduled',
+                session_type: 'Initial Consultation'
+              })
+              .select()
+              .single();
+              
+            if (appointmentError) throw appointmentError;
+            
+            console.log("Appointment created:", appointmentData);
+              
+            // Show a success notification
+            showNotificationToast({
+              user_id: user.id,
+              title: 'Booking Confirmed',
+              message: `Your appointment with ${profileData.full_name} on ${decodeURIComponent(date || '')} at ${decodeURIComponent(time || '')} has been confirmed.`,
+              type: 'appointment',
+              action_url: '/client/appointments'
+            });
+          } catch (appointmentError) {
+            console.error("Failed to create appointment:", appointmentError);
+          }
         }
       } catch (error) {
         console.error('Error fetching therapist data:', error);

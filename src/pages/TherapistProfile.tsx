@@ -13,8 +13,11 @@ import {
   Languages, 
   MapPin, 
   DollarSign, 
-  Check
+  Check,
+  Loader2
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock therapist data (in real app, this would come from a backend API)
 const mockTherapists = [
@@ -132,28 +135,282 @@ const TherapistProfile = () => {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    // In a real app, this would be an API call
-    setLoading(true);
-    setTimeout(() => {
-      const foundTherapist = mockTherapists.find(t => t.id === id);
-      setTherapist(foundTherapist || null);
+  // Generate date options for the next 7 days
+  const generateDateOptions = () => {
+    const dates = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(today.getDate() + i);
       
-      if (foundTherapist?.nextAvailable && foundTherapist.nextAvailable.length > 0) {
-        setSelectedDate(foundTherapist.nextAvailable[0].date);
+      const dateStr = date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      // Generate random time slots for each day
+      const slots = [];
+      const numSlots = Math.floor(Math.random() * 5) + 1; // 1-5 slots
+      
+      for (let j = 0; j < numSlots; j++) {
+        const hour = Math.floor(Math.random() * 8) + 9; // 9 AM - 5 PM
+        const minute = Math.random() < 0.5 ? 0 : 30;
+        const amPm = hour < 12 ? 'AM' : 'PM';
+        const hourFormatted = hour <= 12 ? hour : hour - 12;
+        const timeStr = `${hourFormatted}:${minute === 0 ? '00' : '30'} ${amPm}`;
+        slots.push(timeStr);
       }
       
-      setLoading(false);
-    }, 500); // Simulate API delay
-  }, [id]);
+      // Sort time slots
+      slots.sort((a, b) => {
+        const hourA = parseInt(a.split(':')[0]);
+        const minA = parseInt(a.split(':')[1].split(' ')[0]);
+        const ampmA = a.split(' ')[1];
+        
+        const hourB = parseInt(b.split(':')[0]);
+        const minB = parseInt(b.split(':')[1].split(' ')[0]);
+        const ampmB = b.split(' ')[1];
+        
+        // Convert to 24 hour for comparison
+        const hour24A = ampmA === 'PM' && hourA !== 12 ? hourA + 12 : (ampmA === 'AM' && hourA === 12 ? 0 : hourA);
+        const hour24B = ampmB === 'PM' && hourB !== 12 ? hourB + 12 : (ampmB === 'AM' && hourB === 12 ? 0 : hourB);
+        
+        if (hour24A !== hour24B) return hour24A - hour24B;
+        return minA - minB;
+      });
+      
+      dates.push({
+        date: dateStr,
+        slots
+      });
+    }
+    
+    return dates;
+  };
+  
+  useEffect(() => {
+    const fetchTherapistData = async () => {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+        
+        // Check if id is one of our mock UUIDs (1, 2, 3)
+        if (id === "1" || id === "2" || id === "3") {
+          // Use mock data for demo purposes
+          const mockTherapists = [
+            {
+              id: "1",
+              name: "Dr. Sarah Johnson",
+              title: "Licensed Clinical Psychologist",
+              image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+              rating: 4.9,
+              reviewCount: 127,
+              specialties: ["Anxiety", "Depression", "Trauma", "PTSD"],
+              languages: ["English", "Spanish"],
+              yearsExperience: 8,
+              location: "New York, NY (Remote Available)",
+              education: [
+                { degree: "Ph.D. in Clinical Psychology", institution: "Columbia University", year: "2015" },
+                { degree: "M.A. in Psychology", institution: "New York University", year: "2012" },
+              ],
+              certifications: [
+                "Licensed Psychologist - State of New York",
+                "Certified Trauma Professional",
+                "Cognitive Behavioral Therapy Certification"
+              ],
+              approach: [
+                "Cognitive Behavioral Therapy (CBT)",
+                "Mindfulness-Based Therapy",
+                "Trauma-Informed Care",
+                "Solution-Focused Brief Therapy"
+              ],
+              price: 85,
+              insurance: ["Blue Cross Blue Shield", "Aetna", "Cigna", "United Healthcare"],
+              nextAvailable: generateDateOptions(),
+              about: "I am a licensed clinical psychologist with over 8 years of experience helping clients navigate life's challenges. I specialize in evidence-based approaches including Cognitive Behavioral Therapy (CBT) and mindfulness techniques.\n\nMy practice focuses on creating a warm, non-judgmental environment where you can explore your thoughts and feelings safely. I believe therapy is a collaborative process, and I work with each client to develop personalized strategies for growth and healing.\n\nWhether you're dealing with anxiety, depression, trauma, or just feeling stuck, I'm here to support your journey toward better mental health. I particularly enjoy working with adults and young professionals navigating life transitions, identity issues, and relationship challenges."
+            },
+            {
+              id: "2",
+              name: "Dr. Michael Chen",
+              title: "Licensed Marriage & Family Therapist",
+              image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+              rating: 4.8,
+              reviewCount: 93,
+              specialties: ["Relationships", "Couples Therapy", "Family Conflict"],
+              languages: ["English", "Mandarin"],
+              yearsExperience: 12,
+              location: "San Francisco, CA (Remote Available)",
+              education: [
+                { degree: "Ph.D. in Marriage and Family Therapy", institution: "Stanford University", year: "2010" },
+                { degree: "M.A. in Psychology", institution: "UC Berkeley", year: "2007" },
+              ],
+              certifications: [
+                "Licensed Marriage and Family Therapist - California",
+                "Gottman Method Couples Therapy (Level 3)",
+                "Emotionally Focused Therapy Certification"
+              ],
+              approach: [
+                "Gottman Method",
+                "Emotionally Focused Therapy",
+                "Narrative Therapy",
+                "Family Systems Theory"
+              ],
+              price: 95,
+              insurance: ["Aetna", "Cigna", "Kaiser Permanente"],
+              nextAvailable: generateDateOptions(),
+              about: "I am a licensed marriage and family therapist with over 12 years of experience helping couples and families improve their relationships. I specialize in communication issues, conflict resolution, and rebuilding trust.\n\nMy therapeutic approach integrates the Gottman Method and Emotionally Focused Therapy to help couples break negative cycles and develop more secure connections. For families, I use Family Systems Theory to address dynamics that may be contributing to conflict or distress.\n\nI believe that healthy relationships are foundational to our well-being. Whether you're navigating a specific crisis or looking to deepen your connection, I provide a supportive space where all parties feel heard and validated. My goal is to help you develop practical tools for more satisfying relationships."
+            },
+            {
+              id: "3",
+              name: "Dr. Amara Okafor",
+              title: "Clinical Social Worker",
+              image: "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+              rating: 5.0,
+              reviewCount: 78,
+              specialties: ["Depression", "Grief", "Life Transitions", "Identity"],
+              languages: ["English"],
+              yearsExperience: 5,
+              location: "Boston, MA (Remote Available)",
+              education: [
+                { degree: "Master of Social Work (MSW)", institution: "Boston University", year: "2018" },
+                { degree: "B.A. in Psychology", institution: "Tufts University", year: "2015" },
+              ],
+              certifications: [
+                "Licensed Clinical Social Worker - Massachusetts",
+                "Certified Grief Counselor",
+                "Dialectical Behavior Therapy Trained"
+              ],
+              approach: [
+                "Psychodynamic Therapy",
+                "Dialectical Behavior Therapy (DBT)",
+                "Grief Counseling",
+                "Culturally-Responsive Therapy"
+              ],
+              price: 75,
+              insurance: ["Blue Cross Blue Shield", "Harvard Pilgrim", "Tufts Health Plan"],
+              nextAvailable: generateDateOptions(),
+              about: "I am a licensed clinical social worker passionate about helping individuals navigate through depression, grief, major life transitions, and identity exploration. With 5 years of clinical experience, I create a warm and inclusive therapeutic environment for all my clients.\n\nMy approach combines psychodynamic techniques with practical DBT skills to address both the root causes of distress and develop effective coping strategies. I believe in honoring each person's unique story while building resilience and self-compassion.\n\nWhether you're coping with loss, struggling with depression, navigating a significant change, or exploring aspects of your identity, I'm committed to walking alongside you on your journey. I particularly enjoy working with young adults, BIPOC individuals, and those navigating cultural or identity-related challenges."
+            }
+          ];
+
+          const foundTherapist = mockTherapists.find(t => t.id === id);
+          setTherapist(foundTherapist || null);
+          
+          if (foundTherapist?.nextAvailable && foundTherapist.nextAvailable.length > 0) {
+            setSelectedDate(foundTherapist.nextAvailable[0].date);
+          }
+          
+          setLoading(false);
+          return;
+        }
+        
+        // Try to fetch from database if not a mock ID
+        try {
+          // Get therapist profile
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, full_name, profile_image_url, role')
+            .eq('id', id)
+            .eq('role', 'therapist')
+            .single();
+            
+          if (profileError) throw profileError;
+          
+          // Get therapist details
+          const { data: therapistData, error: therapistError } = await supabase
+            .from('therapists')
+            .select('bio, specialization, years_experience, hourly_rate, rating')
+            .eq('id', id)
+            .single();
+            
+          if (therapistError) throw therapistError;
+          
+          // Convert to a format similar to our mock data
+          const therapistSpecialties = therapistData.specialization ? therapistData.specialization.split(',').map(s => s.trim()) : ["Therapy"];
+          
+          const dbTherapist = {
+            id,
+            name: profileData.full_name,
+            title: `Licensed ${therapistSpecialties[0]} Therapist`,
+            image: profileData.profile_image_url || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+            rating: therapistData.rating || 4.5,
+            reviewCount: Math.floor(Math.random() * 50) + 10,
+            specialties: therapistSpecialties,
+            languages: ["English"],
+            yearsExperience: therapistData.years_experience || 3,
+            location: "Remote Available",
+            education: [
+              { degree: "Ph.D. in Psychology", institution: "University", year: "2015" }
+            ],
+            certifications: [
+              "Licensed Therapist"
+            ],
+            approach: therapistSpecialties.map(s => `${s} Therapy`),
+            price: therapistData.hourly_rate || 75,
+            insurance: ["Blue Cross Blue Shield", "Aetna"],
+            nextAvailable: generateDateOptions(),
+            about: therapistData.bio || "Professional therapist with experience in providing supportive counseling and therapy services."
+          };
+          
+          setTherapist(dbTherapist);
+          
+          if (dbTherapist?.nextAvailable && dbTherapist.nextAvailable.length > 0) {
+            setSelectedDate(dbTherapist.nextAvailable[0].date);
+          }
+        } catch (error) {
+          console.error("Error fetching therapist data:", error);
+          throw error;
+        }
+      } catch (error) {
+        console.error("Error in therapist profile:", error);
+        toast({
+          title: "Could not load therapist profile",
+          description: "Please try again later",
+          variant: "destructive",
+        });
+        
+        // Fallback to mock data
+        setTherapist({
+          id: id,
+          name: "Therapist Profile",
+          title: "Licensed Therapist",
+          image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+          rating: 4.7,
+          reviewCount: 50,
+          specialties: ["Therapy", "Counseling"],
+          languages: ["English"],
+          yearsExperience: 5,
+          location: "Remote Available",
+          education: [
+            { degree: "Ph.D. in Psychology", institution: "University", year: "2018" }
+          ],
+          certifications: ["Licensed Therapist"],
+          approach: ["Therapy", "Counseling"],
+          price: 80,
+          insurance: ["Insurance Plans"],
+          nextAvailable: generateDateOptions(),
+          about: "Professional therapist with experience in providing supportive counseling and therapy services."
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTherapistData();
+  }, [id, toast]);
 
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-12 flex justify-center items-center">
         <div className="w-full max-w-6xl h-96 flex items-center justify-center">
-          <div className="animate-pulse-subtle">
-            <p className="text-gray-500">Loading therapist profile...</p>
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">Loading therapist profile...</p>
           </div>
         </div>
       </div>
@@ -176,7 +433,9 @@ const TherapistProfile = () => {
 
   const handleBookSession = () => {
     if (selectedDate && selectedTime) {
-      navigate(`/therapists/${therapist.id}/book`);
+      const encodedDate = encodeURIComponent(selectedDate);
+      const encodedTime = encodeURIComponent(selectedTime);
+      navigate(`/booking/complete/${therapist.id}/${encodedDate}/${encodedTime}`);
     }
   };
 
@@ -245,13 +504,10 @@ const TherapistProfile = () => {
                 
                 <div className="md:hidden mt-6 flex gap-2">
                   <Button 
-                    asChild
                     className="flex-1 bg-thera-600 hover:bg-thera-700"
                     onClick={() => window.scrollTo({top: document.getElementById('booking-section')?.offsetTop || 0, behavior: 'smooth'})}
                   >
-                    <Link to="#booking-section">
-                      Book Session
-                    </Link>
+                    Book Session
                   </Button>
                   <Button 
                     asChild
@@ -448,7 +704,6 @@ const TherapistProfile = () => {
               
               <div className="space-y-4">
                 <Button 
-                  asChild
                   className="w-full bg-thera-600 hover:bg-thera-700"
                   disabled={!selectedDate || !selectedTime}
                   onClick={handleBookSession}
