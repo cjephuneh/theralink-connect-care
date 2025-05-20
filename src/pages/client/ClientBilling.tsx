@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, CreditCard, Wallet, CalendarClock, CheckCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -157,16 +158,26 @@ const ClientBilling = () => {
         
         if (txError) throw txError;
         
-        // Update wallet balance
-        const { error: walletError } = await supabase.rpc('add_funds_to_wallet', {
-          p_user_id: user.id,
-          p_amount: amount
-        });
+        // Update wallet balance directly since we don't have the RPC function available
+        const { data: currentWallet, error: fetchError } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (fetchError) throw fetchError;
         
-        if (walletError) throw walletError;
+        const newBalance = (currentWallet?.balance || 0) + amount;
+        
+        const { error: updateError } = await supabase
+          .from('wallets')
+          .update({ balance: newBalance })
+          .eq('user_id', user.id);
+          
+        if (updateError) throw updateError;
         
         // Update local state
-        setWalletBalance(prev => prev + amount);
+        setWalletBalance(newBalance);
         setTransactions(prev => [txData, ...prev]);
         
         // Show success message

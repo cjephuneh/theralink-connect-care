@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -53,8 +54,8 @@ import AdminContent from '@/pages/admin/AdminContent';
 import TherapistOnboardingPage from '@/pages/TherapistOnboardingPage';
 
 // Import layout components
-import { Layout } from '@/components/layout/Layout';
-import { TherapistLayout } from '@/components/layout/TherapistLayout';
+import Layout from '@/components/layout/Layout';
+import TherapistLayout from '@/components/layout/TherapistLayout';
 
 // Authentication context
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
