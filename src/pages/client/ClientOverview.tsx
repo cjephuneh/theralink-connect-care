@@ -20,6 +20,7 @@ const ClientOverview = () => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [therapyProgress, setTherapyProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [therapists, setTherapists] = useState({});
 
   useEffect(() => {
     if (!user) return;
@@ -27,7 +28,7 @@ const ClientOverview = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Fetch upcoming appointments
+        // Fetch upcoming appointments (without trying to join with therapist profiles)
         const { data: appointmentData, error: appointmentError } = await supabase
           .from('appointments')
           .select(`
@@ -36,8 +37,7 @@ const ClientOverview = () => {
             end_time,
             session_type,
             status,
-            therapist_id,
-            profiles:therapist_id (full_name, profile_image_url)
+            therapist_id
           `)
           .eq('client_id', user.id)
           .eq('status', 'scheduled')
@@ -46,7 +46,35 @@ const ClientOverview = () => {
           .limit(3);
 
         if (appointmentError) throw appointmentError;
-        setUpcomingAppointments(appointmentData || []);
+        
+        // Get unique therapist IDs from appointments
+        const therapistIds = [...new Set(appointmentData?.map(apt => apt.therapist_id) || [])];
+        
+        // Fetch therapist profiles separately if there are appointments
+        if (therapistIds.length > 0) {
+          const { data: therapistData, error: therapistError } = await supabase
+            .from('profiles')
+            .select('id, full_name, profile_image_url')
+            .in('id', therapistIds);
+            
+          if (therapistError) throw therapistError;
+          
+          // Create a map of therapist data for easy lookup
+          const therapistMap = {};
+          therapistData?.forEach(therapist => {
+            therapistMap[therapist.id] = therapist;
+          });
+          
+          setTherapists(therapistMap);
+        }
+        
+        // Combine appointment data with therapist data
+        const enrichedAppointments = appointmentData?.map(apt => ({
+          ...apt,
+          profiles: therapists[apt.therapist_id] || null
+        })) || [];
+        
+        setUpcomingAppointments(enrichedAppointments);
 
         // Fetch recent client notes
         const { data: notesData, error: notesError } = await supabase
@@ -108,6 +136,18 @@ const ClientOverview = () => {
 
     fetchData();
   }, [user, toast]);
+
+  // Update the appointment data whenever therapists data changes
+  useEffect(() => {
+    if (Object.keys(therapists).length > 0) {
+      setUpcomingAppointments(prev => 
+        prev.map(apt => ({
+          ...apt,
+          profiles: therapists[apt.therapist_id] || null
+        }))
+      );
+    }
+  }, [therapists]);
 
   const formatDate = (dateString) => {
     // Use const typed parameters to fix the TypeScript error

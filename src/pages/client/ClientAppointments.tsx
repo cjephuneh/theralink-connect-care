@@ -23,6 +23,7 @@ const ClientAppointments = () => {
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [pastAppointments, setPastAppointments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [therapists, setTherapists] = useState({});
 
   useEffect(() => {
     if (!user) return;
@@ -32,7 +33,7 @@ const ClientAppointments = () => {
       try {
         const now = new Date().toISOString();
 
-        // Fetch upcoming appointments
+        // Fetch upcoming appointments (without trying to join with therapist profiles)
         const { data: upcomingData, error: upcomingError } = await supabase
           .from('appointments')
           .select(`
@@ -50,37 +51,7 @@ const ClientAppointments = () => {
 
         if (upcomingError) throw upcomingError;
         
-        // Fetch therapist profiles in a separate query
-        let enrichedUpcomingData = [];
-        
-        if (upcomingData && upcomingData.length > 0) {
-          // Get unique therapist IDs
-          const therapistIds = [...new Set(upcomingData.map(apt => apt.therapist_id))];
-          
-          // Fetch therapist profiles
-          const { data: therapists } = await supabase
-            .from('profiles')
-            .select('id, full_name, profile_image_url')
-            .in('id', therapistIds);
-            
-          // Create a lookup map for therapists
-          const therapistMap = {};
-          if (therapists) {
-            therapists.forEach(therapist => {
-              therapistMap[therapist.id] = therapist;
-            });
-          }
-          
-          // Combine data
-          enrichedUpcomingData = upcomingData.map(apt => ({
-            ...apt,
-            therapist: therapistMap[apt.therapist_id] || { full_name: 'Therapist' }
-          }));
-        }
-        
-        setUpcomingAppointments(enrichedUpcomingData);
-
-        // Fetch past appointments with the same approach
+        // Fetch past appointments (without trying to join with therapist profiles)
         const { data: pastData, error: pastError } = await supabase
           .from('appointments')
           .select(`
@@ -98,35 +69,44 @@ const ClientAppointments = () => {
 
         if (pastError) throw pastError;
         
-        // Enrich past appointments with therapist data
-        let enrichedPastData = [];
+        // Get unique therapist IDs from all appointments
+        const allAppointments = [...(upcomingData || []), ...(pastData || [])];
+        const therapistIds = [...new Set(allAppointments.map(apt => apt.therapist_id))];
         
-        if (pastData && pastData.length > 0) {
-          // Get unique therapist IDs
-          const therapistIds = [...new Set(pastData.map(apt => apt.therapist_id))];
-          
-          // Fetch therapist profiles
-          const { data: therapists } = await supabase
+        // Fetch therapist profiles separately if there are appointments
+        if (therapistIds.length > 0) {
+          const { data: therapistData, error: therapistError } = await supabase
             .from('profiles')
             .select('id, full_name, profile_image_url')
             .in('id', therapistIds);
             
-          // Create a lookup map for therapists
-          const therapistMap = {};
-          if (therapists) {
-            therapists.forEach(therapist => {
-              therapistMap[therapist.id] = therapist;
-            });
-          }
+          if (therapistError) throw therapistError;
           
-          // Combine data
-          enrichedPastData = pastData.map(apt => ({
+          // Create a map of therapist data for easy lookup
+          const therapistMap = {};
+          therapistData?.forEach(therapist => {
+            therapistMap[therapist.id] = therapist;
+          });
+          
+          setTherapists(therapistMap);
+          
+          // Enrich appointments with therapist data
+          const enrichedUpcomingData = upcomingData?.map(apt => ({
             ...apt,
             therapist: therapistMap[apt.therapist_id] || { full_name: 'Therapist' }
-          }));
+          })) || [];
+          
+          const enrichedPastData = pastData?.map(apt => ({
+            ...apt,
+            therapist: therapistMap[apt.therapist_id] || { full_name: 'Therapist' }
+          })) || [];
+          
+          setUpcomingAppointments(enrichedUpcomingData);
+          setPastAppointments(enrichedPastData);
+        } else {
+          setUpcomingAppointments([]);
+          setPastAppointments([]);
         }
-        
-        setPastAppointments(enrichedPastData);
       } catch (error) {
         console.error('Error fetching appointments:', error);
         toast({

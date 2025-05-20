@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -259,7 +258,7 @@ export function ClientSidebar({ children }) {
     <SidebarProvider>
       <div className="flex w-full min-h-screen">
         <ClientSidebarContent />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-background">
           {children}
         </main>
       </div>
@@ -276,6 +275,7 @@ export function ClientSidebar({ children }) {
         }
         
         @media (max-width: 768px) {
+          /* Fix for sidebar mobile layout */
           .sidebar-collapsed {
             width: 0 !important;
             min-width: 0 !important;
@@ -291,6 +291,11 @@ export function ClientSidebar({ children }) {
           /* Improve touch targets on mobile */
           [data-sidebar="menu-button"] {
             min-height: 44px;
+          }
+          
+          /* Ensure main content takes full width on mobile */
+          [data-collapsible="offcanvas"] + main {
+            width: 100%;
           }
         }
       `}</style>
