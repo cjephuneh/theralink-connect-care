@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 
 export interface NotificationData {
   user_id: string;
@@ -68,17 +67,14 @@ export const useNotifications = () => {
       description: notification.message,
     };
     
-    // Conditionally add action if action_url exists
+    // If there's an action URL, add an action to the toast
     if (notification.action_url) {
-      const handleClick = () => {
-        window.location.href = notification.action_url as string;
+      options.action = {
+        label: "View",
+        onClick: () => {
+          window.location.href = notification.action_url as string;
+        }
       };
-      
-      options.action = (
-        <ToastAction altText="View" onClick={handleClick}>
-          View
-        </ToastAction>
-      );
     }
     
     // Display the toast with our options
