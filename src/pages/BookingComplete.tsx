@@ -24,6 +24,23 @@ const BookingComplete = () => {
       try {
         setLoading(true);
 
+        // Validate if therapistId is a valid UUID before making Supabase requests
+        // Mock UUIDs like "1" will fail this validation
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(therapistId)) {
+          // If not a valid UUID, use mock data instead
+          console.log("Using mock data for non-UUID therapist ID:", therapistId);
+          setTherapist({
+            id: therapistId,
+            name: "Dr. Sarah Johnson",
+            image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+            title: "Licensed Therapist",
+            hourlyRate: 85
+          });
+          setLoading(false);
+          return;
+        }
+
         // Get therapist profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -67,6 +84,15 @@ const BookingComplete = () => {
           description: 'Failed to load therapist details',
           variant: 'destructive',
         });
+        
+        // Use mock data as fallback
+        setTherapist({
+          id: therapistId,
+          name: "Dr. Sarah Johnson",
+          image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+          title: "Licensed Therapist",
+          hourlyRate: 85
+        });
       } finally {
         setLoading(false);
       }
@@ -74,22 +100,6 @@ const BookingComplete = () => {
 
     fetchTherapistData();
   }, [therapistId, toast, date, time, user, showNotificationToast]);
-
-  // Fallback to mock data if supabase fetch fails
-  useEffect(() => {
-    if (!loading && !therapist && therapistId) {
-      // Mock data fallback
-      const mockTherapistData = {
-        id: therapistId,
-        name: "Dr. Sarah Johnson",
-        image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-        title: "Licensed Therapist",
-        hourlyRate: 85
-      };
-      
-      setTherapist(mockTherapistData);
-    }
-  }, [loading, therapist, therapistId]);
 
   if (loading) {
     return (

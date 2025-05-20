@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -131,6 +131,7 @@ const TherapistProfile = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // In a real app, this would be an API call
@@ -172,6 +173,12 @@ const TherapistProfile = () => {
       </div>
     );
   }
+
+  const handleBookSession = () => {
+    if (selectedDate && selectedTime) {
+      navigate(`/therapists/${therapist.id}/book`);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -444,10 +451,9 @@ const TherapistProfile = () => {
                   asChild
                   className="w-full bg-thera-600 hover:bg-thera-700"
                   disabled={!selectedDate || !selectedTime}
+                  onClick={handleBookSession}
                 >
-                  <Link to={selectedDate && selectedTime ? `/therapists/${therapist.id}/book` : "#"}>
-                    Book Session
-                  </Link>
+                  Book Session
                 </Button>
                 
                 <div className="flex gap-2">

@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -80,9 +81,9 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
-        <Toaster />
-        <SonnerToaster />
         <BrowserRouter>
+          <Toaster />
+          <SonnerToaster />
           <Routes>
             {/* Client Routes */}
             <Route path="/" element={<Layout />}>
