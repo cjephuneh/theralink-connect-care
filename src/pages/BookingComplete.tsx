@@ -68,50 +68,54 @@ const BookingComplete = () => {
         });
 
         // Create appointment record in database
-        if (user) {
-          const appointmentDate = new Date(decodeURIComponent(date || ''));
-          const timeString = decodeURIComponent(time || '');
-          const [hourStr, minuteStr, ampm] = timeString.match(/(\d+):(\d+)\s*([AP]M)/i) || [0, 0, 'AM'];
+        if (user && date && time) {
+          const appointmentDate = new Date(decodeURIComponent(date));
+          const timeString = decodeURIComponent(time);
+          const timeMatch = timeString.match(/(\d+):(\d+)\s*([AP]M)/i);
           
-          let hour = parseInt(hourStr);
-          const minute = parseInt(minuteStr);
-          
-          // Convert to 24-hour format
-          if (ampm.toUpperCase() === 'PM' && hour < 12) hour += 12;
-          if (ampm.toUpperCase() === 'AM' && hour === 12) hour = 0;
-          
-          appointmentDate.setHours(hour, minute, 0, 0);
-          const endTime = new Date(appointmentDate);
-          endTime.setMinutes(endTime.getMinutes() + 50); // 50 minute appointment
-          
-          try {
-            const { data: appointmentData, error: appointmentError } = await supabase
-              .from('appointments')
-              .insert({
-                client_id: user.id,
-                therapist_id: therapistId,
-                start_time: appointmentDate.toISOString(),
-                end_time: endTime.toISOString(),
-                status: 'scheduled',
-                session_type: 'Initial Consultation'
-              })
-              .select()
-              .single();
-              
-            if (appointmentError) throw appointmentError;
+          if (timeMatch) {
+            const [_, hourStr, minuteStr, ampm] = timeMatch;
             
-            console.log("Appointment created:", appointmentData);
+            let hour = parseInt(hourStr, 10);
+            const minute = parseInt(minuteStr, 10);
+            
+            // Convert to 24-hour format
+            if (ampm.toUpperCase() === 'PM' && hour < 12) hour += 12;
+            if (ampm.toUpperCase() === 'AM' && hour === 12) hour = 0;
+            
+            appointmentDate.setHours(hour, minute, 0, 0);
+            const endTime = new Date(appointmentDate);
+            endTime.setMinutes(endTime.getMinutes() + 50); // 50 minute appointment
+            
+            try {
+              const { data: appointmentData, error: appointmentError } = await supabase
+                .from('appointments')
+                .insert({
+                  client_id: user.id,
+                  therapist_id: therapistId,
+                  start_time: appointmentDate.toISOString(),
+                  end_time: endTime.toISOString(),
+                  status: 'scheduled',
+                  session_type: 'Initial Consultation'
+                })
+                .select()
+                .single();
+                
+              if (appointmentError) throw appointmentError;
               
-            // Show a success notification
-            showNotificationToast({
-              user_id: user.id,
-              title: 'Booking Confirmed',
-              message: `Your appointment with ${profileData.full_name} on ${decodeURIComponent(date || '')} at ${decodeURIComponent(time || '')} has been confirmed.`,
-              type: 'appointment',
-              action_url: '/client/appointments'
-            });
-          } catch (appointmentError) {
-            console.error("Failed to create appointment:", appointmentError);
+              console.log("Appointment created:", appointmentData);
+                
+              // Show a success notification
+              showNotificationToast({
+                user_id: user.id,
+                title: 'Booking Confirmed',
+                message: `Your appointment with ${profileData.full_name} on ${decodeURIComponent(date)} at ${decodeURIComponent(time)} has been confirmed.`,
+                type: 'appointment',
+                action_url: '/client/appointments'
+              });
+            } catch (appointmentError) {
+              console.error("Failed to create appointment:", appointmentError);
+            }
           }
         }
       } catch (error) {
@@ -182,7 +186,7 @@ const BookingComplete = () => {
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Date</div>
-                <div className="font-medium">{decodeURIComponent(date || '')}</div>
+                <div className="font-medium">{date ? decodeURIComponent(date) : 'Not specified'}</div>
               </div>
             </div>
 
@@ -192,7 +196,7 @@ const BookingComplete = () => {
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Time</div>
-                <div className="font-medium">{decodeURIComponent(time || '')}</div>
+                <div className="font-medium">{time ? decodeURIComponent(time) : 'Not specified'}</div>
               </div>
             </div>
           </div>
