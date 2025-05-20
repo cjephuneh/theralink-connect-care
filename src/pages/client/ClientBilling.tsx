@@ -17,17 +17,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { PaymentMethodManager } from "@/components/payment/PaymentMethodManager";
+import { useNotifications } from "@/components/notifications/NotificationProvider";
 
 const ClientBilling = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState("transactions");
   const [transactions, setTransactions] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFundingDialogOpen, setIsFundingDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [therapistData, setTherapistData] = useState({});
+  const [fundAmount, setFundAmount] = useState("100");
+  const [isFunding, setIsFunding] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -107,9 +113,9 @@ const ClientBilling = () => {
   }, [user, toast]);
 
   const formatAmount = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-NG', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'NGN'
     }).format(amount);
   };
 
@@ -124,6 +130,73 @@ const ClientBilling = () => {
   const openTransactionDetails = (transaction) => {
     setSelectedTransaction(transaction);
     setIsDialogOpen(true);
+  };
+  
+  const handleFundWallet = async () => {
+    if (!user) return;
+    setIsFunding(true);
+    
+    // For demo, simulate successful funding
+    setTimeout(async () => {
+      const amount = parseFloat(fundAmount);
+      
+      try {
+        // Create transaction record
+        const { data: txData, error: txError } = await supabase
+          .from('transactions')
+          .insert({
+            user_id: user.id,
+            amount: amount,
+            reference: `fund-${Date.now()}`,
+            status: 'completed',
+            description: 'Wallet funding',
+            transaction_type: 'deposit',
+          })
+          .select()
+          .single();
+        
+        if (txError) throw txError;
+        
+        // Update wallet balance
+        const { error: walletError } = await supabase.rpc('add_funds_to_wallet', {
+          p_user_id: user.id,
+          p_amount: amount
+        });
+        
+        if (walletError) throw walletError;
+        
+        // Update local state
+        setWalletBalance(prev => prev + amount);
+        setTransactions(prev => [txData, ...prev]);
+        
+        // Show success message
+        toast({
+          title: "Wallet Funded Successfully",
+          description: `${formatAmount(amount)} has been added to your wallet`,
+        });
+        
+        // Add notification
+        addNotification({
+          title: "Wallet Funded",
+          message: `${formatAmount(amount)} has been added to your wallet balance.`,
+          type: "payment",
+          read: false
+        });
+        
+        // Close dialog
+        setIsFundingDialogOpen(false);
+        setFundAmount("100");
+      } catch (error) {
+        console.error('Error funding wallet:', error);
+        toast({
+          title: "Funding Failed",
+          description: "There was a problem adding funds to your wallet",
+          variant: "destructive",
+        });
+      } finally {
+        setIsFunding(false);
+      }
+    }, 1500);
   };
 
   const getTransactionStatusColor = (status) => {
@@ -184,7 +257,7 @@ const ClientBilling = () => {
             <p className="text-sm text-muted-foreground mt-1">Available for future sessions</p>
           </CardContent>
           <CardFooter>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => setIsFundingDialogOpen(true)}>
               <CreditCard className="mr-2 h-4 w-4" />
               Add Funds
             </Button>
@@ -285,34 +358,7 @@ const ClientBilling = () => {
         </TabsContent>
 
         <TabsContent value="payment-methods" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Methods</CardTitle>
-              <CardDescription>Manage your payment options</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="border rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-5 w-5" />
-                    <div>
-                      <p className="font-medium">Visa ending in 4242</p>
-                      <p className="text-sm text-muted-foreground">Expires 12/25</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
-                    Default
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full">
-                Add Payment Method
-              </Button>
-            </CardFooter>
-          </Card>
+          <PaymentMethodManager />
         </TabsContent>
       </Tabs>
 
@@ -366,8 +412,105 @@ const ClientBilling = () => {
           </DialogContent>
         )}
       </Dialog>
+
+      {/* Fund Wallet Dialog */}
+      <Dialog open={isFundingDialogOpen} onOpenChange={setIsFundingDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Funds to Wallet</DialogTitle>
+            <DialogDescription>
+              Select an amount to add to your wallet balance
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount (₦)</Label>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setFundAmount("100")}
+                  className={fundAmount === "100" ? "bg-primary/10" : ""}
+                >
+                  ₦100
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setFundAmount("500")}
+                  className={fundAmount === "500" ? "bg-primary/10" : ""}
+                >
+                  ₦500
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setFundAmount("1000")}
+                  className={fundAmount === "1000" ? "bg-primary/10" : ""}
+                >
+                  ₦1000
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setFundAmount("5000")}
+                  className={fundAmount === "5000" ? "bg-primary/10" : ""}
+                >
+                  ₦5000
+                </Button>
+              </div>
+              <Input
+                id="amount"
+                value={fundAmount}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9]/g, '');
+                  setFundAmount(value);
+                }}
+                className="mt-2"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the amount you wish to add to your wallet
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFundingDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleFundWallet} disabled={isFunding || !fundAmount}>
+              {isFunding ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Add Funds'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default ClientBilling;
+
+const Label = ({ children, htmlFor }) => (
+  <label htmlFor={htmlFor} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+    {children}
+  </label>
+);
+
+const Loader = (props) => (
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+  </svg>
+);
