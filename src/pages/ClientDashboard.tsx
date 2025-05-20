@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ClientSidebar } from "@/components/layout/ClientSidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useNotifications } from "@/utils/notifications";
 
 const ClientDashboard = () => {
   const location = useLocation();
@@ -13,6 +15,7 @@ const ClientDashboard = () => {
   const { toast } = useToast();
   const { user, profile, isLoading } = useAuth();
   const [pageLoading, setPageLoading] = useState(true);
+  const { showNotificationToast } = useNotifications();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -42,6 +45,36 @@ const ClientDashboard = () => {
       });
     }
   }, [profile, navigate, toast]);
+
+  // Subscribe to notifications
+  useEffect(() => {
+    if (!user) return;
+
+    // Subscribe to new notifications
+    const channel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}` 
+      }, payload => {
+        // Show toast notification for new notifications
+        const newNotification = payload.new;
+        showNotificationToast({
+          user_id: newNotification.user_id,
+          title: newNotification.title,
+          message: newNotification.message,
+          type: newNotification.type,
+          action_url: newNotification.action_url
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, showNotificationToast]);
 
   // If still loading or no user, show loading state
   if (isLoading || pageLoading || !user) {
