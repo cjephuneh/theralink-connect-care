@@ -62,15 +62,23 @@ export const useNotifications = () => {
   const { toast } = useToast();
   
   const showNotificationToast = (notification: NotificationData) => {
-    toast({
+    const toastOptions = {
       title: notification.title,
       description: notification.message,
-      action: notification.action_url ? (
-        <ToastAction altText="View" onClick={() => window.location.href = notification.action_url!}>
+    };
+    
+    if (notification.action_url) {
+      toastOptions['action'] = (
+        <ToastAction 
+          altText="View" 
+          onClick={() => window.location.href = notification.action_url!}
+        >
           View
         </ToastAction>
-      ) : undefined,
-    });
+      );
+    }
+    
+    toast(toastOptions);
   };
   
   return { showNotificationToast };
