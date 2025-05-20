@@ -88,10 +88,10 @@ export function Header({ toggleSidebar, isMobile }: HeaderProps) {
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" onClick={() => navigate('/login')}>
+              <Button variant="ghost" onClick={() => navigate('/auth/login')}>
                 Sign In
               </Button>
-              <Button onClick={() => navigate('/register')}>
+              <Button onClick={() => navigate('/auth/register')}>
                 Create Account
               </Button>
             </div>
