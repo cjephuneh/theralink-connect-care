@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -274,12 +275,20 @@ export function ClientSidebar({ children }) {
           color: transparent;
         }
         
+        /* Fix for sidebar mobile layout */
         @media (max-width: 768px) {
-          /* Fix for sidebar mobile layout */
-          .sidebar-collapsed {
+          /* Ensure sidebar collapses properly */
+          [data-state="collapsed"] [data-sidebar="sidebar"] {
             width: 0 !important;
             min-width: 0 !important;
+            padding: 0 !important;
             overflow: hidden;
+          }
+          
+          /* Keep icons visible in collapsed state on mobile */
+          [data-state="collapsed"] [data-collapsible="icon"] [data-sidebar="menu-button"] {
+            width: 100%;
+            justify-content: center;
           }
           
           /* Fix for mobile menu expanded state */
@@ -290,13 +299,39 @@ export function ClientSidebar({ children }) {
           
           /* Improve touch targets on mobile */
           [data-sidebar="menu-button"] {
-            min-height: 44px;
+            min-height: 48px;
+            padding: 0.75rem !important;
           }
           
           /* Ensure main content takes full width on mobile */
-          [data-collapsible="offcanvas"] + main {
-            width: 100%;
+          [data-collapsible="offcanvas"] + main,
+          [data-collapsible="icon"] + main {
+            width: 100% !important;
           }
+          
+          /* Fix for sidebar rail on mobile */
+          [data-sidebar="rail"] {
+            display: none !important;
+          }
+        }
+        
+        /* Custom transitions for smoother sidebar collapse/expand */
+        [data-sidebar="sidebar"] {
+          transition: width 0.3s ease-in-out, padding 0.3s ease-in-out !important;
+        }
+        
+        /* Fix for icon mode display */
+        [data-collapsible="icon"] [data-sidebar="menu-button"] > a > div:first-child {
+          margin-right: 0 !important;
+        }
+        
+        /* Ensure proper width constraints */
+        [data-state="expanded"] [data-sidebar="sidebar"] {
+          width: var(--sidebar-width) !important;
+        }
+        
+        [data-state="collapsed"][data-collapsible="icon"] [data-sidebar="sidebar"] {
+          width: var(--sidebar-width-icon) !important;
         }
       `}</style>
     </SidebarProvider>

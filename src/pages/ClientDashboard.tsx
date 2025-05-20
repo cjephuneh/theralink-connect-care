@@ -70,7 +70,7 @@ const ClientDashboard = () => {
 
   return (
     <ClientSidebar>
-      <div className="container max-w-6xl mx-auto p-6 animation-fade-in">
+      <div className="container max-w-6xl mx-auto p-4 md:p-6 animation-fade-in">
         <Outlet />
       </div>
     </ClientSidebar>
