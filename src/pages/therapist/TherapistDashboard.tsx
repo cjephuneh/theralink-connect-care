@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,14 +56,19 @@ const TherapistDashboard = () => {
         if (appointmentsError) throw appointmentsError;
         
         // Format appointments data
-        const formattedAppointments = appointments?.map(appointment => ({
-          id: appointment.id,
-          client: appointment.profiles?.full_name || "Unknown Client",
-          avatar: appointment.profiles?.profile_image_url || "/placeholder.svg",
-          date: formatAppointmentDate(appointment.start_time),
-          time: formatAppointmentTime(appointment.start_time),
-          type: appointment.session_type === 'video' ? 'video' : 'chat'
-        })) || [];
+        const formattedAppointments = appointments?.map(appointment => {
+          // Fix: Properly access the nested profiles object
+          const profileData = appointment.profiles || {};
+          
+          return {
+            id: appointment.id,
+            client: profileData.full_name || "Unknown Client",
+            avatar: profileData.profile_image_url || "/placeholder.svg",
+            date: formatAppointmentDate(appointment.start_time),
+            time: formatAppointmentTime(appointment.start_time),
+            type: appointment.session_type === 'video' ? 'video' : 'chat'
+          };
+        }) || [];
         
         setUpcomingAppointments(formattedAppointments);
         
@@ -76,7 +80,7 @@ const TherapistDashboard = () => {
             content,
             created_at,
             is_read,
-            profiles!messages_sender_id_fkey(full_name, profile_image_url)
+            sender:sender_id(full_name, profile_image_url)
           `)
           .eq('receiver_id', user.id)
           .order('created_at', { ascending: false })
@@ -85,19 +89,24 @@ const TherapistDashboard = () => {
         if (messagesError) throw messagesError;
         
         // Format messages data
-        const formattedMessages = messages?.map(message => ({
-          id: message.id,
-          client: message.profiles?.full_name || "Unknown Client",
-          avatar: message.profiles?.profile_image_url || "/placeholder.svg",
-          message: message.content,
-          time: formatMessageTime(message.created_at),
-          unread: !message.is_read
-        })) || [];
+        const formattedMessages = messages?.map(message => {
+          // Fix: Use the renamed sender field instead of profiles
+          const senderData = message.sender || {};
+          
+          return {
+            id: message.id,
+            client: senderData.full_name || "Unknown Client",
+            avatar: senderData.profile_image_url || "/placeholder.svg",
+            message: message.content,
+            time: formatMessageTime(message.created_at),
+            unread: !message.is_read
+          };
+        }) || [];
         
         setRecentMessages(formattedMessages);
         
-        // Fetch statistics data
-        const { data: clientsCount, error: clientsError } = await supabase
+        // Fetch statistics data - Fix: Use count option correctly
+        const { count: clientsCount, error: clientsError } = await supabase
           .from('appointments')
           .select('client_id', { count: 'exact', head: true })
           .eq('therapist_id', user.id)
@@ -105,11 +114,11 @@ const TherapistDashboard = () => {
           
         if (clientsError) throw clientsError;
         
-        const { data: activeClientsCount, error: activeClientsError } = await supabase
+        const { count: activeClientsCount, error: activeClientsError } = await supabase
           .from('appointments')
           .select('client_id', { count: 'exact', head: true })
           .eq('therapist_id', user.id)
-          .gte('start_time', new Date(today.setDate(today.getDate() - 30)).toISOString())
+          .gte('start_time', new Date(new Date().setDate(today.getDate() - 30)).toISOString())
           .not('client_id', 'is', null);
           
         if (activeClientsError) throw activeClientsError;
@@ -131,7 +140,7 @@ const TherapistDashboard = () => {
         if (completedError) throw completedError;
         
         // Calculate message response rate
-        const { data: sentMessages, error: sentMessagesError } = await supabase
+        const { count: sentMessages, error: sentMessagesError } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
           .eq('sender_id', user.id);
@@ -142,13 +151,13 @@ const TherapistDashboard = () => {
         // This would be more complex in a real app, considering repeat appointments, etc.
         let retentionRate = 0;
         if (clientsCount && activeClientsCount) {
-          retentionRate = (activeClientsCount.count / clientsCount.count) * 100;
+          retentionRate = ((activeClientsCount / clientsCount) * 100);
         }
         
-        // Set statistics
+        // Set statistics - Fix: Use the count directly from the query results
         setStatistics({
-          totalClients: clientsCount?.count || 0,
-          activeClients: activeClientsCount?.count || 0,
+          totalClients: clientsCount || 0,
+          activeClients: activeClientsCount || 0,
           upcomingSessions: upcomingCount || 0,
           completedSessions: completedCount || 0,
           clientRetention: Math.round(retentionRate) || 85, // Fallback value
