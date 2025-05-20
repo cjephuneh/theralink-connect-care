@@ -15,20 +15,18 @@ import { useToast } from '@/hooks/use-toast';
 interface AppointmentData {
   id: string;
   start_time: string;
-  client: {
-    full_name: string;
-    profile_image_url: string | null;
-  };
+  client_id: string;
+  client_full_name: string;
+  client_profile_image_url: string | null;
 }
 
 interface MessageData {
   id: string;
   created_at: string;
   content: string;
-  sender: {
-    full_name: string;
-    profile_image_url: string | null;
-  };
+  sender_id: string;
+  sender_full_name: string;
+  sender_profile_image_url: string | null;
 }
 
 interface StatisticsData {
@@ -62,16 +60,13 @@ const TherapistDashboard = () => {
       
       setLoading(true);
       try {
-        // Fetch upcoming appointments with client data
+        // Fetch upcoming appointments with client data using separate queries and joins
         const { data: appointmentsData, error: appointmentsError } = await supabase
           .from('appointments')
           .select(`
             id,
             start_time,
-            client:client_id (
-              full_name,
-              profile_image_url
-            )
+            client_id
           `)
           .eq('therapist_id', user.id)
           .eq('status', 'scheduled')
@@ -81,29 +76,48 @@ const TherapistDashboard = () => {
 
         if (appointmentsError) throw appointmentsError;
         
-        // Transform the data to make TypeScript happy
-        const processedAppointments: AppointmentData[] = appointmentsData.map(appt => ({
-          id: appt.id,
-          start_time: appt.start_time,
-          client: {
-            full_name: appt.client?.full_name || 'Unknown Client',
-            profile_image_url: appt.client?.profile_image_url || null
+        // Get client profiles separately for each appointment
+        const processedAppointments: AppointmentData[] = [];
+        
+        if (appointmentsData && appointmentsData.length > 0) {
+          for (const appointment of appointmentsData) {
+            // Fetch client profile for this appointment
+            const { data: clientData, error: clientError } = await supabase
+              .from('profiles')
+              .select('full_name, profile_image_url')
+              .eq('id', appointment.client_id)
+              .single();
+            
+            if (!clientError && clientData) {
+              processedAppointments.push({
+                id: appointment.id,
+                start_time: appointment.start_time,
+                client_id: appointment.client_id,
+                client_full_name: clientData.full_name || 'Unknown Client',
+                client_profile_image_url: clientData.profile_image_url
+              });
+            } else {
+              processedAppointments.push({
+                id: appointment.id,
+                start_time: appointment.start_time,
+                client_id: appointment.client_id,
+                client_full_name: 'Unknown Client',
+                client_profile_image_url: null
+              });
+            }
           }
-        }));
+        }
         
         setUpcomingAppointments(processedAppointments);
 
-        // Fetch recent messages
+        // Fetch recent messages with separate queries
         const { data: messagesData, error: messagesError } = await supabase
           .from('messages')
           .select(`
             id,
             content,
             created_at,
-            sender:sender_id (
-              full_name,
-              profile_image_url
-            )
+            sender_id
           `)
           .eq('receiver_id', user.id)
           .order('created_at', { ascending: false })
@@ -111,68 +125,89 @@ const TherapistDashboard = () => {
 
         if (messagesError) throw messagesError;
         
-        // Transform the message data
-        const processedMessages: MessageData[] = messagesData.map(msg => ({
-          id: msg.id,
-          created_at: msg.created_at,
-          content: msg.content,
-          sender: {
-            full_name: msg.sender?.full_name || 'Unknown Sender',
-            profile_image_url: msg.sender?.profile_image_url || null
+        // Get sender profiles separately for each message
+        const processedMessages: MessageData[] = [];
+        
+        if (messagesData && messagesData.length > 0) {
+          for (const message of messagesData) {
+            // Fetch sender profile for this message
+            const { data: senderData, error: senderError } = await supabase
+              .from('profiles')
+              .select('full_name, profile_image_url')
+              .eq('id', message.sender_id)
+              .single();
+            
+            if (!senderError && senderData) {
+              processedMessages.push({
+                id: message.id,
+                created_at: message.created_at,
+                content: message.content,
+                sender_id: message.sender_id,
+                sender_full_name: senderData.full_name || 'Unknown Sender',
+                sender_profile_image_url: senderData.profile_image_url
+              });
+            } else {
+              processedMessages.push({
+                id: message.id,
+                created_at: message.created_at,
+                content: message.content,
+                sender_id: message.sender_id,
+                sender_full_name: 'Unknown Sender',
+                sender_profile_image_url: null
+              });
+            }
           }
-        }));
+        }
         
         setRecentMessages(processedMessages);
 
         // Fetch statistics data
-        const [
-          appointmentsCountResult,
-          earningsResult,
-          ratingsResult,
-          clientsResult
-        ] = await Promise.all([
-          supabase
-            .from('appointments')
-            .select('id', { count: 'exact' })
-            .eq('therapist_id', user.id),
+        const { data: appointmentsCountData, error: appointmentsCountError } = await supabase
+          .from('appointments')
+          .select('id', { count: 'exact' })
+          .eq('therapist_id', user.id);
+        
+        const totalAppointments = appointmentsCountError ? 0 : (appointmentsCountData?.length || 0);
           
-          supabase
-            .from('transactions')
-            .select('amount')
-            .eq('therapist_id', user.id)
-            .eq('transaction_type', 'payment'),
-          
-          supabase
-            .from('reviews')
-            .select('rating')
-            .eq('therapist_id', user.id),
-          
-          supabase
-            .from('appointments')
-            .select('client_id')
-            .eq('therapist_id', user.id)
-            .order('client_id')
-        ]);
-
-        // Calculate unique clients
-        const uniqueClientsSet = new Set();
-        clientsResult.data?.forEach(item => uniqueClientsSet.add(item.client_id));
-        const uniqueClientsCount = uniqueClientsSet.size;
-
+        const { data: earningsData, error: earningsError } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('therapist_id', user.id)
+          .eq('transaction_type', 'payment');
+        
         // Calculate total earnings
-        const totalEarnings = earningsResult.data?.reduce((sum, transaction) => 
-          sum + (parseFloat(transaction.amount.toString()) || 0), 0) || 0;
+        const totalEarnings = earningsError ? 0 : 
+          earningsData?.reduce((sum, transaction) => 
+            sum + (parseFloat(transaction.amount.toString()) || 0), 0) || 0;
 
+        const { data: ratingsData, error: ratingsError } = await supabase
+          .from('reviews')
+          .select('rating')
+          .eq('therapist_id', user.id);
+        
         // Calculate average rating
-        const allRatings = ratingsResult.data || [];
+        const allRatings = ratingsError ? [] : (ratingsData || []);
         const averageRating = allRatings.length > 0 
           ? allRatings.reduce((sum, review) => sum + review.rating, 0) / allRatings.length 
           : 0;
 
+        const { data: clientsData, error: clientsError } = await supabase
+          .from('appointments')
+          .select('client_id')
+          .eq('therapist_id', user.id)
+          .order('client_id');
+
+        // Calculate unique clients
+        const uniqueClientsSet = new Set();
+        if (!clientsError && clientsData) {
+          clientsData.forEach(item => uniqueClientsSet.add(item.client_id));
+        }
+        const uniqueClientsCount = uniqueClientsSet.size;
+
         // Update statistics state
         setStats({
           totalClients: uniqueClientsCount,
-          totalAppointments: appointmentsCountResult.count || 0,
+          totalAppointments,
           totalEarnings,
           averageRating,
           uniqueClientCount: uniqueClientsCount,
@@ -283,11 +318,11 @@ const TherapistDashboard = () => {
                 {upcomingAppointments.map((appointment) => (
                   <div key={appointment.id} className="flex items-center gap-4">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={appointment.client.profile_image_url || undefined} alt={appointment.client.full_name} />
-                      <AvatarFallback>{appointment.client.full_name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={appointment.client_profile_image_url || undefined} alt={appointment.client_full_name} />
+                      <AvatarFallback>{appointment.client_full_name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1">
-                      <p className="font-medium leading-none">{appointment.client.full_name}</p>
+                      <p className="font-medium leading-none">{appointment.client_full_name}</p>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <Clock className="mr-1 h-4 w-4" />
                         {format(new Date(appointment.start_time), 'MMM dd, h:mm a')}
@@ -334,12 +369,12 @@ const TherapistDashboard = () => {
                 {recentMessages.map((message) => (
                   <div key={message.id} className="flex items-start gap-4">
                     <Avatar className="h-9 w-9">
-                      <AvatarImage src={message.sender.profile_image_url || undefined} alt={message.sender.full_name} />
-                      <AvatarFallback>{message.sender.full_name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={message.sender_profile_image_url || undefined} alt={message.sender_full_name} />
+                      <AvatarFallback>{message.sender_full_name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1">
                       <div className="flex justify-between">
-                        <p className="font-medium leading-none">{message.sender.full_name}</p>
+                        <p className="font-medium leading-none">{message.sender_full_name}</p>
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(message.created_at), 'MMM dd')}
                         </span>

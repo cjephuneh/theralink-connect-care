@@ -232,8 +232,6 @@ const TherapistNotifications = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full"
-            // Fix: Remove the icon prop as it's not available on Input component
-            // Instead use startAdornment in future, or modify a custom input component
           />
         </div>
         <Tabs defaultValue="all" className="w-full md:w-auto" onValueChange={(value) => setFilter(value as "all" | "unread" | "read")}>
