@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import {
   Form,
   FormControl,
@@ -177,6 +177,23 @@ const TherapistOnboarding = () => {
         'languages'
       ]);
       canProceed = isValid;
+    } else if (step === 4) {
+      // Skip validation for availability step as it's optional which day is selected
+      // Just validate the time fields
+      const isValid = await form.trigger(['start_time', 'end_time']);
+      canProceed = isValid;
+      
+      // Ensure at least one day is selected
+      const availability = form.getValues('availability');
+      const hasSelectedDay = Object.values(availability).some(value => value === true);
+      
+      if (!hasSelectedDay) {
+        form.setError('availability', {
+          type: 'manual',
+          message: 'Please select at least one available day'
+        });
+        canProceed = false;
+      }
     }
 
     if (canProceed) {
@@ -679,7 +696,7 @@ const TherapistOnboarding = () => {
                     <FormField
                       control={form.control}
                       name="availability"
-                      render={() => (
+                      render={({ field }) => (
                         <FormItem>
                           <FormLabel>Available Days</FormLabel>
                           <FormDescription className="mb-3">
@@ -715,6 +732,7 @@ const TherapistOnboarding = () => {
                               />
                             ))}
                           </div>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
