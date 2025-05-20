@@ -445,7 +445,7 @@ const TherapistProfile = () => {
                   className="w-full bg-thera-600 hover:bg-thera-700"
                   disabled={!selectedDate || !selectedTime}
                 >
-                  <Link to={selectedDate && selectedTime ? `/checkout/${therapist.id}/${selectedDate}/${selectedTime}` : "#"}>
+                  <Link to={selectedDate && selectedTime ? `/therapists/${therapist.id}/book` : "#"}>
                     Book Session
                   </Link>
                 </Button>

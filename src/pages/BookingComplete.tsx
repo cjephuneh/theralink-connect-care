@@ -75,6 +75,22 @@ const BookingComplete = () => {
     fetchTherapistData();
   }, [therapistId, toast, date, time, user, showNotificationToast]);
 
+  // Fallback to mock data if supabase fetch fails
+  useEffect(() => {
+    if (!loading && !therapist && therapistId) {
+      // Mock data fallback
+      const mockTherapistData = {
+        id: therapistId,
+        name: "Dr. Sarah Johnson",
+        image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
+        title: "Licensed Therapist",
+        hourlyRate: 85
+      };
+      
+      setTherapist(mockTherapistData);
+    }
+  }, [loading, therapist, therapistId]);
+
   if (loading) {
     return (
       <div className="container max-w-4xl mx-auto px-4 py-16 flex flex-col items-center justify-center min-h-[70vh]">

@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import {
@@ -110,8 +109,8 @@ const BookingPage = () => {
   const [selectedSession, setSelectedSession] = useState<any | null>(null);
   const [bookingStep, setBookingStep] = useState(1);
 
-  // Use useEffect to load therapist data
-  useState(() => {
+  // Use useEffect to load therapist data - fixed from useState to useEffect
+  useEffect(() => {
     setLoading(true);
     
     // In a real app, this would be an API call
@@ -129,7 +128,7 @@ const BookingPage = () => {
       
       setLoading(false);
     }, 800);
-  });
+  }, [therapistId]);
 
   // Handle date selection
   const handleDateSelect = (date: string) => {
@@ -465,8 +464,10 @@ const BookingPage = () => {
                 Continue <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button>
-                Complete Booking <ArrowRight className="h-4 w-4 ml-1" />
+              <Button asChild>
+                <Link to={selectedDate && selectedTime ? `/booking/complete/${therapistId}/${encodeURIComponent(selectedDate)}/${encodeURIComponent(selectedTime)}` : "#"}>
+                  Complete Booking <ArrowRight className="h-4 w-4 ml-1" />
+                </Link>
               </Button>
             )}
           </CardFooter>
