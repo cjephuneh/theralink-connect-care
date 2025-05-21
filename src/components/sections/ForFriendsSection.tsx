@@ -34,8 +34,8 @@ const ForFriendsSection = () => {
             
             <div className="pt-4">
               <Button asChild size="lg" className="group">
-                <Link to="/auth/register" className="flex items-center">
-                  Register as a Friend
+                <Link to="/for-friends" className="flex items-center">
+                  Learn More
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>

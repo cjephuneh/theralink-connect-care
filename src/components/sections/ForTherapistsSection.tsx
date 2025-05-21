@@ -35,7 +35,7 @@ const ForTherapistsSection = () => {
             <div className="pt-4">
               <Button asChild size="lg" className="group">
                 <Link to="/for-therapists" className="flex items-center">
-                  Join as a Therapist
+                  Learn More
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>

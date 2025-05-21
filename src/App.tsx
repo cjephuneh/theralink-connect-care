@@ -13,6 +13,8 @@ import FriendLayout from "@/components/layout/FriendLayout";
 
 // Client Pages
 import Index from "./pages/Index";
+import TherapistsLandingPage from "./pages/TherapistsLandingPage";
+import FriendsLandingPage from "./pages/FriendsLandingPage";
 import TherapistListing from "./pages/TherapistListing";
 import TherapistProfile from "./pages/TherapistProfile";
 import ChatPage from "./pages/ChatPage";
@@ -96,6 +98,8 @@ const App = () => (
             {/* Client Routes */}
             <Route path="/" element={<Layout />}>
               <Route index element={<Index />} />
+              <Route path="for-therapists" element={<TherapistsLandingPage />} />
+              <Route path="for-friends" element={<FriendsLandingPage />} />
               <Route path="therapists" element={<TherapistListing />} />
               <Route path="therapists/:id" element={<TherapistProfile />} />
               <Route path="therapists/:therapistId/book" element={<BookingPage />} />
@@ -112,7 +116,6 @@ const App = () => (
               <Route path="terms" element={<TermsPage />} />
               <Route path="privacy" element={<PrivacyPolicyPage />} />
               <Route path="hipaa" element={<HIPAAPage />} />
-              <Route path="for-therapists" element={<TherapistOnboardingPage />} />
               <Route path="*" element={<NotFound />} />
             </Route>
 

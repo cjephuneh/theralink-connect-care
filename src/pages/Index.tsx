@@ -66,6 +66,22 @@ const Index = () => {
                 <span className="ml-1 text-muted-foreground">(2.4k+ reviews)</span>
               </div>
             </div>
+            
+            {/* New section: User Type Options */}
+            <div className="flex flex-col sm:flex-row gap-4 pt-6">
+              <Button asChild variant="outline" className="group border-primary/30 hover:border-primary">
+                <Link to="/for-therapists" className="flex items-center">
+                  I'm a Therapist
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="group border-secondary/30 hover:border-secondary">
+                <Link to="/for-friends" className="flex items-center">
+                  I want to be a Friend
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+            </div>
           </div>
           
           <div className="lg:w-1/2 relative animation-slide-up">
@@ -292,6 +308,21 @@ const Index = () => {
                 </Button>
                 <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
                   <Link to="/auth/register">Create an Account</Link>
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+                <Button asChild size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10">
+                  <Link to="/for-therapists" className="flex items-center justify-center">
+                    Join as a Therapist
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10">
+                  <Link to="/for-friends" className="flex items-center justify-center">
+                    Become a Friend
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
                 </Button>
               </div>
               
