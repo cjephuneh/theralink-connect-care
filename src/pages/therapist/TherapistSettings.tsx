@@ -76,7 +76,35 @@ const TherapistSettings = () => {
         
         setTherapistDetails(detailsData);
         
-        // Set form data
+        // Set form data with default availability structure if not present
+        const defaultAvailability = {
+          days: {
+            monday: false,
+            tuesday: false,
+            wednesday: false,
+            thursday: false,
+            friday: false,
+            saturday: false,
+            sunday: false
+          },
+          hours: { start: "09:00", end: "17:00" }
+        };
+        
+        // Parse availability from JSON if it's a string, or use default if not available
+        let parsedAvailability = defaultAvailability;
+        
+        if (therapistData?.availability) {
+          if (typeof therapistData.availability === 'string') {
+            try {
+              parsedAvailability = JSON.parse(therapistData.availability);
+            } catch (e) {
+              console.error("Error parsing availability JSON:", e);
+            }
+          } else if (typeof therapistData.availability === 'object') {
+            parsedAvailability = therapistData.availability;
+          }
+        }
+        
         setFormData({
           full_name: profileData?.full_name || "",
           email: profileData?.email || user.email || "",
@@ -84,18 +112,7 @@ const TherapistSettings = () => {
           specialization: therapistData?.specialization || "",
           hourly_rate: therapistData?.hourly_rate?.toString() || "",
           years_experience: therapistData?.years_experience?.toString() || "",
-          availability: therapistData?.availability || {
-            days: {
-              monday: false,
-              tuesday: false,
-              wednesday: false,
-              thursday: false,
-              friday: false,
-              saturday: false,
-              sunday: false
-            },
-            hours: { start: "09:00", end: "17:00" }
-          }
+          availability: parsedAvailability
         });
       } catch (error) {
         console.error("Error fetching therapist data:", error);
