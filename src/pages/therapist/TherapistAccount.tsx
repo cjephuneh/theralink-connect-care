@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,19 +10,369 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, Bell, Calendar, Camera, Check, CheckCircle, CreditCard, Globe, Lock, LogOut, Mail, MessageCircle, Pencil, Search, Shield, Smartphone, UploadCloud, User, Video, Clock } from "lucide-react";
+import { AlertCircle, Bell, Calendar, Camera, Check, CheckCircle, CreditCard, Globe, Lock, LogOut, Mail, MessageCircle, Pencil, Search, Shield, Smartphone, UploadCloud, User, Video, Clock, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 const TherapistAccount = () => {
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [profileImage, setProfileImage] = useState("/placeholder.svg");
-  const [uploadedDocuments, setUploadedDocuments] = useState([
-    { id: 1, name: "License Certificate.pdf", status: "verified" },
-    { id: 2, name: "Professional Liability Insurance.pdf", status: "verified" }
-  ]);
-  
+  const [uploadedDocuments, setUploadedDocuments] = useState([]);
+  const [pastSessions, setPastSessions] = useState([]);
+  const [therapistDetails, setTherapistDetails] = useState(null);
+  const [therapistData, setTherapistData] = useState(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [formData, setFormData] = useState({
+    full_name: "",
+    email: "",
+    professional_title: "Licensed Clinical Psychologist",
+    phone: "(555) 123-4567",
+    license_number: "",
+    location: "New York, NY",
+    bio: "",
+    specialties: [],
+    approaches: [],
+    languages: "",
+    age_groups: "Adults (18+), Seniors (65+)"
+  });
+
+  // Fetch therapist data
+  useEffect(() => {
+    const fetchTherapistData = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        // Get profile data
+        if (profile) {
+          setFormData(prev => ({
+            ...prev,
+            full_name: profile.full_name || "",
+            email: profile.email || ""
+          }));
+          
+          if (profile.profile_image_url) {
+            setProfileImage(profile.profile_image_url);
+          }
+        }
+        
+        // Get therapist data
+        const { data: therapistData, error: therapistError } = await supabase
+          .from("therapists")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+          
+        if (therapistError && therapistError.code !== 'PGRST116') {
+          console.error("Error fetching therapist data:", therapistError);
+        }
+        
+        if (therapistData) {
+          setTherapistData(therapistData);
+          setFormData(prev => ({
+            ...prev,
+            bio: therapistData.bio || "",
+            specialties: therapistData.specialization ? therapistData.specialization.split(",").map(s => s.trim()) : []
+          }));
+        }
+        
+        // Get therapist details
+        const { data: detailsData, error: detailsError } = await supabase
+          .from("therapist_details")
+          .select("*")
+          .eq("therapist_id", user.id)
+          .maybeSingle();
+          
+        if (detailsError && detailsError.code !== 'PGRST116') {
+          console.error("Error fetching therapist details:", detailsError);
+        }
+        
+        if (detailsData) {
+          setTherapistDetails(detailsData);
+          setFormData(prev => ({
+            ...prev,
+            license_number: detailsData.license_number || "",
+            approaches: detailsData.therapy_approaches ? detailsData.therapy_approaches.split(",").map(a => a.trim()) : [],
+            languages: detailsData.languages || ""
+          }));
+        }
+        
+        // Fetch verification documents
+        try {
+          const { data: filesList } = await supabase
+            .storage
+            .from('verification-documents')
+            .list(`${user.id}`);
+            
+          if (filesList && filesList.length > 0) {
+            const documents = await Promise.all(filesList.map(async (file) => {
+              const { data: { publicUrl } } = supabase
+                .storage
+                .from('verification-documents')
+                .getPublicUrl(`${user.id}/${file.name}`);
+                
+              return {
+                id: file.id,
+                name: file.name,
+                url: publicUrl,
+                status: "verified" // Assuming all uploaded docs are verified
+              };
+            }));
+            
+            setUploadedDocuments(documents);
+          }
+        } catch (error) {
+          console.log("No verification documents found");
+        }
+        
+        // Fetch past sessions (appointments)
+        const { data: appointmentsData, error: appointmentsError } = await supabase
+          .from("appointments")
+          .select(`
+            *,
+            profiles(full_name, profile_image_url)
+          `)
+          .eq("therapist_id", user.id)
+          .order("start_time", { ascending: false })
+          .limit(5);
+          
+        if (appointmentsError) {
+          console.error("Error fetching appointments:", appointmentsError);
+        }
+        
+        if (appointmentsData) {
+          setPastSessions(appointmentsData.map(appointment => ({
+            client: appointment.profiles?.full_name || "Client",
+            avatar: appointment.profiles?.profile_image_url || "/placeholder.svg",
+            date: format(new Date(appointment.start_time), "MMM d, yyyy"),
+            time: format(new Date(appointment.start_time), "h:mm a"),
+            type: appointment.session_type || "video",
+            duration: "50 minutes", // Default duration
+            notes: appointment.notes || ""
+          })));
+        }
+      } catch (error) {
+        console.error("Error fetching therapist data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTherapistData();
+  }, [user, profile, toast]);
+  
+  const handleDocumentUpload = async (e) => {
+    if (!user || !e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    const fileName = `${Date.now()}-${file.name}`;
+    const filePath = `${user.id}/${fileName}`;
+    
+    setUploading(true);
+    
+    try {
+      // Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('verification-documents')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('verification-documents')
+        .getPublicUrl(filePath);
+      
+      // Add the new document to the list
+      setUploadedDocuments(prev => [...prev, {
+        id: Date.now(),
+        name: file.name,
+        url: publicUrl,
+        status: "pending"
+      }]);
+      
+      toast({
+        title: "Success",
+        description: "Document uploaded successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload document",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+  const handleProfileImageUpload = async (e) => {
+    if (!user || !e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+    
+    setUploading(true);
+    
+    try {
+      // Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('profile-images')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('profile-images')
+        .getPublicUrl(filePath);
+      
+      // Update the profile with the new image URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ profile_image_url: publicUrl })
+        .eq('id', user.id);
+      
+      if (updateError) throw updateError;
+      
+      setProfileImage(publicUrl);
+      
+      toast({
+        title: "Success",
+        description: "Profile image updated successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setUploading(true);
+    try {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ 
+          full_name: formData.full_name,
+          email: formData.email
+        })
+        .eq("id", user.id);
+        
+      if (profileError) throw profileError;
+      
+      // Update therapist
+      const { error: therapistError } = await supabase
+        .from("therapists")
+        .update({
+          bio: formData.bio,
+          specialization: formData.specialties.join(", ")
+        })
+        .eq("id", user.id);
+        
+      if (therapistError) throw therapistError;
+      
+      // Update therapist details if it exists
+      if (therapistDetails) {
+        const { error: detailsError } = await supabase
+          .from("therapist_details")
+          .update({
+            license_number: formData.license_number,
+            therapy_approaches: formData.approaches.join(", "),
+            languages: formData.languages
+          })
+          .eq("therapist_id", user.id);
+          
+        if (detailsError) throw detailsError;
+      } else {
+        // Insert therapist details if it doesn't exist
+        const { error: insertError } = await supabase
+          .from("therapist_details")
+          .insert({
+            therapist_id: user.id,
+            license_number: formData.license_number,
+            therapy_approaches: formData.approaches.join(", "),
+            languages: formData.languages
+          });
+          
+        if (insertError) throw insertError;
+      }
+      
+      setIsEditingProfile(false);
+      
+      toast({
+        title: "Success",
+        description: "Your profile has been updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update your profile",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  const handleSpecialtiesChange = (e) => {
+    const specialties = e.target.value.split(",").map(s => s.trim());
+    setFormData(prev => ({
+      ...prev,
+      specialties
+    }));
+  };
+  
+  const handleApproachesChange = (e) => {
+    const approaches = e.target.value.split(",").map(a => a.trim());
+    setFormData(prev => ({
+      ...prev,
+      approaches
+    }));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[80vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -55,14 +405,17 @@ const TherapistAccount = () => {
                   </div>
                   <Button 
                     variant="outline"
-                    onClick={() => setIsEditingProfile(!isEditingProfile)}
+                    onClick={() => isEditingProfile ? handleSaveProfile() : setIsEditingProfile(true)}
+                    disabled={uploading}
                   >
-                    {isEditingProfile ? (
+                    {uploading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : isEditingProfile ? (
                       <Check className="mr-2 h-4 w-4" />
                     ) : (
                       <Pencil className="mr-2 h-4 w-4" />
                     )}
-                    {isEditingProfile ? "Save" : "Edit Profile"}
+                    {uploading ? "Saving..." : isEditingProfile ? "Save" : "Edit Profile"}
                   </Button>
                 </div>
               </CardHeader>
@@ -72,23 +425,31 @@ const TherapistAccount = () => {
                     <div className="relative">
                       <Avatar className="h-32 w-32 border-2">
                         <AvatarImage src={profileImage} />
-                        <AvatarFallback>DR</AvatarFallback>
+                        <AvatarFallback>{formData.full_name?.[0] || "T"}</AvatarFallback>
                       </Avatar>
-                      <Button 
-                        className="absolute bottom-0 right-0 rounded-full w-8 h-8 p-0"
-                        variant="secondary"
-                        size="icon"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </Button>
+                      <div className="absolute bottom-0 right-0">
+                        <Label htmlFor="avatar-upload" className="cursor-pointer">
+                          <div className="rounded-full w-8 h-8 bg-secondary flex items-center justify-center">
+                            <Camera className="h-4 w-4" />
+                          </div>
+                          <Input
+                            id="avatar-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleProfileImageUpload}
+                            disabled={uploading}
+                          />
+                        </Label>
+                      </div>
                     </div>
                     <div className="mt-4 text-center">
                       <Badge className="mb-2">
                         <CheckCircle className="h-3 w-3 mr-1" />
-                        Verified
+                        {therapistDetails?.application_status === 'approved' ? 'Verified' : 'Pending'}
                       </Badge>
                       <p className="text-sm text-muted-foreground">
-                        Member since Jan 2025
+                        Member since {therapistData?.created_at ? format(new Date(therapistData.created_at), "MMM yyyy") : "Jan 2025"}
                       </p>
                     </div>
                   </div>
@@ -98,55 +459,86 @@ const TherapistAccount = () => {
                       {isEditingProfile ? (
                         <>
                           <div className="space-y-2">
-                            <Label htmlFor="name">Full Name</Label>
-                            <Input id="name" defaultValue="Dr. Morgan Smith" />
+                            <Label htmlFor="full_name">Full Name</Label>
+                            <Input 
+                              id="full_name" 
+                              name="full_name"
+                              value={formData.full_name}
+                              onChange={handleInputChange}
+                            />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="title">Professional Title</Label>
-                            <Input id="title" defaultValue="Licensed Clinical Psychologist" />
+                            <Label htmlFor="professional_title">Professional Title</Label>
+                            <Input 
+                              id="professional_title" 
+                              name="professional_title"
+                              value={formData.professional_title}
+                              onChange={handleInputChange}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" type="email" defaultValue="dr.morgan@theralink.com" />
+                            <Input 
+                              id="email" 
+                              name="email"
+                              type="email" 
+                              value={formData.email}
+                              onChange={handleInputChange}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="phone">Phone Number</Label>
-                            <Input id="phone" defaultValue="(555) 123-4567" />
+                            <Input 
+                              id="phone" 
+                              name="phone"
+                              value={formData.phone}
+                              onChange={handleInputChange}
+                            />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="license">License Number</Label>
-                            <Input id="license" defaultValue="PSY12345" />
+                            <Label htmlFor="license_number">License Number</Label>
+                            <Input 
+                              id="license_number" 
+                              name="license_number"
+                              value={formData.license_number}
+                              onChange={handleInputChange}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="location">Location</Label>
-                            <Input id="location" defaultValue="New York, NY" />
+                            <Input 
+                              id="location" 
+                              name="location"
+                              value={formData.location}
+                              onChange={handleInputChange}
+                            />
                           </div>
                         </>
                       ) : (
                         <>
                           <div>
                             <p className="text-sm text-muted-foreground">Full Name</p>
-                            <p className="font-medium">Dr. Morgan Smith</p>
+                            <p className="font-medium">{formData.full_name || "Dr. Morgan Smith"}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Professional Title</p>
-                            <p className="font-medium">Licensed Clinical Psychologist</p>
+                            <p className="font-medium">{formData.professional_title}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Email</p>
-                            <p className="font-medium">dr.morgan@theralink.com</p>
+                            <p className="font-medium">{formData.email || user?.email || "dr.morgan@theralink.com"}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Phone Number</p>
-                            <p className="font-medium">(555) 123-4567</p>
+                            <p className="font-medium">{formData.phone}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">License Number</p>
-                            <p className="font-medium">PSY12345</p>
+                            <p className="font-medium">{formData.license_number || "PSY12345"}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">Location</p>
-                            <p className="font-medium">New York, NY</p>
+                            <p className="font-medium">{formData.location}</p>
                           </div>
                         </>
                       )}
@@ -158,7 +550,10 @@ const TherapistAccount = () => {
                           <Label htmlFor="bio">Professional Bio</Label>
                           <Textarea 
                             id="bio" 
-                            defaultValue="Dr. Morgan Smith is a licensed clinical psychologist with over 10 years of experience specializing in anxiety, depression, and relationship issues. Dr. Smith utilizes evidence-based approaches including Cognitive Behavioral Therapy (CBT), mindfulness, and solution-focused methods."
+                            name="bio"
+                            value={formData.bio}
+                            onChange={handleInputChange}
+                            placeholder="Write a professional bio that describes your experience and approach..."
                             className="min-h-[120px]"
                           />
                         </div>
@@ -166,10 +561,7 @@ const TherapistAccount = () => {
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">Professional Bio</p>
                           <p>
-                            Dr. Morgan Smith is a licensed clinical psychologist with over 10 years of experience 
-                            specializing in anxiety, depression, and relationship issues. Dr. Smith utilizes 
-                            evidence-based approaches including Cognitive Behavioral Therapy (CBT), mindfulness, 
-                            and solution-focused methods.
+                            {formData.bio || "Dr. Morgan Smith is a licensed clinical psychologist with over 10 years of experience specializing in anxiety, depression, and relationship issues. Dr. Smith utilizes evidence-based approaches including Cognitive Behavioral Therapy (CBT), mindfulness, and solution-focused methods."}
                           </p>
                         </div>
                       )}
@@ -181,7 +573,10 @@ const TherapistAccount = () => {
                           <Label htmlFor="specialties">Specialties</Label>
                           <Textarea 
                             id="specialties" 
-                            defaultValue="Anxiety, Depression, Relationship Issues, Trauma, LGBTQ+ Issues, Work Stress"
+                            name="specialties"
+                            value={formData.specialties.join(", ")}
+                            onChange={handleSpecialtiesChange}
+                            placeholder="Anxiety, Depression, Relationship Issues, etc."
                           />
                           <p className="text-xs text-muted-foreground">
                             Enter specialties separated by commas
@@ -191,7 +586,10 @@ const TherapistAccount = () => {
                         <div>
                           <p className="text-sm text-muted-foreground mb-2">Specialties</p>
                           <div className="flex flex-wrap gap-2">
-                            {["Anxiety", "Depression", "Relationship Issues", "Trauma", "LGBTQ+ Issues", "Work Stress"].map((specialty, idx) => (
+                            {(formData.specialties.length > 0 
+                              ? formData.specialties 
+                              : ["Anxiety", "Depression", "Relationship Issues", "Trauma", "LGBTQ+ Issues", "Work Stress"]
+                            ).map((specialty, idx) => (
                               <Badge key={idx} variant="outline">
                                 {specialty}
                               </Badge>
@@ -219,18 +617,35 @@ const TherapistAccount = () => {
                       <Label htmlFor="approaches">Therapy Approaches</Label>
                       <Textarea 
                         id="approaches" 
-                        defaultValue="Cognitive Behavioral Therapy (CBT), Mindfulness-Based Cognitive Therapy (MBCT), Solution-Focused Brief Therapy (SFBT), Acceptance and Commitment Therapy (ACT)"
+                        name="approaches"
+                        value={formData.approaches.join(", ")}
+                        onChange={handleApproachesChange}
+                        placeholder="CBT, Mindfulness, etc."
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Enter approaches separated by commas
+                      </p>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="language">Languages Spoken</Label>
-                        <Input id="language" defaultValue="English, Spanish" />
+                        <Label htmlFor="languages">Languages Spoken</Label>
+                        <Input 
+                          id="languages" 
+                          name="languages"
+                          value={formData.languages}
+                          onChange={handleInputChange}
+                          placeholder="English, Spanish, etc."
+                        />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="age-groups">Age Groups</Label>
-                        <Input id="age-groups" defaultValue="Adults (18+), Seniors (65+)" />
+                        <Label htmlFor="age_groups">Age Groups</Label>
+                        <Input 
+                          id="age_groups" 
+                          name="age_groups"
+                          value={formData.age_groups}
+                          onChange={handleInputChange}
+                        />
                       </div>
                     </div>
                   </div>
@@ -239,21 +654,28 @@ const TherapistAccount = () => {
                     <div>
                       <h4 className="font-medium mb-2">Therapy Approaches</h4>
                       <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                        <li>Cognitive Behavioral Therapy (CBT)</li>
-                        <li>Mindfulness-Based Cognitive Therapy (MBCT)</li>
-                        <li>Solution-Focused Brief Therapy (SFBT)</li>
-                        <li>Acceptance and Commitment Therapy (ACT)</li>
+                        {(formData.approaches.length > 0 
+                          ? formData.approaches 
+                          : [
+                              "Cognitive Behavioral Therapy (CBT)",
+                              "Mindfulness-Based Cognitive Therapy (MBCT)",
+                              "Solution-Focused Brief Therapy (SFBT)",
+                              "Acceptance and Commitment Therapy (ACT)"
+                            ]
+                        ).map((approach, idx) => (
+                          <li key={idx}>{approach}</li>
+                        ))}
                       </ul>
                     </div>
                     
                     <div className="flex flex-col md:flex-row gap-8">
                       <div>
                         <h4 className="font-medium mb-1">Languages Spoken</h4>
-                        <p className="text-muted-foreground">English, Spanish</p>
+                        <p className="text-muted-foreground">{formData.languages || "English, Spanish"}</p>
                       </div>
                       <div>
                         <h4 className="font-medium mb-1">Age Groups</h4>
-                        <p className="text-muted-foreground">Adults (18+), Seniors (65+)</p>
+                        <p className="text-muted-foreground">{formData.age_groups}</p>
                       </div>
                     </div>
                   </div>
@@ -280,48 +702,72 @@ const TherapistAccount = () => {
                       <CheckCircle className="h-6 w-6 text-green-600" />
                     </div>
                     <div>
-                      <h3 className="font-medium">Verification Complete</h3>
+                      <h3 className="font-medium">Verification {therapistDetails?.application_status === 'approved' ? 'Complete' : 'Pending'}</h3>
                       <p className="text-sm text-muted-foreground">
-                        Your professional credentials have been verified
+                        {therapistDetails?.application_status === 'approved' 
+                          ? 'Your professional credentials have been verified' 
+                          : 'Your professional credentials are being reviewed'}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="bg-green-50 text-green-600">
-                    Verified
+                  <Badge variant="outline" className={
+                    therapistDetails?.application_status === 'approved' 
+                      ? 'bg-green-50 text-green-600' 
+                      : therapistDetails?.application_status === 'rejected'
+                        ? 'bg-red-50 text-red-600'
+                        : 'bg-yellow-50 text-yellow-600'
+                  }>
+                    {therapistDetails?.application_status 
+                      ? therapistDetails.application_status.charAt(0).toUpperCase() + therapistDetails.application_status.slice(1) 
+                      : 'Pending'}
                   </Badge>
                 </div>
                 
                 <div>
                   <h3 className="text-lg font-medium mb-3">Uploaded Documents</h3>
                   <div className="space-y-3">
-                    {uploadedDocuments.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-md">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-muted rounded-md">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              className="h-5 w-5 text-primary"
-                            >
-                              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                              <path d="M14 2v6h6" />
-                              <path d="M16 13H8" />
-                              <path d="M16 17H8" />
-                              <path d="M10 9H8" />
-                            </svg>
+                    {uploadedDocuments.length > 0 ? (
+                      uploadedDocuments.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between p-3 border rounded-md">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-muted rounded-md">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                className="h-5 w-5 text-primary"
+                              >
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                                <path d="M14 2v6h6" />
+                                <path d="M16 13H8" />
+                                <path d="M16 17H8" />
+                                <path d="M10 9H8" />
+                              </svg>
+                            </div>
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                              <span>{doc.name}</span>
+                            </a>
                           </div>
-                          <span>{doc.name}</span>
+                          <Badge variant="outline" className={
+                            doc.status === "verified" 
+                              ? "bg-green-50 text-green-600" 
+                              : "bg-yellow-50 text-yellow-600"
+                          }>
+                            {doc.status === "verified" ? (
+                              <><CheckCircle className="h-3 w-3 mr-1" /> Verified</>
+                            ) : (
+                              <>Pending</>
+                            )}
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className="bg-green-50 text-green-600">
-                          <CheckCircle className="h-3 w-3 mr-1" /> Verified
-                        </Badge>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground">No documents uploaded yet</p>
+                    )}
                   </div>
                   
                   <Dialog>
@@ -367,6 +813,8 @@ const TherapistAccount = () => {
                             <Input
                               type="file"
                               className="w-full h-full opacity-0 absolute inset-0 cursor-pointer"
+                              onChange={handleDocumentUpload}
+                              disabled={uploading}
                             />
                           </div>
                         </div>
@@ -386,15 +834,17 @@ const TherapistAccount = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">License Number</p>
-                      <p className="font-medium">PSY12345</p>
+                      <p className="font-medium">{formData.license_number || "PSY12345"}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">License State/Region</p>
-                      <p className="font-medium">New York</p>
+                      <p className="font-medium">{therapistDetails?.license_type 
+                        ? therapistDetails.license_type.split(' ')[0] 
+                        : "New York"}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">License Type</p>
-                      <p className="font-medium">Licensed Clinical Psychologist</p>
+                      <p className="font-medium">{therapistDetails?.license_type || formData.professional_title}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">License Expiration</p>
@@ -640,147 +1090,114 @@ const TherapistAccount = () => {
                     <div>Actions</div>
                   </div>
                   <div className="divide-y">
-                    {[
-                      {
-                        client: "Sarah Johnson",
-                        avatar: "/placeholder.svg",
-                        date: "May 10, 2025",
-                        time: "3:00 PM",
-                        type: "video",
-                        duration: "50 minutes"
-                      },
-                      {
-                        client: "Michael Chen",
-                        avatar: "/placeholder.svg",
-                        date: "May 8, 2025",
-                        time: "4:30 PM",
-                        type: "video",
-                        duration: "50 minutes"
-                      },
-                      {
-                        client: "Emily Davis",
-                        avatar: "/placeholder.svg",
-                        date: "May 5, 2025",
-                        time: "10:00 AM",
-                        type: "chat",
-                        duration: "30 minutes"
-                      },
-                      {
-                        client: "Sarah Johnson",
-                        avatar: "/placeholder.svg",
-                        date: "May 3, 2025",
-                        time: "3:00 PM",
-                        type: "video",
-                        duration: "50 minutes"
-                      },
-                      {
-                        client: "David Wilson",
-                        avatar: "/placeholder.svg",
-                        date: "Apr 30, 2025",
-                        time: "1:30 PM",
-                        type: "video",
-                        duration: "50 minutes"
-                      },
-                    ].map((session, idx) => (
-                      <div key={idx} className="grid grid-cols-1 md:grid-cols-5 p-3 gap-3 md:gap-0 items-center">
-                        <div className="flex items-center gap-3 md:col-span-1 col-span-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={session.avatar} />
-                            <AvatarFallback>{session.client.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">{session.client}</span>
-                        </div>
-                        
-                        <div className="md:col-span-1 col-span-2 flex items-center text-sm">
-                          <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span>{session.date}, {session.time}</span>
-                        </div>
-                        
-                        <div className="md:col-span-1 col-span-2">
-                          <Badge variant={session.type === "video" ? "default" : "outline"}>
-                            {session.type === "video" ? (
-                              <Video className="h-3 w-3 mr-1" />
-                            ) : (
-                              <MessageCircle className="h-3 w-3 mr-1" />
-                            )}
-                            {session.type === "video" ? "Video" : "Chat"}
-                          </Badge>
-                        </div>
-                        
-                        <div className="md:col-span-1 col-span-2 text-sm">
-                          <Clock className="h-4 w-4 mr-2 text-muted-foreground inline-block" />
-                          {session.duration}
-                        </div>
-                        
-                        <div className="md:col-span-1 col-span-2 flex gap-2">
-                          <Button variant="outline" size="sm">
-                            View Notes
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm">Details</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Session Details</DialogTitle>
-                                <DialogDescription>
-                                  Session with {session.client} on {session.date}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4 py-3">
-                                <div className="flex items-center gap-4">
-                                  <Avatar className="h-12 w-12">
-                                    <AvatarImage src={session.avatar} />
-                                    <AvatarFallback>{session.client.charAt(0)}</AvatarFallback>
-                                  </Avatar>
+                    {pastSessions.length > 0 ? (
+                      pastSessions.map((session, idx) => (
+                        <div key={idx} className="grid grid-cols-1 md:grid-cols-5 p-3 gap-3 md:gap-0 items-center">
+                          <div className="flex items-center gap-3 md:col-span-1 col-span-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={session.avatar} />
+                              <AvatarFallback>{session.client.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{session.client}</span>
+                          </div>
+                          
+                          <div className="md:col-span-1 col-span-2 flex items-center text-sm">
+                            <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span>{session.date}, {session.time}</span>
+                          </div>
+                          
+                          <div className="md:col-span-1 col-span-2">
+                            <Badge variant={session.type === "video" ? "default" : "outline"}>
+                              {session.type === "video" ? (
+                                <Video className="h-3 w-3 mr-1" />
+                              ) : (
+                                <MessageCircle className="h-3 w-3 mr-1" />
+                              )}
+                              {session.type === "video" ? "Video" : "Chat"}
+                            </Badge>
+                          </div>
+                          
+                          <div className="md:col-span-1 col-span-2 text-sm">
+                            <Clock className="h-4 w-4 mr-2 text-muted-foreground inline-block" />
+                            {session.duration}
+                          </div>
+                          
+                          <div className="md:col-span-1 col-span-2 flex gap-2">
+                            <Button variant="outline" size="sm">
+                              View Notes
+                            </Button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">Details</Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Session Details</DialogTitle>
+                                  <DialogDescription>
+                                    Session with {session.client} on {session.date}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4 py-3">
+                                  <div className="flex items-center gap-4">
+                                    <Avatar className="h-12 w-12">
+                                      <AvatarImage src={session.avatar} />
+                                      <AvatarFallback>{session.client.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <h4 className="font-medium">{session.client}</h4>
+                                      <p className="text-sm text-muted-foreground">Client</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Date</p>
+                                      <p className="font-medium">{session.date}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Time</p>
+                                      <p className="font-medium">{session.time}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Duration</p>
+                                      <p className="font-medium">{session.duration}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-sm text-muted-foreground">Type</p>
+                                      <p className="font-medium capitalize">{session.type} session</p>
+                                    </div>
+                                  </div>
+                                  
                                   <div>
-                                    <h4 className="font-medium">{session.client}</h4>
-                                    <p className="text-sm text-muted-foreground">Client</p>
+                                    <p className="text-sm text-muted-foreground mb-1">Session Notes</p>
+                                    <Card>
+                                      <CardContent className="p-3 text-sm">
+                                        <p>{session.notes || "Continued work on anxiety management techniques. Client reported using deep breathing exercises successfully during stressful situations at work."}</p>
+                                      </CardContent>
+                                    </Card>
                                   </div>
                                 </div>
-                                
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Date</p>
-                                    <p className="font-medium">{session.date}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Time</p>
-                                    <p className="font-medium">{session.time}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Duration</p>
-                                    <p className="font-medium">{session.duration}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">Type</p>
-                                    <p className="font-medium capitalize">{session.type} session</p>
-                                  </div>
-                                </div>
-                                
-                                <div>
-                                  <p className="text-sm text-muted-foreground mb-1">Session Notes</p>
-                                  <Card>
-                                    <CardContent className="p-3 text-sm">
-                                      <p>Continued work on anxiety management techniques. Client reported using deep breathing exercises successfully during stressful situations at work.</p>
-                                    </CardContent>
-                                  </Card>
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button>Download Summary</Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
+                                <DialogFooter>
+                                  <Button>Download Summary</Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-muted-foreground">
+                        No past sessions found
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
                 
-                <div className="flex justify-center">
-                  <Button variant="outline">Load More Sessions</Button>
-                </div>
+                {pastSessions.length > 0 && (
+                  <div className="flex justify-center">
+                    <Button variant="outline">Load More Sessions</Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
