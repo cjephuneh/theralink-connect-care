@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Users } from "lucide-react";
+import { Search, Users as UsersIcon } from "lucide-react";
 
 const FriendClients = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,7 +44,7 @@ const FriendClients = () => {
       {clients.length === 0 ? (
         <div className="flex flex-col items-center justify-center border rounded-lg p-12 bg-muted/40">
           <div className="rounded-full bg-primary/10 p-4">
-            <Users className="h-8 w-8 text-primary" />
+            <UsersIcon className="h-8 w-8 text-primary" />
           </div>
           <h3 className="mt-4 text-lg font-medium">No clients yet</h3>
           <p className="text-muted-foreground text-center mt-2 max-w-sm">

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,11 +13,17 @@ import { useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Register = () => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const preSelectedRole = params.get('role') as "client" | "therapist" | "friend" | null;
+  
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [accountType, setAccountType] = useState<"client" | "therapist" | "friend">("client");
+  const [accountType, setAccountType] = useState<"client" | "therapist" | "friend">(
+    preSelectedRole || "client"
+  );
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
@@ -72,7 +78,7 @@ const Register = () => {
 
         <Card className="w-full">
           <CardHeader>
-            <Tabs defaultValue="client" onValueChange={(value) => setAccountType(value as "client" | "therapist" | "friend")}>
+            <Tabs defaultValue={accountType} onValueChange={(value) => setAccountType(value as "client" | "therapist" | "friend")}>
               <TabsList className="grid grid-cols-3 mb-4">
                 <TabsTrigger value="client">I'm a Client</TabsTrigger>
                 <TabsTrigger value="therapist">I'm a Therapist</TabsTrigger>

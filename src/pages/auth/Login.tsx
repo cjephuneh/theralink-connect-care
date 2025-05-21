@@ -9,23 +9,30 @@ import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loginType, setLoginType] = useState<"client" | "therapist">("client");
+  const [loginType, setLoginType] = useState<"client" | "therapist" | "friend">("client");
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
+  const { signIn, user, profile } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate(loginType === "therapist" ? "/therapist/dashboard" : "/dashboard");
+      if (profile?.role === "therapist") {
+        navigate("/therapist/dashboard");
+      } else if (profile?.role === "friend") {
+        navigate("/friend/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     }
-  }, [user, navigate, loginType]);
+  }, [user, navigate, profile]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,32 +64,29 @@ const Login = () => {
 
         <Card className="w-full">
           <CardHeader>
-            <div className="flex items-center justify-center space-x-4 mb-4">
-              <button
-                className={`px-4 py-2 flex-1 text-center rounded-md ${
-                  loginType === "client"
-                    ? "bg-thera-600 text-white"
-                    : "bg-muted"
-                }`}
-                onClick={() => setLoginType("client")}
-              >
-                Client Login
-              </button>
-              <button
-                className={`px-4 py-2 flex-1 text-center rounded-md ${
-                  loginType === "therapist"
-                    ? "bg-thera-600 text-white"
-                    : "bg-muted"
-                }`}
-                onClick={() => setLoginType("therapist")}
-              >
-                Therapist Login
-              </button>
-            </div>
+            <Tabs defaultValue="client" onValueChange={(value) => setLoginType(value as "client" | "therapist" | "friend")}>
+              <TabsList className="grid grid-cols-3 mb-4">
+                <TabsTrigger value="client">Client Login</TabsTrigger>
+                <TabsTrigger value="therapist">Therapist Login</TabsTrigger>
+                <TabsTrigger value="friend">Friend Login</TabsTrigger>
+              </TabsList>
+              <TabsContent value="client">
+                <CardDescription>
+                  Sign in to access therapy and support services
+                </CardDescription>
+              </TabsContent>
+              <TabsContent value="therapist">
+                <CardDescription>
+                  Sign in to manage your therapy practice
+                </CardDescription>
+              </TabsContent>
+              <TabsContent value="friend">
+                <CardDescription>
+                  Sign in to provide peer support as a Friend
+                </CardDescription>
+              </TabsContent>
+            </Tabs>
             <CardTitle>Sign In</CardTitle>
-            <CardDescription>
-              Enter your email and password to access your {loginType === "therapist" ? "therapist" : "client"} account
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
@@ -173,6 +177,14 @@ const Login = () => {
                 Create an account <ArrowRight className="inline h-3 w-3" />
               </Link>
             </p>
+            {loginType === "friend" && (
+              <p className="text-center text-sm mt-4 text-muted-foreground">
+                Want to share your experience as a Friend?{" "}
+                <Link to="/auth/register?role=friend" className="text-thera-600 hover:underline font-medium">
+                  Apply now <ArrowRight className="inline h-3 w-3" />
+                </Link>
+              </p>
+            )}
             {loginType === "therapist" && (
               <p className="text-center text-sm mt-4 text-muted-foreground">
                 Are you a therapist looking to join TheraLink?{" "}
