@@ -48,26 +48,52 @@ const AdminSessionNotes = () => {
   const fetchNotes = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // First, fetch all session notes
+      const { data: notesData, error } = await supabase
         .from('session_notes')
         .select(`
           *,
-          therapist:therapist_id(id, full_name:profiles(full_name)),
-          client:client_id(id, full_name:profiles(full_name)),
           appointment:appointment_id(*)
         `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      // Process the data to extract nested information
-      const processedData = data?.map(note => ({
-        ...note,
-        therapist_name: note.therapist?.full_name?.full_name || 'Unknown',
-        client_name: note.client?.full_name?.full_name || 'Unknown',
-      }));
-      
-      setNotes(processedData || []);
+      if (notesData && notesData.length > 0) {
+        // Collect all therapist and client IDs
+        const therapistIds = notesData.map(note => note.therapist_id).filter(Boolean);
+        const clientIds = notesData.map(note => note.client_id).filter(Boolean);
+        
+        // Fetch all related profiles in a single query
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', [...therapistIds, ...clientIds]);
+        
+        if (profilesError) throw profilesError;
+        
+        // Create a map for quick lookup
+        const profilesMap: Record<string, any> = {};
+        profilesData?.forEach(profile => {
+          profilesMap[profile.id] = profile;
+        });
+        
+        // Process notes with profile data
+        const processedNotes = notesData.map(note => {
+          const therapistProfile = note.therapist_id ? profilesMap[note.therapist_id] : null;
+          const clientProfile = note.client_id ? profilesMap[note.client_id] : null;
+          
+          return {
+            ...note,
+            therapist_name: therapistProfile ? therapistProfile.full_name || therapistProfile.email || 'Unknown' : 'Unknown',
+            client_name: clientProfile ? clientProfile.full_name || clientProfile.email || 'Unknown' : 'Unknown',
+          };
+        });
+        
+        setNotes(processedNotes);
+      } else {
+        setNotes([]);
+      }
     } catch (error: any) {
       console.error('Error fetching session notes:', error);
       toast({

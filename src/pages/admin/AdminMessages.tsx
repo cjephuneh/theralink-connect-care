@@ -48,26 +48,52 @@ const AdminMessages = () => {
   const fetchMessages = async () => {
     setIsLoading(true);
     try {
-      // Get messages from both sender and receiver perspective
-      const { data, error } = await supabase
+      // Instead of trying to join with profiles directly, we'll fetch messages first
+      // and then fetch the related profiles separately
+      const { data: messagesData, error } = await supabase
         .from('messages')
-        .select(`
-          *,
-          sender:sender_id(id, full_name:profiles(full_name), email:profiles(email)),
-          receiver:receiver_id(id, full_name:profiles(full_name), email:profiles(email))
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
-      // Process to make it easier to display
-      const processedMessages = data?.map(msg => ({
-        ...msg,
-        sender_name: msg.sender?.full_name?.full_name || msg.sender?.email || 'Unknown',
-        receiver_name: msg.receiver?.full_name?.full_name || msg.receiver?.email || 'Unknown',
-      }));
-      
-      setMessages(processedMessages || []);
+      if (messagesData && messagesData.length > 0) {
+        // Get unique user IDs from sender_id and receiver_id
+        const userIds = new Set([
+          ...messagesData.map(msg => msg.sender_id),
+          ...messagesData.map(msg => msg.receiver_id)
+        ]);
+        
+        // Fetch user profiles
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', Array.from(userIds));
+        
+        if (profilesError) throw profilesError;
+        
+        // Create a map for quick lookup
+        const profilesMap: Record<string, any> = {};
+        profilesData?.forEach(profile => {
+          profilesMap[profile.id] = profile;
+        });
+        
+        // Process messages with profile data
+        const processedMessages = messagesData.map(msg => {
+          const senderProfile = profilesMap[msg.sender_id] || {};
+          const receiverProfile = profilesMap[msg.receiver_id] || {};
+          
+          return {
+            ...msg,
+            sender_name: senderProfile.full_name || senderProfile.email || 'Unknown',
+            receiver_name: receiverProfile.full_name || receiverProfile.email || 'Unknown',
+          };
+        });
+        
+        setMessages(processedMessages);
+      } else {
+        setMessages([]);
+      }
     } catch (error: any) {
       console.error('Error fetching messages:', error);
       toast({

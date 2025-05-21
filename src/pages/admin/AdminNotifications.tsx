@@ -137,14 +137,19 @@ const AdminNotifications = () => {
         return;
       }
 
+      // Generate a UUID for the notification ID
+      const notificationId = crypto.randomUUID();
+
       const { error } = await supabase
         .from('notifications')
         .insert({
+          id: notificationId,
           title: values.title,
           message: values.message,
           type: values.type,
           user_id: values.userId,
           action_url: values.actionUrl || null,
+          is_read: false
         });
 
       if (error) throw error;
