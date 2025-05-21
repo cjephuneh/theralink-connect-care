@@ -209,8 +209,10 @@ const AdminNotifications = () => {
       });
       setSelectedUserId("");
       
-      // Close dialog and refresh
-      document.querySelector('[data-state="open"] button[data-state="open"]')?.click();
+      // Close dialog - Fix the TypeScript error by adding proper type assertion
+      const dialogCloseButton = document.querySelector('[data-state="open"] button[data-state="open"]') as HTMLButtonElement;
+      dialogCloseButton?.click();
+      
       fetchNotifications();
     } catch (error) {
       console.error("Error creating notification:", error);
