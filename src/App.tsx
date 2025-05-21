@@ -79,6 +79,11 @@ import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminAppointments from "./pages/admin/AdminAppointments";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminFeedback from "./pages/admin/AdminFeedback";
+import AdminSessionNotes from "./pages/admin/AdminSessionNotes";
+import AdminNotifications from "./pages/admin/AdminNotifications";
+import AdminFriends from "./pages/admin/AdminFriends";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminMessages from "./pages/admin/AdminMessages";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -190,6 +195,11 @@ const App = () => (
               <Route path="appointments" element={<AdminAppointments />} />
               <Route path="content" element={<AdminContent />} />
               <Route path="feedback" element={<AdminFeedback />} />
+              <Route path="session-notes" element={<AdminSessionNotes />} />
+              <Route path="notifications" element={<AdminNotifications />} />
+              <Route path="friends" element={<AdminFriends />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="messages" element={<AdminMessages />} />
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
             </Route>
