@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -57,12 +58,15 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  UserCog
+  UserCog,
+  Shield,
+  FileText
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { createNotification } from '@/utils/notifications';
 
 const therapistFormSchema = z.object({
   bio: z.string().min(10, { message: "Bio must be at least 10 characters" }),
@@ -77,6 +81,8 @@ const AdminTherapists = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTherapist, setSelectedTherapist] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
+  const [therapistDetails, setTherapistDetails] = useState<any>(null);
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -143,6 +149,78 @@ const AdminTherapists = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchTherapistDetails = async (therapistId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('therapist_details')
+        .select('*')
+        .eq('therapist_id', therapistId)
+        .single();
+        
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No data found - therapist hasn't completed onboarding
+          setTherapistDetails(null);
+        } else {
+          throw error;
+        }
+      } else {
+        setTherapistDetails(data);
+      }
+    } catch (error) {
+      console.error('Error fetching therapist details:', error);
+      toast({
+        title: 'Error',
+        description: 'Could not load therapist verification details',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleVerifyTherapist = async (therapistId: string) => {
+    await fetchTherapistDetails(therapistId);
+    setSelectedTherapist(therapists.find(t => t.id === therapistId));
+    setVerifyDialogOpen(true);
+  };
+
+  const handleVerificationAction = async (status: 'approved' | 'rejected') => {
+    try {
+      // Update therapist_details with verification status
+      const { error } = await supabase
+        .from('therapist_details')
+        .update({ application_status: status })
+        .eq('therapist_id', selectedTherapist.id);
+        
+      if (error) throw error;
+      
+      // Send notification to therapist
+      await createNotification({
+        user_id: selectedTherapist.id,
+        title: status === 'approved' ? 'Your account is verified!' : 'Account verification update',
+        message: status === 'approved' 
+          ? 'Congratulations! Your therapist account has been verified. You can now start accepting clients.'
+          : 'Your account verification was not approved. Please check your details and resubmit.',
+        type: status === 'approved' ? 'verification_approved' : 'verification_rejected',
+        action_url: '/therapist/account'
+      });
+      
+      toast({
+        title: status === 'approved' ? 'Therapist Verified' : 'Verification Rejected',
+        description: `The therapist has been successfully ${status === 'approved' ? 'verified' : 'rejected'}.`,
+      });
+      
+      setVerifyDialogOpen(false);
+      fetchTherapists();
+    } catch (error: any) {
+      console.error('Error updating verification status:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update verification status',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -221,6 +299,20 @@ const AdminTherapists = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
+  const getStatusBadge = (status: string | null) => {
+    if (!status) return <Badge variant="outline">Unknown</Badge>;
+    
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500">Verified</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Rejected</Badge>;
+      case 'pending':
+      default:
+        return <Badge variant="outline">Pending</Badge>;
+    }
+  };
+
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Therapist Management</h1>
@@ -261,20 +353,21 @@ const AdminTherapists = () => {
                   <TableHead>Experience</TableHead>
                   <TableHead>Hourly Rate</TableHead>
                   <TableHead>Rating</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
                       <p className="mt-2 text-gray-500">Loading therapists...</p>
                     </TableCell>
                   </TableRow>
                 ) : filteredTherapists.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       <p className="text-gray-500">No therapists found</p>
                     </TableCell>
                   </TableRow>
@@ -306,8 +399,23 @@ const AdminTherapists = () => {
                           <span className="text-gray-500">No ratings</span>
                         )}
                       </TableCell>
+                      <TableCell>
+                        {therapist.therapist_details?.application_status ? 
+                          getStatusBadge(therapist.therapist_details.application_status) : 
+                          <Badge variant="outline">Pending</Badge>
+                        }
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => handleVerifyTherapist(therapist.id)}
+                            title="Verify credentials"
+                          >
+                            <Shield className="h-4 w-4" />
+                          </Button>
                           <Button 
                             variant="outline" 
                             size="icon" 
@@ -442,6 +550,160 @@ const AdminTherapists = () => {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Verify Therapist Dialog */}
+      <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Verify Therapist Credentials</DialogTitle>
+            <DialogDescription>
+              Review the therapist's professional credentials before approving their account.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedTherapist && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 border-b pb-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={selectedTherapist.profiles?.profile_image_url} />
+                  <AvatarFallback>{getInitials(selectedTherapist.profiles?.full_name)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-semibold">{selectedTherapist.profiles?.full_name}</h3>
+                  <p className="text-gray-500">{selectedTherapist.profiles?.email}</p>
+                  {selectedTherapist.specialization && (
+                    <Badge variant="secondary" className="mt-1">{selectedTherapist.specialization}</Badge>
+                  )}
+                </div>
+              </div>
+
+              {!therapistDetails ? (
+                <div className="p-6 bg-gray-50 rounded-md text-center">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <h3 className="text-lg font-medium">No Verification Details</h3>
+                  <p className="text-gray-500 mt-1">This therapist hasn't completed their verification details yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="credentials">
+                      <AccordionTrigger>Professional Credentials</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 p-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Education</h4>
+                              <p className="text-md">{therapistDetails.education || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">License Type</h4>
+                              <p className="text-md">{therapistDetails.license_type || 'Not provided'}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">License Number</h4>
+                            <p className="text-md">{therapistDetails.license_number || 'Not provided'}</p>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="approaches">
+                      <AccordionTrigger>Therapy Approaches</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="p-2">
+                          <p>{therapistDetails.therapy_approaches || 'Not provided'}</p>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="services">
+                      <AccordionTrigger>Services Offered</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 p-2">
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Session Formats</h4>
+                            <p>{therapistDetails.session_formats || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500">Languages</h4>
+                            <p>{therapistDetails.languages || 'Not provided'}</p>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="insurance">
+                      <AccordionTrigger>Insurance & Payment</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2 p-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-medium text-gray-500">Accepts Insurance:</h4>
+                            <span>{therapistDetails.has_insurance ? 'Yes' : 'No'}</span>
+                          </div>
+                          {therapistDetails.has_insurance && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-500">Insurance Information</h4>
+                              <p>{therapistDetails.insurance_info || 'Not provided'}</p>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-medium text-gray-500">Hourly Rate:</h4>
+                            <span>₦{selectedTherapist.hourly_rate || 'Not set'}</span>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                  
+                  <div className="pt-4 border-t">
+                    <h3 className="font-medium mb-2">Current Status:</h3>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(therapistDetails.application_status)}
+                      <span className="text-sm text-gray-500">
+                        {therapistDetails.application_status === 'approved' 
+                          ? 'This therapist is verified and active on the platform' 
+                          : therapistDetails.application_status === 'rejected'
+                          ? 'This therapist was previously rejected'
+                          : 'This therapist is awaiting verification'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:justify-between">
+                  <Button type="button" variant="outline" onClick={() => setVerifyDialogOpen(false)}>
+                    Close
+                  </Button>
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => handleVerificationAction('rejected')}
+                      className="flex items-center gap-1"
+                      disabled={!therapistDetails}
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Reject
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      onClick={() => handleVerificationAction('approved')}
+                      className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
+                      disabled={!therapistDetails}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Approve
+                    </Button>
+                  </div>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

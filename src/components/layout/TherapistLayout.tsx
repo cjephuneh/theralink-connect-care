@@ -20,7 +20,8 @@ import {
   BookOpen,
   FileDigit,
   DollarSign,
-  ClipboardList
+  ClipboardList,
+  Bell
 } from "lucide-react";
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -120,6 +121,7 @@ const TherapistLayout = () => {
     { path: '/therapist/messages', label: 'Messages', icon: MessageCircle },
     { path: '/therapist/session-notes', label: 'Session Notes', icon: FileText },
     { path: '/therapist/earnings', label: 'Earnings', icon: DollarSign },
+    { path: '/therapist/notifications', label: 'Notifications', icon: Bell },
     { path: '/therapist/onboarding', label: 'Complete Profile', icon: ClipboardList },
     { path: '/therapist/reviews', label: 'Reviews', icon: Star },
     { path: '/therapist/analytics', label: 'Analytics', icon: BarChart3 },
