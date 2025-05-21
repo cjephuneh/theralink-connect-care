@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -17,7 +18,8 @@ import {
   Star,
   FileText,
   FileCheck,
-  UserCog
+  UserCog,
+  MessageSquare
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -28,6 +30,8 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [therapists, setTherapists] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [feedback, setFeedback] = useState<any[]>([]);
+  const [contactMessages, setContactMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { user, profile } = useAuth();
@@ -77,6 +81,27 @@ const AdminDashboard = () => {
         if (appointmentError) throw appointmentError;
         setAppointments(appointmentData || []);
 
+        // Fetch all feedback
+        const { data: feedbackData, error: feedbackError } = await supabase
+          .from('feedback')
+          .select(`
+            *,
+            profiles:user_id (full_name, email)
+          `)
+          .order('created_at', { ascending: false });
+        
+        if (feedbackError) throw feedbackError;
+        setFeedback(feedbackData || []);
+
+        // Fetch all contact messages
+        const { data: contactData, error: contactError } = await supabase
+          .from('contact_messages')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (contactError) throw contactError;
+        setContactMessages(contactData || []);
+
       } catch (error) {
         console.error('Error fetching admin data:', error);
         toast({
@@ -91,6 +116,60 @@ const AdminDashboard = () => {
 
     fetchAllData();
   }, [profile, toast, navigate]);
+
+  const markFeedbackAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('feedback')
+        .update({ is_read: true })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setFeedback(feedback.map(item => 
+        item.id === id ? { ...item, is_read: true } : item
+      ));
+      
+      toast({
+        title: 'Success',
+        description: 'Feedback marked as read'
+      });
+    } catch (error) {
+      console.error('Error marking feedback as read:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update feedback status',
+        variant: 'destructive',
+      });
+    }
+  };
+  
+  const markContactMessageAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('contact_messages')
+        .update({ is_read: true })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setContactMessages(contactMessages.map(item => 
+        item.id === id ? { ...item, is_read: true } : item
+      ));
+      
+      toast({
+        title: 'Success',
+        description: 'Message marked as read'
+      });
+    } catch (error) {
+      console.error('Error marking contact message as read:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update message status',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -133,6 +212,8 @@ const AdminDashboard = () => {
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="therapists">Therapists</TabsTrigger>
           <TabsTrigger value="appointments">Appointments</TabsTrigger>
+          <TabsTrigger value="feedback">Feedback</TabsTrigger>
+          <TabsTrigger value="messages">Contact Messages</TabsTrigger>
         </TabsList>
         
         <TabsContent value="users">
@@ -240,6 +321,140 @@ const AdminDashboard = () => {
                         </TableCell>
                       </TableRow>
                     ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="feedback">
+          <Card>
+            <CardHeader>
+              <CardTitle>User Feedback</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Dashboard</TableHead>
+                      <TableHead>Message</TableHead>
+                      <TableHead>Rating</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {feedback.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-4">
+                          No feedback messages yet
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      feedback.map((item) => (
+                        <TableRow key={item.id} className={!item.is_read ? 'bg-blue-50' : ''}>
+                          <TableCell>{item.profiles?.full_name || 'Anonymous'}</TableCell>
+                          <TableCell>{item.dashboard_type}</TableCell>
+                          <TableCell className="max-w-xs truncate">{item.message}</TableCell>
+                          <TableCell>
+                            {item.rating ? (
+                              <div className="flex">
+                                {Array.from({ length: item.rating }).map((_, i) => (
+                                  <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                                ))}
+                              </div>
+                            ) : (
+                              'No rating'
+                            )}
+                          </TableCell>
+                          <TableCell>{new Date(item.created_at).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              item.is_read ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {item.is_read ? 'Read' : 'Unread'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {!item.is_read && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => markFeedbackAsRead(item.id)}
+                              >
+                                Mark as Read
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="messages">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contact Messages</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Message</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contactMessages.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-4">
+                          No contact messages yet
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      contactMessages.map((message) => (
+                        <TableRow key={message.id} className={!message.is_read ? 'bg-blue-50' : ''}>
+                          <TableCell>{message.name}</TableCell>
+                          <TableCell>{message.email}</TableCell>
+                          <TableCell>{message.subject}</TableCell>
+                          <TableCell className="max-w-xs truncate">{message.message}</TableCell>
+                          <TableCell>{new Date(message.created_at).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              message.is_read ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {message.is_read ? 'Read' : 'Unread'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {!message.is_read && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => markContactMessageAsRead(message.id)}
+                              >
+                                Mark as Read
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

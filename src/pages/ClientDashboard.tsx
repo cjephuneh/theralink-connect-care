@@ -1,112 +1,73 @@
 
-import { useState, useEffect } from "react";
-import { useLocation, useNavigate, Outlet, Navigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { ClientSidebar } from "@/components/layout/ClientSidebar";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
-import { useNotifications } from "@/utils/notifications";
+import FeedbackForm from "@/components/feedback/FeedbackForm";
 
 const ClientDashboard = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, profile, isLoading } = useAuth();
-  const [pageLoading, setPageLoading] = useState(true);
-  const { showNotificationToast } = useNotifications();
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigate('/auth/login');
-      toast({
-        title: "Authentication required",
-        description: "Please log in to access your dashboard",
-      });
-    } else {
-      // Add a small delay to prevent flickering
-      const timer = setTimeout(() => {
-        setPageLoading(false);
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [user, isLoading, navigate, toast]);
-
-  // Check if user is a therapist and redirect if needed
-  useEffect(() => {
-    if (profile && profile.role === 'therapist') {
-      navigate('/therapist/dashboard');
-      toast({
-        title: "Redirecting to therapist dashboard",
-        description: "We've detected that you're a therapist",
-      });
-    }
-  }, [profile, navigate, toast]);
-
-  // Subscribe to notifications
-  useEffect(() => {
-    if (!user) return;
-
-    // Subscribe to new notifications
-    const channel = supabase
-      .channel('public:notifications')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}` 
-      }, payload => {
-        // Show toast notification for new notifications
-        const newNotification = payload.new;
-        showNotificationToast({
-          user_id: newNotification.user_id,
-          title: newNotification.title,
-          message: newNotification.message,
-          type: newNotification.type,
-          action_url: newNotification.action_url
-        });
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, showNotificationToast]);
-
-  // If still loading or no user, show loading state
-  if (isLoading || pageLoading || !user) {
-    return (
-      <div className="bg-background min-h-screen">
-        <div className="container mx-auto px-4 py-12">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid gap-6">
-              <Skeleton className="h-8 w-1/3" />
-              <Card className="card-shadow">
-                <CardContent className="p-0">
-                  <Skeleton className="h-[400px] w-full rounded-md" />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect to dashboard overview if just accessing /client or /client/ without a subpath
-  if (location.pathname === '/client' || location.pathname === '/client/') {
-    return <Navigate to="/client/dashboard" replace />;
-  }
+  const { profile } = useAuth();
 
   return (
-    <ClientSidebar>
-      <div className="container max-w-6xl mx-auto p-6 animation-fade-in">
-        <Outlet />
+    <div className="container max-w-6xl mx-auto py-8 px-4 sm:px-6">
+      <h1 className="text-3xl font-bold mb-6">Welcome back, {profile?.full_name || "Client"}</h1>
+      <p className="text-gray-600 mb-8">
+        Access your therapy sessions, manage appointments, and track your mental health journey all in one place.
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">0</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Messages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">0</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Resources</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">0</p>
+          </CardContent>
+        </Card>
       </div>
-    </ClientSidebar>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Journey</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-gray-600">Start tracking your mental health progress</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Activity Log</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-gray-600">No recent activity</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <FeedbackForm dashboardType="client" />
+    </div>
   );
 };
 

@@ -62,6 +62,7 @@ export type Database = {
       contact_messages: {
         Row: {
           created_at: string
+          dashboard_type: string | null
           email: string
           id: string
           is_read: boolean | null
@@ -72,6 +73,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dashboard_type?: string | null
           email: string
           id?: string
           is_read?: boolean | null
@@ -82,12 +84,43 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dashboard_type?: string | null
           email?: string
           id?: string
           is_read?: boolean | null
           message?: string
           name?: string
           subject?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      feedback: {
+        Row: {
+          created_at: string
+          dashboard_type: string
+          id: string
+          is_read: boolean
+          message: string
+          rating: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          dashboard_type: string
+          id?: string
+          is_read?: boolean
+          message: string
+          rating?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          dashboard_type?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          rating?: number | null
           user_id?: string | null
         }
         Relationships: []

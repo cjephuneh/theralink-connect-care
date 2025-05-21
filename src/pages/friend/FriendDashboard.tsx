@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, MessageCircle, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import FeedbackForm from "@/components/feedback/FeedbackForm";
 
 const FriendDashboard = () => {
   const { profile } = useAuth();
@@ -57,6 +58,9 @@ const FriendDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Feedback Form */}
+      <FeedbackForm dashboardType="friend" />
     </div>
   );
 };
