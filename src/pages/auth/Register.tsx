@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,12 +74,10 @@ const Register = () => {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
+            // Pass account type as a custom parameter
+            role: accountType,
           },
           redirectTo: `${window.location.origin}/dashboard`,
-          // Pass role as metadata
-          data: {
-            role: accountType
-          }
         }
       });
       

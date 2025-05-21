@@ -53,11 +53,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
+        console.log('Auth state change:', event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
+          // For OAuth logins, we might need to update the profile with the role
+          if (event === 'SIGNED_IN') {
+            const queryParams = new URLSearchParams(window.location.search);
+            const role = queryParams.get('role');
+            
+            // If we have a role in the URL and it's a new OAuth sign-in
+            if (role && ['client', 'therapist', 'friend'].includes(role)) {
+              try {
+                await supabase.from('profiles')
+                  .update({ role })
+                  .eq('id', currentSession.user.id);
+              } catch (error) {
+                console.error('Error updating profile role:', error);
+              }
+            }
+          }
+          
+          // Fetch the profile
           setTimeout(() => {
             fetchProfile(currentSession.user.id);
           }, 0);
