@@ -7,7 +7,10 @@
     <title>TheraLink | Connect with Licensed Therapists & Peer Support Online | Mental Health Platform</title>
     <meta name="description" content="TheraLink offers secure online therapy sessions with licensed professionals and peer support. Connect via video, chat, or messaging for personalized mental health support." />
     <meta name="author" content="TheraLink" />
-    <meta name="keywords" content="online therapy, teletherapy, mental health services, licensed therapists, video therapy, chat therapy, counseling, psychological support, virtual therapy, TheraLink, therabot, find a therapist, therapy online, peer support, mental health friends" />
+    <meta name="keywords" content="online therapy, teletherapy, mental health services, licensed therapists, video therapy, chat therapy, counseling, psychological support, virtual therapy, TheraLink, therabot, find a therapist, therapy online, peer support, mental health friends, affordable therapy, virtual counseling, best online therapy, online mental health services" />
+    
+    <!-- Robots control -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -15,6 +18,10 @@
     <meta property="og:title" content="TheraLink | Connect with Licensed Therapists & Peer Support Online" />
     <meta property="og:description" content="Connect with licensed therapists and peer supporters for secure video sessions, messaging, and personalized mental health support." />
     <meta property="og:image" content="https://theralink.online/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:site_name" content="TheraLink" />
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -22,12 +29,26 @@
     <meta name="twitter:title" content="TheraLink | Connect with Licensed Therapists & Peer Support Online" />
     <meta name="twitter:description" content="Connect with licensed therapists and peer supporters for secure video sessions, messaging, and personalized mental health support." />
     <meta name="twitter:image" content="https://theralink.online/og-image.png" />
+    <meta name="twitter:creator" content="@theralinkapp" />
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://theralink.online/" />
     
-    <!-- Favicon -->
+    <!-- Favicon and App Icons -->
     <link rel="icon" type="image/png" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Color theme for browsers -->
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    
+    <!-- Preconnect to important domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
     
     <!-- Structured Data / Schema.org -->
     <script type="application/ld+json">
@@ -38,15 +59,31 @@
         "description": "TheraLink provides secure, confidential online therapy sessions with licensed professionals and peer supporters. Connect via video, chat, or messaging for personalized mental health support.",
         "url": "https://theralink.online/",
         "logo": "https://theralink.online/logo.png",
+        "image": "https://theralink.online/og-image.png",
         "sameAs": [
           "https://twitter.com/theralinkapp",
           "https://facebook.com/theralinkapp",
-          "https://instagram.com/theralinkapp"
+          "https://instagram.com/theralinkapp",
+          "https://linkedin.com/company/theralink"
         ],
         "openingHours": "Mo-Su 00:00-23:59",
         "priceRange": "₦₦-₦₦₦₦",
         "serviceType": ["Online Therapy", "Mental Health Counseling", "Psychological Support", "Peer Support"],
-        "areaServed": "Worldwide"
+        "areaServed": "Worldwide",
+        "telephone": "+18001234567",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "123 Therapy Lane",
+          "addressLocality": "Mental Health City",
+          "addressRegion": "CA",
+          "postalCode": "90210",
+          "addressCountry": "US"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://theralink.online/therapists?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
       }
     </script>
     
@@ -65,8 +102,85 @@
         },
         "offers": {
           "@type": "Offer",
-          "category": "Health & Beauty"
+          "category": "Health & Beauty",
+          "priceCurrency": "NGN",
+          "availability": "https://schema.org/InStock"
+        },
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "Mental Health Services",
+          "itemListElement": [
+            {
+              "@type": "OfferCatalog",
+              "name": "Therapist Sessions",
+              "itemListElement": [
+                {
+                  "@type": "Offer",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Video Therapy Session",
+                    "description": "One-on-one video therapy sessions with licensed therapists"
+                  }
+                },
+                {
+                  "@type": "Offer",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Chat Therapy",
+                    "description": "Text-based therapy sessions with licensed professionals"
+                  }
+                },
+                {
+                  "@type": "Offer",
+                  "itemOffered": {
+                    "@type": "Service",
+                    "name": "Peer Support",
+                    "description": "Connect with trained peers who've walked similar paths"
+                  }
+                }
+              ]
+            }
+          ]
         }
+      }
+    </script>
+
+    <!-- Local Business Schema -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "MedicalBusiness",
+        "name": "TheraLink",
+        "image": "https://theralink.online/logo.png",
+        "url": "https://theralink.online",
+        "telephone": "+18001234567",
+        "priceRange": "₦₦-₦₦₦₦",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "123 Therapy Lane",
+          "addressLocality": "Mental Health City",
+          "addressRegion": "CA",
+          "postalCode": "90210",
+          "addressCountry": "US"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": "37.7749",
+          "longitude": "-122.4194"
+        },
+        "sameAs": [
+          "https://twitter.com/theralinkapp",
+          "https://facebook.com/theralinkapp",
+          "https://instagram.com/theralinkapp"
+        ],
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            "opens": "00:00",
+            "closes": "23:59"
+          }
+        ]
       }
     </script>
   </head>

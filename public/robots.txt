@@ -1,8 +1,18 @@
 
+# TheraLink Robots.txt
 User-agent: *
 Allow: /
 
-Sitemap: https://theralink.online/sitemap.xml
+# Important pages for indexing
+Allow: /therapists
+Allow: /friends
+Allow: /how-it-works
+Allow: /for-therapists
+Allow: /for-friends
+Allow: /about
+Allow: /blog
+Allow: /ai-matching
+Allow: /contact
 
 # Disallow private/auth pages
 Disallow: /auth/
@@ -11,3 +21,12 @@ Disallow: /therapist/
 Disallow: /admin/
 Disallow: /chat/
 Disallow: /video/
+
+# Bots that may put extra load on sites
+User-agent: GPTBot
+Disallow: /auth/
+User-agent: ChatGPT-User
+Disallow: /auth/
+
+# Sitemap reference
+Sitemap: https://theralink.online/sitemap.xml
