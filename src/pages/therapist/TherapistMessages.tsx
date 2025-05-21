@@ -86,7 +86,7 @@ const TherapistMessages = () => {
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
   
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -153,7 +153,9 @@ const TherapistMessages = () => {
         );
         
         const lastMsg = clientMessages[0];
-        const hasUnread = clientMessages.some(msg => msg.receiver_id === user.id && !msg.is_read);
+        const hasUnread = clientMessages.some(msg => 
+          msg.receiver_id === user.id && msg.is_read === false
+        );
         
         conversationsData.push({
           id: clientId,
@@ -192,7 +194,7 @@ const TherapistMessages = () => {
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('id, sender_id, receiver_id, content, created_at')
+        .select('id, sender_id, receiver_id, content, created_at, is_read')
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${clientId}),and(sender_id.eq.${clientId},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
       
@@ -201,7 +203,7 @@ const TherapistMessages = () => {
       if (data) {
         // Mark unread messages as read
         const unreadMessageIds = data
-          .filter(msg => msg.receiver_id === user.id && !msg.is_read)
+          .filter(msg => msg.receiver_id === user.id && msg.is_read === false)
           .map(msg => msg.id);
           
         if (unreadMessageIds.length > 0) {
@@ -577,7 +579,11 @@ const TherapistMessages = () => {
                         </div>
                         {message.sender === "therapist" && (
                           <Avatar className="h-8 w-8 ml-2">
-                            <AvatarFallback>{profile?.full_name?.[0] || "T"}</AvatarFallback>
+                            {profile?.profile_image_url ? (
+                              <AvatarImage src={profile.profile_image_url} />
+                            ) : (
+                              <AvatarFallback>{profile?.full_name?.[0] || "T"}</AvatarFallback>
+                            )}
                           </Avatar>
                         )}
                       </div>
