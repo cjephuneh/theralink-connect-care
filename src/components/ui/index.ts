@@ -48,6 +48,9 @@ export * from "./input-otp";
 // Label
 export * from "./label";
 
+// Navigation Menu
+export * from "./navigation-menu";
+
 // Pagination
 export * from "./pagination";
 
