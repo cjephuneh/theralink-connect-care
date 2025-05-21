@@ -46,7 +46,7 @@ const Index = () => {
             
             <div className="flex items-center gap-4 pt-6 text-sm">
               <div className="flex -space-x-2">
-                {[1, 2, 3, 4].map((i) => (
+                {[1].map((i) => (
                   <div key={i} className="w-8 h-8 rounded-full border-2 border-background overflow-hidden">
                     <img 
                       src={`https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80&auto=format&fit=crop&w=100&q=80`} 
