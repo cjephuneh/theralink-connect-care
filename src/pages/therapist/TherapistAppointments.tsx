@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +11,8 @@ import {
   Clock,
   Check,
   X,
-  MoreVertical
+  MoreVertical,
+  Loader2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,65 +25,107 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
-// Mock appointment data
-const appointments = [
-  {
-    id: 1,
-    client: "Sarah Johnson",
-    date: "2025-05-12",
-    time: "15:00",
-    duration: 50,
-    type: "video",
-    status: "confirmed",
-    notes: "Follow-up on anxiety management techniques"
-  },
-  {
-    id: 2,
-    client: "Michael Chen",
-    date: "2025-05-12",
-    time: "16:30",
-    duration: 50,
-    type: "video",
-    status: "confirmed",
-    notes: "Initial consultation"
-  },
-  {
-    id: 3,
-    client: "Emily Davis",
-    date: "2025-05-13",
-    time: "10:00",
-    duration: 30,
-    type: "chat",
-    status: "pending",
-    notes: "Weekly check-in"
-  },
-  {
-    id: 4,
-    client: "David Wilson",
-    date: "2025-05-14",
-    time: "13:30",
-    duration: 50,
-    type: "video",
-    status: "confirmed",
-    notes: "Discuss progress and adjust treatment plan"
-  },
-  {
-    id: 5,
-    client: "Jessica Brown",
-    date: "2025-05-15",
-    time: "11:00",
-    duration: 50,
-    type: "video",
-    status: "confirmed",
-    notes: "Monthly session"
-  }
-];
+// Type definition for appointments
+interface Appointment {
+  id: string;
+  client: {
+    full_name: string;
+    id: string;
+  };
+  date: string;
+  time: string;
+  duration: number;
+  type: "video" | "chat";
+  status: "confirmed" | "pending" | "completed" | "cancelled";
+  notes?: string;
+  start_time: string;
+  end_time: string;
+}
 
 const TherapistAppointments = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [view, setView] = useState<"calendar" | "list">("list");
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
   
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Fetch appointments
+        const { data: appointmentsData, error: appointmentsError } = await supabase
+          .from('appointments')
+          .select('*, client_id')
+          .eq('therapist_id', user.id);
+          
+        if (appointmentsError) throw appointmentsError;
+        
+        // Fetch client profiles for each appointment
+        const formattedAppointments: Appointment[] = [];
+        
+        for (const appointment of appointmentsData) {
+          // Get client information
+          const { data: clientData, error: clientError } = await supabase
+            .from('profiles')
+            .select('full_name, id')
+            .eq('id', appointment.client_id)
+            .single();
+            
+          if (clientError) {
+            console.error('Error fetching client data:', clientError);
+            continue;
+          }
+          
+          // Format the date for display
+          const startTime = new Date(appointment.start_time);
+          const endTime = new Date(appointment.end_time);
+          
+          // Calculate duration in minutes
+          const durationMs = endTime.getTime() - startTime.getTime();
+          const durationMinutes = Math.floor(durationMs / (1000 * 60));
+          
+          formattedAppointments.push({
+            id: appointment.id,
+            client: {
+              full_name: clientData.full_name || 'Unknown Client',
+              id: clientData.id
+            },
+            date: startTime.toISOString().split('T')[0],
+            time: startTime.toTimeString().substring(0, 5),
+            duration: durationMinutes,
+            type: appointment.session_type === 'video' ? 'video' : 'chat',
+            status: appointment.status as "confirmed" | "pending" | "completed" | "cancelled",
+            notes: appointment.notes,
+            start_time: appointment.start_time,
+            end_time: appointment.end_time,
+          });
+        }
+        
+        setAppointments(formattedAppointments);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+        toast({
+          title: "Error Loading Appointments",
+          description: "There was an error loading your appointments.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchAppointments();
+  }, [user, toast]);
+
   // Filter appointments for the selected date
   const formatDate = (date: Date | undefined) => {
     if (!date) return "";
@@ -110,6 +153,46 @@ const TherapistAppointments = () => {
     
     return `${startFormatted} - ${endFormatted}`;
   };
+
+  // Handle appointment status update
+  const handleUpdateStatus = async (appointmentId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: newStatus })
+        .eq('id', appointmentId);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setAppointments(appointments.map(appointment => 
+        appointment.id === appointmentId 
+          ? {...appointment, status: newStatus as "confirmed" | "pending" | "completed" | "cancelled"} 
+          : appointment
+      ));
+      
+      toast({
+        title: "Appointment Updated",
+        description: `Appointment status changed to ${newStatus}.`,
+      });
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      toast({
+        title: "Error Updating Appointment",
+        description: "There was an error updating the appointment status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-8">
+        <Loader2 className="h-12 w-12 text-thera-600 animate-spin mb-4" />
+        <p className="text-lg">Loading appointments...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -175,7 +258,7 @@ const TherapistAppointments = () => {
                           }
                         </div>
                         <div>
-                          <p className="font-medium">{appointment.client}</p>
+                          <p className="font-medium">{appointment.client.full_name}</p>
                           <p className="text-sm text-muted-foreground">
                             {formatAppointmentTime(appointment.time, appointment.duration)}
                           </p>
@@ -184,7 +267,7 @@ const TherapistAppointments = () => {
                       
                       <div className="flex items-center space-x-2">
                         <Badge variant={appointment.status === 'confirmed' ? 'default' : 'outline'}>
-                          {appointment.status === 'confirmed' ? 'Confirmed' : 'Pending'}
+                          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                         </Badge>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -197,7 +280,10 @@ const TherapistAppointments = () => {
                             <DropdownMenuItem>View Details</DropdownMenuItem>
                             <DropdownMenuItem>Edit</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">Cancel</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive"
+                              onClick={() => handleUpdateStatus(appointment.id, "cancelled")}>
+                              Cancel
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -233,129 +319,210 @@ const TherapistAppointments = () => {
           </div>
           
           <TabsContent value="upcoming" className="space-y-4">
-            {confirmedAppointments.map(appointment => (
-              <Card key={appointment.id}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row justify-between">
-                    <div className="flex items-start space-x-4">
-                      <div className={`p-3 rounded-lg ${
-                        appointment.type === 'video' ? 'bg-thera-100' : 'bg-blue-100'
-                      }`}>
-                        {appointment.type === 'video' ? (
-                          <Video className="h-6 w-6 text-thera-600" />
-                        ) : (
-                          <MessageSquare className="h-6 w-6 text-blue-600" />
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-lg">{appointment.client}</h3>
-                        <div className="flex items-center text-sm text-muted-foreground mt-1">
-                          <CalendarIcon className="h-4 w-4 mr-1" />
-                          <span>
-                            {new Date(appointment.date).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </span>
-                          <Clock className="h-4 w-4 ml-3 mr-1" />
-                          <span>{formatAppointmentTime(appointment.time, appointment.duration)}</span>
+            {confirmedAppointments.length > 0 ? (
+              confirmedAppointments.map(appointment => (
+                <Card key={appointment.id}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row justify-between">
+                      <div className="flex items-start space-x-4">
+                        <div className={`p-3 rounded-lg ${
+                          appointment.type === 'video' ? 'bg-thera-100' : 'bg-blue-100'
+                        }`}>
+                          {appointment.type === 'video' ? (
+                            <Video className="h-6 w-6 text-thera-600" />
+                          ) : (
+                            <MessageSquare className="h-6 w-6 text-blue-600" />
+                          )}
                         </div>
-                        {appointment.notes && (
-                          <p className="text-sm mt-2">{appointment.notes}</p>
+                        <div>
+                          <h3 className="font-medium text-lg">{appointment.client.full_name}</h3>
+                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            <CalendarIcon className="h-4 w-4 mr-1" />
+                            <span>
+                              {new Date(appointment.date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                            <Clock className="h-4 w-4 ml-3 mr-1" />
+                            <span>{formatAppointmentTime(appointment.time, appointment.duration)}</span>
+                          </div>
+                          {appointment.notes && (
+                            <p className="text-sm mt-2">{appointment.notes}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-4 md:mt-0 flex items-center space-x-2">
+                        {appointment.type === 'video' ? (
+                          <Button variant="default" className="bg-thera-600" asChild>
+                            <Link to={`/video/${appointment.id}`}>
+                              <Video className="h-4 w-4 mr-2" /> Join Video
+                            </Link>
+                          </Button>
+                        ) : (
+                          <Button variant="default" className="bg-blue-600" asChild>
+                            <Link to={`/chat/${appointment.id}`}>
+                              <MessageSquare className="h-4 w-4 mr-2" /> Open Chat
+                            </Link>
+                          </Button>
                         )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/therapist/clients?clientId=${appointment.client.id}`}>
+                                View Client Profile
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>Edit Appointment</DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/therapist/session-notes?appointmentId=${appointment.id}`}>
+                                Add Session Notes
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive"
+                              onClick={() => handleUpdateStatus(appointment.id, "cancelled")}>
+                              Cancel Appointment
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-                    <div className="mt-4 md:mt-0 flex items-center space-x-2">
-                      {appointment.type === 'video' ? (
-                        <Button variant="default" className="bg-thera-600" asChild>
-                          <Link to={`/video/${appointment.id}`}>
-                            <Video className="h-4 w-4 mr-2" /> Join Video
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button variant="default" className="bg-blue-600" asChild>
-                          <Link to={`/chat/${appointment.id}`}>
-                            <MessageSquare className="h-4 w-4 mr-2" /> Open Chat
-                          </Link>
-                        </Button>
-                      )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>View Client Profile</DropdownMenuItem>
-                          <DropdownMenuItem>Edit Appointment</DropdownMenuItem>
-                          <DropdownMenuItem>Add Session Notes</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive">
-                            Cancel Appointment
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CalendarIcon className="h-12 w-12 text-muted-foreground mb-3" />
+                <h3 className="text-lg font-medium">No upcoming appointments</h3>
+                <p className="text-muted-foreground mt-1">You don't have any confirmed appointments scheduled.</p>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="pending" className="space-y-4">
-            {pendingAppointments.map(appointment => (
-              <Card key={appointment.id}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row justify-between">
-                    <div className="flex items-start space-x-4">
-                      <div className={`p-3 rounded-lg ${
-                        appointment.type === 'video' ? 'bg-thera-100' : 'bg-blue-100'
-                      }`}>
-                        {appointment.type === 'video' ? (
-                          <Video className="h-6 w-6 text-thera-600" />
-                        ) : (
-                          <MessageSquare className="h-6 w-6 text-blue-600" />
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-lg">{appointment.client}</h3>
-                        <div className="flex items-center text-sm text-muted-foreground mt-1">
-                          <CalendarIcon className="h-4 w-4 mr-1" />
-                          <span>
-                            {new Date(appointment.date).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </span>
-                          <Clock className="h-4 w-4 ml-3 mr-1" />
-                          <span>{formatAppointmentTime(appointment.time, appointment.duration)}</span>
+            {pendingAppointments.length > 0 ? (
+              pendingAppointments.map(appointment => (
+                <Card key={appointment.id}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row justify-between">
+                      <div className="flex items-start space-x-4">
+                        <div className={`p-3 rounded-lg ${
+                          appointment.type === 'video' ? 'bg-thera-100' : 'bg-blue-100'
+                        }`}>
+                          {appointment.type === 'video' ? (
+                            <Video className="h-6 w-6 text-thera-600" />
+                          ) : (
+                            <MessageSquare className="h-6 w-6 text-blue-600" />
+                          )}
                         </div>
-                        {appointment.notes && (
-                          <p className="text-sm mt-2">{appointment.notes}</p>
-                        )}
+                        <div>
+                          <h3 className="font-medium text-lg">{appointment.client.full_name}</h3>
+                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            <CalendarIcon className="h-4 w-4 mr-1" />
+                            <span>
+                              {new Date(appointment.date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                            <Clock className="h-4 w-4 ml-3 mr-1" />
+                            <span>{formatAppointmentTime(appointment.time, appointment.duration)}</span>
+                          </div>
+                          {appointment.notes && (
+                            <p className="text-sm mt-2">{appointment.notes}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-4 md:mt-0 flex items-center space-x-2">
+                        <Button 
+                          variant="default" 
+                          className="bg-green-600"
+                          onClick={() => handleUpdateStatus(appointment.id, "confirmed")}
+                        >
+                          <Check className="h-4 w-4 mr-2" /> Confirm
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="border-destructive text-destructive"
+                          onClick={() => handleUpdateStatus(appointment.id, "cancelled")}
+                        >
+                          <X className="h-4 w-4 mr-2" /> Decline
+                        </Button>
                       </div>
                     </div>
-                    <div className="mt-4 md:mt-0 flex items-center space-x-2">
-                      <Button variant="default" className="bg-green-600">
-                        <Check className="h-4 w-4 mr-2" /> Confirm
-                      </Button>
-                      <Button variant="outline" className="border-destructive text-destructive">
-                        <X className="h-4 w-4 mr-2" /> Decline
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CalendarIcon className="h-12 w-12 text-muted-foreground mb-3" />
+                <h3 className="text-lg font-medium">No pending appointments</h3>
+                <p className="text-muted-foreground mt-1">You don't have any pending appointment requests.</p>
+              </div>
+            )}
           </TabsContent>
           
-          <TabsContent value="past" className="text-center py-10">
-            <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground" />
-            <h3 className="text-lg font-medium mt-4">No past appointments to show</h3>
-            <p className="text-muted-foreground mt-1">Past appointments will appear here.</p>
+          <TabsContent value="past" className="space-y-4">
+            {appointments.filter(app => app.status === "completed").length > 0 ? (
+              appointments.filter(app => app.status === "completed").map(appointment => (
+                <Card key={appointment.id}>
+                  <CardContent className="p-6">
+                    <div className="flex flex-col md:flex-row justify-between">
+                      <div className="flex items-start space-x-4">
+                        <div className="p-3 rounded-lg bg-gray-100">
+                          {appointment.type === 'video' ? (
+                            <Video className="h-6 w-6 text-gray-600" />
+                          ) : (
+                            <MessageSquare className="h-6 w-6 text-gray-600" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-lg">{appointment.client.full_name}</h3>
+                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            <CalendarIcon className="h-4 w-4 mr-1" />
+                            <span>
+                              {new Date(appointment.date).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                            <Clock className="h-4 w-4 ml-3 mr-1" />
+                            <span>{formatAppointmentTime(appointment.time, appointment.duration)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 md:mt-0">
+                        <Button 
+                          variant="outline" 
+                          asChild
+                          className="mr-2"
+                        >
+                          <Link to={`/therapist/session-notes?appointmentId=${appointment.id}`}>
+                            <FileText className="h-4 w-4 mr-2" /> View Notes
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CalendarIcon className="h-12 w-12 text-muted-foreground mb-3" />
+                <h3 className="text-lg font-medium">No past appointments</h3>
+                <p className="text-muted-foreground mt-1">Past appointments will appear here.</p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       )}
