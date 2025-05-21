@@ -1,0 +1,40 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  <!-- This is a placeholder for dynamically generated therapist profiles -->
+  <!-- In production, this file would be generated server-side with actual therapist data -->
+  <url>
+    <loc>https://theralink.online/therapist/dr-sarah-johnson</loc>
+    <lastmod>2025-05-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://theralink.online/images/therapists/sarah-johnson.jpg</image:loc>
+      <image:title>Dr. Sarah Johnson - Licensed Therapist</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://theralink.online/therapist/dr-michael-zhang</loc>
+    <lastmod>2025-05-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://theralink.online/images/therapists/michael-zhang.jpg</image:loc>
+      <image:title>Dr. Michael Zhang - Licensed Therapist</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://theralink.online/therapist/dr-amara-patel</loc>
+    <lastmod>2025-05-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://theralink.online/images/therapists/amara-patel.jpg</image:loc>
+      <image:title>Dr. Amara Patel - Licensed Therapist</image:title>
+    </image:image>
+  </url>
+</urlset>

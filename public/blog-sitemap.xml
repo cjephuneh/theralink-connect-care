@@ -1,0 +1,51 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  <!-- This is a placeholder for dynamically generated blog posts -->
+  <url>
+    <loc>https://theralink.online/blog/understanding-anxiety</loc>
+    <lastmod>2025-05-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <news:news>
+      <news:publication>
+        <news:name>TheraLink Blog</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>2025-05-20</news:publication_date>
+      <news:title>Understanding Anxiety: Signs, Symptoms and Coping Strategies</news:title>
+    </news:news>
+  </url>
+  <url>
+    <loc>https://theralink.online/blog/benefits-of-online-therapy</loc>
+    <lastmod>2025-05-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <news:news>
+      <news:publication>
+        <news:name>TheraLink Blog</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>2025-05-15</news:publication_date>
+      <news:title>The Benefits of Online Therapy in Today's Digital World</news:title>
+    </news:news>
+  </url>
+  <url>
+    <loc>https://theralink.online/blog/mental-health-myths</loc>
+    <lastmod>2025-05-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <news:news>
+      <news:publication>
+        <news:name>TheraLink Blog</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>2025-05-10</news:publication_date>
+      <news:title>Debunking Common Mental Health Myths</news:title>
+    </news:news>
+  </url>
+</urlset>

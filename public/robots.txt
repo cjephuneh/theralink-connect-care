@@ -1,9 +1,10 @@
 
-# TheraLink Robots.txt
+# TheraLink Robots.txt - Comprehensive SEO Configuration
 User-agent: *
 Allow: /
 
-# Important pages for indexing
+# Critical Business Pages - High Priority
+Allow: /
 Allow: /therapists
 Allow: /friends
 Allow: /how-it-works
@@ -14,6 +15,19 @@ Allow: /blog
 Allow: /ai-matching
 Allow: /contact
 
+# Service Pages
+Allow: /services/individual-therapy
+Allow: /services/couples-therapy
+Allow: /services/peer-support
+Allow: /services/specialized-care
+
+# Locations - For local SEO
+Allow: /locations/
+Allow: /locations/new-york
+Allow: /locations/los-angeles
+Allow: /locations/chicago
+Allow: /locations/remote
+
 # Disallow private/auth pages
 Disallow: /auth/
 Disallow: /dashboard/
@@ -21,16 +35,46 @@ Disallow: /therapist/
 Disallow: /admin/
 Disallow: /chat/
 Disallow: /video/
+Disallow: /payment/
+Disallow: /user/
+Disallow: /profile/private/
 
 # AI Crawler Controls
 User-agent: GPTBot
 Disallow: /auth/
+Disallow: /dashboard/
+Disallow: /payment/
+Allow: /blog/
+Allow: /therapists/
+Allow: /about/
+
 User-agent: ChatGPT-User
 Disallow: /auth/
+Disallow: /dashboard/
+Allow: /blog/
+Allow: /therapists/
+
 User-agent: Bingbot
 Disallow: /auth/
-User-agent: GoogleBot
-Allow: /
+Allow: /blog/
+Allow: /therapists/
 
-# Sitemap reference
+User-agent: Googlebot
+Allow: /
+Disallow: /auth/
+Disallow: /dashboard/
+
+User-agent: Googlebot-Image
+Allow: /images/
+Allow: /therapists/*/image
+Allow: /blog/*/image
+
+# Crawl Delay - Help manage server load
+User-agent: *
+Crawl-delay: 2
+
+# Sitemaps
+Sitemap: https://theralink.online/sitemap-index.xml
 Sitemap: https://theralink.online/sitemap.xml
+Sitemap: https://theralink.online/therapists-sitemap.xml
+Sitemap: https://theralink.online/blog-sitemap.xml
