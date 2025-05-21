@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -49,6 +48,7 @@ import ClientBilling from "./pages/client/ClientBilling";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import AdminLogin from "./pages/admin/AdminLogin";
 
 // Therapist Pages
 import TherapistDashboard from "./pages/therapist/TherapistDashboard";
@@ -78,6 +78,7 @@ import AdminTherapists from "./pages/admin/AdminTherapists";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminAppointments from "./pages/admin/AdminAppointments";
 import AdminContent from "./pages/admin/AdminContent";
+import AdminFeedback from "./pages/admin/AdminFeedback";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -143,6 +144,9 @@ const App = () => (
               <Route path="register" element={<Register />} />
               <Route path="forgot-password" element={<ForgotPassword />} />
             </Route>
+            
+            {/* Hidden Admin Login - not linked in UI */}
+            <Route path="/admin/login" element={<AdminLogin />} />
 
             {/* Therapist Routes */}
             <Route path="/therapist/*" element={<TherapistLayout />}>
@@ -185,6 +189,7 @@ const App = () => (
               <Route path="transactions" element={<AdminTransactions />} />
               <Route path="appointments" element={<AdminAppointments />} />
               <Route path="content" element={<AdminContent />} />
+              <Route path="feedback" element={<AdminFeedback />} />
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
             </Route>
