@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,10 +136,7 @@ const TherapistAccount = () => {
         // Fetch past sessions (appointments)
         const { data: appointmentsData, error: appointmentsError } = await supabase
           .from("appointments")
-          .select(`
-            *,
-            client:client_id(full_name, profile_image_url)
-          `)
+          .select("*")
           .eq("therapist_id", user.id)
           .order("start_time", { ascending: false })
           .limit(5);
@@ -148,15 +146,41 @@ const TherapistAccount = () => {
         }
         
         if (appointmentsData) {
-          setPastSessions(appointmentsData.map(appointment => ({
-            client: appointment.client?.full_name || "Client",
-            avatar: appointment.client?.profile_image_url || "/placeholder.svg",
-            date: format(new Date(appointment.start_time), "MMM d, yyyy"),
-            time: format(new Date(appointment.start_time), "h:mm a"),
-            type: appointment.session_type || "video",
-            duration: "50 minutes", // Default duration
-            notes: appointment.notes || ""
-          })));
+          // Now we'll get the client profiles in a separate query
+          const clientIds = appointmentsData.map(appointment => appointment.client_id);
+          
+          // Only fetch profiles if we have client IDs
+          let clientProfiles = {};
+          if (clientIds.length > 0) {
+            const { data: profilesData, error: profilesError } = await supabase
+              .from("profiles")
+              .select("id, full_name, profile_image_url")
+              .in("id", clientIds);
+              
+            if (profilesError) {
+              console.error("Error fetching client profiles:", profilesError);
+            }
+            
+            // Create a map of client ID to profile data for easy lookup
+            if (profilesData) {
+              profilesData.forEach(profile => {
+                clientProfiles[profile.id] = profile;
+              });
+            }
+          }
+          
+          setPastSessions(appointmentsData.map(appointment => {
+            const clientProfile = clientProfiles[appointment.client_id] || {};
+            return {
+              client: clientProfile.full_name || "Client",
+              avatar: clientProfile.profile_image_url || "/placeholder.svg",
+              date: format(new Date(appointment.start_time), "MMM d, yyyy"),
+              time: format(new Date(appointment.start_time), "h:mm a"),
+              type: appointment.session_type || "video",
+              duration: "50 minutes", // Default duration
+              notes: appointment.notes || ""
+            };
+          }));
         }
       } catch (error) {
         console.error("Error fetching therapist data:", error);
