@@ -13,7 +13,7 @@ interface AuthContextProps {
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
   updateProfile: (data: any) => Promise<{ error: any | null }>;
-  refreshProfile: () => Promise<void>; // Added this method
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -44,7 +44,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Added refreshProfile method that can be used by components
   const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user.id);
@@ -185,7 +184,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     signOut,
     updateProfile,
-    refreshProfile, // Added this to the context value
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
