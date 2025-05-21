@@ -23,7 +23,7 @@ const FriendLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [onboardingComplete, setOnboardingComplete] = useState(true);

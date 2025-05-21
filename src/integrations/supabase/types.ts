@@ -92,6 +92,39 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_details: {
+        Row: {
+          areas_of_experience: string | null
+          communication_preferences: string | null
+          created_at: string
+          experience_description: string | null
+          friend_id: string
+          id: string
+          personal_story: string | null
+          updated_at: string
+        }
+        Insert: {
+          areas_of_experience?: string | null
+          communication_preferences?: string | null
+          created_at?: string
+          experience_description?: string | null
+          friend_id: string
+          id?: string
+          personal_story?: string | null
+          updated_at?: string
+        }
+        Update: {
+          areas_of_experience?: string | null
+          communication_preferences?: string | null
+          created_at?: string
+          experience_description?: string | null
+          friend_id?: string
+          id?: string
+          personal_story?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
