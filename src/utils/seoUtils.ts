@@ -25,10 +25,13 @@ interface TherapistData {
   location?: string;
 }
 
+// Generic schema type to avoid TypeScript errors
+type SchemaType = Record<string, any>;
+
 /**
  * Generates breadcrumb structured data for SEO
  */
-export const generateBreadcrumbSchema = (items: BreadcrumbItem[]) => {
+export const generateBreadcrumbSchema = (items: BreadcrumbItem[]): SchemaType => {
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -44,7 +47,7 @@ export const generateBreadcrumbSchema = (items: BreadcrumbItem[]) => {
 /**
  * Generates FAQ structured data for SEO
  */
-export const generateFAQSchema = (faqs: {question: string, answer: string}[]) => {
+export const generateFAQSchema = (faqs: {question: string, answer: string}[]): SchemaType => {
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -62,7 +65,7 @@ export const generateFAQSchema = (faqs: {question: string, answer: string}[]) =>
 /**
  * Generates local business structured data for TheraLink
  */
-export const generateLocalBusinessSchema = (locations: string[] = []) => {
+export const generateLocalBusinessSchema = (locations: string[] = []): SchemaType => {
   const baseSchema = {
     "@context": "https://schema.org",
     "@type": "MedicalBusiness",
@@ -73,6 +76,20 @@ export const generateLocalBusinessSchema = (locations: string[] = []) => {
     "description": "TheraLink offers secure online therapy sessions with licensed professionals and peer support. Connect via video, chat, or messaging for personalized mental health support.",
     "telephone": "+18001234567",
     "priceRange": "₦₦-₦₦₦₦",
+    "sameAs": [
+      "https://twitter.com/theralinkapp",
+      "https://facebook.com/theralinkapp",
+      "https://instagram.com/theralinkapp",
+      "https://linkedin.com/company/theralink"
+    ],
+    "contactPoint": [
+      {
+        "@type": "ContactPoint",
+        "telephone": "+18001234567",
+        "contactType": "customer service",
+        "availableLanguage": ["English"]
+      }
+    ],
     "openingHoursSpecification": [
       {
         "@type": "OpeningHoursSpecification",
@@ -102,8 +119,8 @@ export const generateLocalBusinessSchema = (locations: string[] = []) => {
 /**
  * Generates therapist profile structured data
  */
-export const generateTherapistSchema = (data: TherapistData) => {
-  const schema: any = {
+export const generateTherapistSchema = (data: TherapistData): SchemaType => {
+  const schema: SchemaType = {
     "@context": "https://schema.org",
     "@type": "Person",
     "name": data.name,
@@ -143,7 +160,7 @@ export const generateTherapistSchema = (data: TherapistData) => {
 /**
  * Generates blog post structured data
  */
-export const generateBlogPostSchema = (data: BlogPostingData) => {
+export const generateBlogPostSchema = (data: BlogPostingData): SchemaType => {
   return {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -167,14 +184,16 @@ export const generateBlogPostSchema = (data: BlogPostingData) => {
     "mainEntityOfPage": {
       "@type": "WebPage",
       "@id": `https://theralink.online/blog/${data.headline.toLowerCase().replace(/\s+/g, '-')}`
-    }
+    },
+    "url": `https://theralink.online/blog/${data.headline.toLowerCase().replace(/\s+/g, '-')}`,
+    "name": data.headline
   };
 };
 
 /**
  * Generates WebSite structured data
  */
-export const generateWebsiteSchema = () => {
+export const generateWebsiteSchema = (): SchemaType => {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -192,7 +211,7 @@ export const generateWebsiteSchema = () => {
 /**
  * Generates the Organization schema with social profiles
  */
-export const generateOrganizationSchema = () => {
+export const generateOrganizationSchema = (): SchemaType => {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",

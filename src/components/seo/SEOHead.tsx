@@ -58,12 +58,20 @@ export const SEOHead = ({
   
   // Determine which schemas to include based on the page
   const getSchemas = () => {
-    const schemas = [seoUtils.generateWebsiteSchema(), seoUtils.generateOrganizationSchema()];
+    const schemas = [];
+    
+    // Base website schema
+    schemas.push(seoUtils.generateWebsiteSchema());
+    
+    // Organization schema
+    schemas.push(seoUtils.generateOrganizationSchema());
     
     // Add page-specific schemas
     if (pathname === '/') {
       // Homepage needs local business info for SEO
-      schemas.push(seoUtils.generateLocalBusinessSchema(locations));
+      if (locations && locations.length > 0) {
+        schemas.push(seoUtils.generateLocalBusinessSchema(locations));
+      }
     }
     
     // Add therapist schema for therapist profiles
