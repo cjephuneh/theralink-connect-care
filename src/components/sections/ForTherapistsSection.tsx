@@ -32,13 +32,22 @@ const ForTherapistsSection = () => {
               </div>
             </div>
             
-            <div className="pt-4">
-              <Button asChild size="lg" className="group">
-                <Link to="/for-therapists" className="flex items-center">
-                  Learn More
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
+            <div className="pt-4 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button asChild size="lg" className="group">
+                  <Link to="/for-therapists" className="flex items-center">
+                    Learn More
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+                
+                <Button asChild size="lg" variant="outline">
+                  <Link to="/therapists" className="flex items-center">
+                    Find Therapists
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
           

@@ -32,14 +32,24 @@ const ForFriendsSection = () => {
               </div>
             </div>
             
-            <div className="pt-4">
-              <Button asChild size="lg" className="group">
-                <Link to="/for-friends" className="flex items-center">
-                  Learn More
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
-              <p className="text-sm text-muted-foreground mt-3">
+            <div className="pt-4 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button asChild size="lg" className="group">
+                  <Link to="/for-friends" className="flex items-center">
+                    Learn More
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+                
+                <Button asChild size="lg" variant="outline">
+                  <Link to="/friends" className="flex items-center">
+                    Browse Friends
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
                 Note: Friends provide peer support, not professional therapy
               </p>
             </div>

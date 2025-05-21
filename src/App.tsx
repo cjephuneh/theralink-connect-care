@@ -16,6 +16,7 @@ import Index from "./pages/Index";
 import TherapistsLandingPage from "./pages/TherapistsLandingPage";
 import FriendsLandingPage from "./pages/FriendsLandingPage";
 import TherapistListing from "./pages/TherapistListing";
+import FriendListing from "./pages/FriendListing";
 import TherapistProfile from "./pages/TherapistProfile";
 import ChatPage from "./pages/ChatPage";
 import VideoChat from "./pages/VideoChat";
@@ -101,6 +102,7 @@ const App = () => (
               <Route path="for-therapists" element={<TherapistsLandingPage />} />
               <Route path="for-friends" element={<FriendsLandingPage />} />
               <Route path="therapists" element={<TherapistListing />} />
+              <Route path="friends" element={<FriendListing />} />
               <Route path="therapists/:id" element={<TherapistProfile />} />
               <Route path="therapists/:therapistId/book" element={<BookingPage />} />
               <Route path="payment/:appointmentId" element={<BookingPaymentPage />} />
