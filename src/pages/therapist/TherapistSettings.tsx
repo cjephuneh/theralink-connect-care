@@ -227,6 +227,24 @@ const TherapistSettings = () => {
         
       if (profileError) throw profileError;
       
+      // Convert availability to a plain object before saving
+      // This ensures it's compatible with Supabase's JSON type
+      const availabilityForDb = {
+        days: {
+          monday: formData.availability.days.monday,
+          tuesday: formData.availability.days.tuesday,
+          wednesday: formData.availability.days.wednesday,
+          thursday: formData.availability.days.thursday,
+          friday: formData.availability.days.friday,
+          saturday: formData.availability.days.saturday,
+          sunday: formData.availability.days.sunday
+        },
+        hours: {
+          start: formData.availability.hours.start,
+          end: formData.availability.hours.end
+        }
+      };
+      
       // Update therapist
       const { error: therapistError } = await supabase
         .from("therapists")
@@ -235,7 +253,7 @@ const TherapistSettings = () => {
           specialization: formData.specialization,
           hourly_rate: formData.hourly_rate ? parseFloat(formData.hourly_rate) : null,
           years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
-          availability: formData.availability
+          availability: availabilityForDb
         })
         .eq("id", user.id);
         
