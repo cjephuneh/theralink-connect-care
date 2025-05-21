@@ -22,11 +22,15 @@ Disallow: /admin/
 Disallow: /chat/
 Disallow: /video/
 
-# Bots that may put extra load on sites
+# AI Crawler Controls
 User-agent: GPTBot
 Disallow: /auth/
 User-agent: ChatGPT-User
 Disallow: /auth/
+User-agent: Bingbot
+Disallow: /auth/
+User-agent: GoogleBot
+Allow: /
 
 # Sitemap reference
 Sitemap: https://theralink.online/sitemap.xml

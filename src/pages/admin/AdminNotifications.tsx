@@ -1,479 +1,486 @@
 
 import { useState, useEffect } from "react";
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
-} from '@/components/ui/table';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from '@/components/ui/card';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Button } from '@/components/ui/button';
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { 
-  Search, 
-  Bell, 
-  PlusCircle, 
-  Trash2, 
-  RefreshCw,
-  Loader2,
-  Check
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-const formSchema = z.object({
-  title: z.string().min(3, { message: "Title must be at least 3 characters" }),
-  message: z.string().min(5, { message: "Message must be at least 5 characters" }),
-  type: z.string().min(1, { message: "Please select a notification type" }),
-  userId: z.string().optional(),
-  actionUrl: z.string().optional(),
-});
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { Bell, BellOff, Clock, AlertTriangle, Info, CheckCircle, Users, Link, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 const AdminNotifications = () => {
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const { toast } = useToast();
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      message: "",
-      type: "info",
-      userId: "",
-      actionUrl: "",
-    },
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newNotification, setNewNotification] = useState({
+    title: "",
+    message: "",
+    type: "info",
+    action_url: "",
+    recipient: "all"
   });
+  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+
+  const fetchNotifications = async () => {
+    setLoading(true);
+    try {
+      const { data: notificationsData, error: notificationsError } = await supabase
+        .from('notifications')
+        .select('*, profiles:profiles(full_name, email)')
+        .order('created_at', { ascending: false });
+
+      if (notificationsError) throw notificationsError;
+
+      setNotifications(notificationsData || []);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      toast.error("Failed to load notifications");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role');
+
+      if (userError) throw userError;
+
+      setUsers(userData || []);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load users");
+    }
+  };
 
   useEffect(() => {
     fetchNotifications();
     fetchUsers();
   }, []);
 
-  const fetchNotifications = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select(`
-          *,
-          user:user_id(id, email, full_name)
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setNotifications(data || []);
-    } catch (error: any) {
-      console.error('Error fetching notifications:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load notifications',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const filterNotifications = () => {
+    if (activeTab === "all") return notifications;
+    if (activeTab === "unread") return notifications.filter(notification => !notification.is_read);
+    return notifications;
   };
 
-  const fetchUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, role')
-        .order('full_name');
-      
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  const createNotification = async (values: z.infer<typeof formSchema>) => {
-    setIsCreating(true);
-    try {
-      // If no specific user is selected, we'll not create a notification
-      if (!values.userId) {
-        toast({
-          title: 'Error',
-          description: 'Please select a user to send the notification to',
-          variant: 'destructive',
-        });
-        setIsCreating(false);
-        return;
-      }
-
-      // Generate a UUID for the notification ID
-      const notificationId = crypto.randomUUID();
-
-      const { error } = await supabase
-        .from('notifications')
-        .insert({
-          id: notificationId,
-          title: values.title,
-          message: values.message,
-          type: values.type,
-          user_id: values.userId,
-          action_url: values.actionUrl || null,
-          is_read: false
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Notification Created',
-        description: `Successfully sent notification to user`,
-      });
-      
-      form.reset();
-      setDialogOpen(false);
-      fetchNotifications();
-    } catch (error: any) {
-      console.error('Error creating notification:', error);
-      toast({
-        title: 'Error Creating Notification',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const deleteNotification = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this notification?")) return;
-    
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Notification Deleted',
-        description: 'Notification has been successfully deleted',
-      });
-      
-      fetchNotifications();
-    } catch (error: any) {
-      console.error('Error deleting notification:', error);
-      toast({
-        title: 'Error Deleting Notification',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const markAsRead = async (id: string) => {
+  const markAsRead = async (notificationId) => {
     try {
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('id', id);
-      
+        .eq('id', notificationId);
+
       if (error) throw error;
       
-      toast({
-        title: 'Notification Updated',
-        description: 'Notification marked as read',
-      });
-      
-      fetchNotifications();
-    } catch (error: any) {
-      console.error('Error updating notification:', error);
-      toast({
-        title: 'Error Updating Notification',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
+      await fetchNotifications();
+      toast.success("Notification marked as read");
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      toast.error("Failed to update notification");
     }
   };
 
-  const filteredNotifications = notifications.filter(notification => 
-    notification.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    notification.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    notification.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    notification.user?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const markAllAsRead = async () => {
+    try {
+      const unreadNotifications = notifications.filter(n => !n.is_read).map(n => n.id);
+      
+      if (unreadNotifications.length === 0) {
+        toast.info("No unread notifications");
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .in('id', unreadNotifications);
+
+      if (error) throw error;
+      
+      await fetchNotifications();
+      toast.success(`${unreadNotifications.length} notifications marked as read`);
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+      toast.error("Failed to update notifications");
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewNotification({
+      ...newNotification,
+      [name]: value
+    });
+  };
+
+  const handleTypeChange = (value) => {
+    setNewNotification({
+      ...newNotification,
+      type: value
+    });
+  };
+
+  const handleRecipientChange = (value) => {
+    setNewNotification({
+      ...newNotification,
+      recipient: value
+    });
+    
+    if (value !== "specific") {
+      setSelectedUserId("");
+    }
+  };
+
+  const handleUserChange = (value) => {
+    setSelectedUserId(value);
+  };
+
+  const createNotification = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const { title, message, type, action_url, recipient } = newNotification;
+      
+      if (!title || !message) {
+        toast.error("Title and message are required");
+        return;
+      }
+      
+      if (recipient === "specific" && !selectedUserId) {
+        toast.error("Please select a user");
+        return;
+      }
+      
+      if (recipient === "all") {
+        // Bulk create for all users
+        const bulkNotifications = users.map(user => ({
+          id: crypto.randomUUID(), // Generate a UUID for each notification
+          title,
+          message,
+          type,
+          user_id: user.id,
+          action_url: action_url || null,
+          is_read: false
+        }));
+        
+        const { error } = await supabase
+          .from('notifications')
+          .insert(bulkNotifications);
+
+        if (error) throw error;
+        
+        toast.success(`Created notifications for ${users.length} users`);
+      } else if (recipient === "specific") {
+        // Create for one specific user
+        const { error } = await supabase
+          .from('notifications')
+          .insert({
+            id: crypto.randomUUID(), // Generate a UUID for the notification
+            title,
+            message,
+            type,
+            user_id: selectedUserId,
+            action_url: action_url || null,
+            is_read: false
+          });
+
+        if (error) throw error;
+        
+        toast.success("Notification created successfully");
+      }
+      
+      // Reset form
+      setNewNotification({
+        title: "",
+        message: "",
+        type: "info",
+        action_url: "",
+        recipient: "all"
+      });
+      setSelectedUserId("");
+      
+      // Close dialog and refresh
+      document.querySelector('[data-state="open"] button[data-state="open"]')?.click();
+      fetchNotifications();
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      toast.error("Failed to create notification");
+    }
+  };
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case "warning":
+        return <AlertTriangle size={16} className="text-amber-500" />;
+      case "error":
+        return <AlertTriangle size={16} className="text-red-500" />;
+      case "success":
+        return <CheckCircle size={16} className="text-green-500" />;
+      default:
+        return <Info size={16} className="text-blue-500" />;
+    }
+  };
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Notification Management</h1>
-      
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search notifications..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={fetchNotifications} 
-            variant="outline" 
-            size="icon" 
-            className="h-10 w-10"
-            disabled={isLoading}
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-thera-600 hover:bg-thera-700">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Send Notification
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Send New Notification</DialogTitle>
-                <DialogDescription>
-                  Create a notification to be sent to a user.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(createNotification)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Notification title" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="message"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Message</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Notification content" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="info">Information</SelectItem>
-                            <SelectItem value="success">Success</SelectItem>
-                            <SelectItem value="warning">Warning</SelectItem>
-                            <SelectItem value="error">Error</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="userId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>User</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a user" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="max-h-60">
-                            {users.map(user => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.full_name || user.email} ({user.role})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="actionUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Action URL (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="/client/appointments" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={isCreating}>
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        "Send Notification"
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
+    <div className="p-6">
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>All Notifications</CardTitle>
-          <CardDescription>Manage all system notifications</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-xl font-bold">Notifications Management</CardTitle>
+          <div className="flex gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-1">
+                  <Plus size={16} />
+                  New Notification
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Create New Notification</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={createNotification} className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title</Label>
+                    <Input 
+                      id="title" 
+                      name="title" 
+                      value={newNotification.title} 
+                      onChange={handleInputChange} 
+                      placeholder="Notification title" 
+                      required 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="message">Message</Label>
+                    <Textarea 
+                      id="message" 
+                      name="message" 
+                      value={newNotification.message} 
+                      onChange={handleInputChange} 
+                      placeholder="Notification message" 
+                      required 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Type</Label>
+                    <Select 
+                      value={newNotification.type} 
+                      onValueChange={handleTypeChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="info">Info</SelectItem>
+                        <SelectItem value="success">Success</SelectItem>
+                        <SelectItem value="warning">Warning</SelectItem>
+                        <SelectItem value="error">Error</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="action_url">Action URL (Optional)</Label>
+                    <Input 
+                      id="action_url" 
+                      name="action_url" 
+                      value={newNotification.action_url} 
+                      onChange={handleInputChange} 
+                      placeholder="https://example.com/action" 
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="recipient">Recipients</Label>
+                    <Select 
+                      value={newNotification.recipient} 
+                      onValueChange={handleRecipientChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select recipients" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Users</SelectItem>
+                        <SelectItem value="specific">Specific User</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {newNotification.recipient === "specific" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="user">Select User</Label>
+                      <Select value={selectedUserId} onValueChange={handleUserChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a user" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.full_name} ({user.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-end">
+                    <Button type="submit">Create Notification</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+            
+            <Button 
+              variant="outline" 
+              onClick={markAllAsRead}
+              className="flex items-center gap-1"
+            >
+              <CheckCircle size={16} />
+              Mark All Read
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="unread">Unread</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {loading ? (
+            <div className="flex justify-center p-6">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>User</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Recipient</TableHead>
                   <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                      <p className="mt-2 text-gray-500">Loading notifications...</p>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredNotifications.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <p className="text-gray-500">No notifications found</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredNotifications.map((notification) => (
-                    <TableRow key={notification.id} className={!notification.is_read ? "bg-primary/5" : ""}>
-                      <TableCell className="font-medium">{notification.title}</TableCell>
-                      <TableCell>{notification.user?.full_name || notification.user?.email || 'Unknown'}</TableCell>
+                {filterNotifications().length > 0 ? (
+                  filterNotifications().map((notification) => (
+                    <TableRow key={notification.id}>
                       <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          notification.type === 'success' ? 'bg-green-100 text-green-800' :
-                          notification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                          notification.type === 'error' ? 'bg-red-100 text-red-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}
-                        </span>
+                        {getTypeIcon(notification.type)}
+                      </TableCell>
+                      <TableCell>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="link" className="p-0 h-auto text-left justify-start">
+                              {notification.title}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center gap-2">
+                                {getTypeIcon(notification.type)}
+                                {notification.title}
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <p className="whitespace-pre-wrap">{notification.message}</p>
+                              </div>
+                              
+                              {notification.action_url && (
+                                <div className="flex items-center gap-2">
+                                  <Link size={14} className="text-muted-foreground" />
+                                  <a 
+                                    href={notification.action_url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-sm text-blue-600 hover:underline"
+                                  >
+                                    {notification.action_url}
+                                  </a>
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-between">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Clock size={14} />
+                                  {notification.created_at && format(new Date(notification.created_at), 'PPpp')}
+                                </div>
+                                <Badge variant={notification.is_read ? "outline" : "default"}>
+                                  {notification.is_read ? "Read" : "Unread"}
+                                </Badge>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Users size={14} className="text-muted-foreground" />
+                          <span>{notification.profiles?.full_name || 'Unknown User'}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({notification.profiles?.email || 'No email'})
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <Clock size={14} className="text-muted-foreground" />
+                          {notification.created_at && format(new Date(notification.created_at), 'PP')}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {notification.is_read ? (
-                          <span className="inline-flex items-center text-gray-500 text-xs">
-                            <Check className="mr-1 h-3 w-3" /> Read
-                          </span>
+                          <Badge variant="outline" className="flex items-center gap-1">
+                            <BellOff size={12} />
+                            Read
+                          </Badge>
                         ) : (
-                          <span className="inline-flex items-center text-blue-600 text-xs font-medium">
-                            <Bell className="mr-1 h-3 w-3" /> Unread
-                          </span>
+                          <Badge variant="default" className="flex items-center gap-1">
+                            <Bell size={12} />
+                            Unread
+                          </Badge>
                         )}
                       </TableCell>
-                      <TableCell>{new Date(notification.created_at).toLocaleString()}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {!notification.is_read && (
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => markAsRead(notification.id)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          )}
+                      <TableCell>
+                        {!notification.is_read && (
                           <Button 
-                            variant="destructive" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => deleteNotification(notification.id)}
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => markAsRead(notification.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            Mark as Read
                           </Button>
-                        </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      No notifications found
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

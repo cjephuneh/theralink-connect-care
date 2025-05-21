@@ -210,4 +210,24 @@ const App = () => (
   </QueryClientProvider>
 );
 
+// Add service worker registration at the end of the App component
+import { register } from './serviceWorker';
+
+// Register the service worker
+register({
+  onUpdate: (registration) => {
+    const waitingServiceWorker = registration.waiting;
+    
+    if (waitingServiceWorker) {
+      waitingServiceWorker.addEventListener("statechange", (event) => {
+        // @ts-ignore
+        if (event.target.state === "activated") {
+          window.location.reload();
+        }
+      });
+      waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
+    }
+  },
+});
+
 export default App;

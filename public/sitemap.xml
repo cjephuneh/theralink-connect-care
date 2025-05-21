@@ -76,12 +76,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://theralink.online/auth/register</loc>
-    <lastmod>2025-05-21</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://theralink.online/terms</loc>
     <lastmod>2025-05-21</lastmod>
     <changefreq>yearly</changefreq>

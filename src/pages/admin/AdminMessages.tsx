@@ -1,247 +1,234 @@
 
 import { useState, useEffect } from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from '@/components/ui/card';
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { 
-  Search, 
-  MessageSquare, 
-  Eye, 
-  RefreshCw,
-  Loader2
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UserIcon, Mail, Clock } from "lucide-react";
+import { format } from "date-fns";
 
 const AdminMessages = () => {
   const [messages, setMessages] = useState<any[]>([]);
-  const [selectedMessage, setSelectedMessage] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
+
+  const fetchMessages = async () => {
+    setLoading(true);
+    try {
+      // Fetch messages first
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (messagesError) throw messagesError;
+      
+      if (!messagesData || messagesData.length === 0) {
+        setMessages([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch all unique user IDs from the messages
+      const userIds = new Set([
+        ...messagesData.map(message => message.sender_id),
+        ...messagesData.map(message => message.receiver_id)
+      ].filter(Boolean));
+
+      // Fetch profiles for these users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', Array.from(userIds));
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of user IDs to profiles for quick lookup
+      const profilesMap = (profilesData || []).reduce((acc, profile) => {
+        acc[profile.id] = profile;
+        return acc;
+      }, {});
+
+      // Combine messages with profile data
+      const enrichedMessages = messagesData.map(message => {
+        const senderProfile = profilesMap[message.sender_id] || { full_name: 'Unknown', email: 'unknown' };
+        const receiverProfile = profilesMap[message.receiver_id] || { full_name: 'Unknown', email: 'unknown' };
+        
+        return {
+          ...message,
+          sender: senderProfile,
+          receiver: receiverProfile
+        };
+      });
+
+      setMessages(enrichedMessages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchMessages();
   }, []);
 
-  const fetchMessages = async () => {
-    setIsLoading(true);
+  const filterMessages = () => {
+    if (activeTab === "all") return messages;
+    if (activeTab === "unread") return messages.filter(message => !message.is_read);
+    return messages;
+  };
+
+  const markAsRead = async (messageId) => {
     try {
-      // Instead of trying to join with profiles directly, we'll fetch messages first
-      // and then fetch the related profiles separately
-      const { data: messagesData, error } = await supabase
+      const { error } = await supabase
         .from('messages')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+        .update({ is_read: true })
+        .eq('id', messageId);
+
       if (error) throw error;
       
-      if (messagesData && messagesData.length > 0) {
-        // Get unique user IDs from sender_id and receiver_id
-        const userIds = new Set([
-          ...messagesData.map(msg => msg.sender_id),
-          ...messagesData.map(msg => msg.receiver_id)
-        ]);
-        
-        // Fetch user profiles
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .in('id', Array.from(userIds));
-        
-        if (profilesError) throw profilesError;
-        
-        // Create a map for quick lookup
-        const profilesMap: Record<string, any> = {};
-        profilesData?.forEach(profile => {
-          profilesMap[profile.id] = profile;
-        });
-        
-        // Process messages with profile data
-        const processedMessages = messagesData.map(msg => {
-          const senderProfile = profilesMap[msg.sender_id] || {};
-          const receiverProfile = profilesMap[msg.receiver_id] || {};
-          
-          return {
-            ...msg,
-            sender_name: senderProfile.full_name || senderProfile.email || 'Unknown',
-            receiver_name: receiverProfile.full_name || receiverProfile.email || 'Unknown',
-          };
-        });
-        
-        setMessages(processedMessages);
-      } else {
-        setMessages([]);
-      }
-    } catch (error: any) {
-      console.error('Error fetching messages:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load messages',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+      fetchMessages();
+    } catch (error) {
+      console.error("Error marking message as read:", error);
     }
   };
 
-  const viewMessage = (message: any) => {
-    setSelectedMessage(message);
-  };
-
-  const filteredMessages = messages.filter(message => 
-    message.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    message.sender_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    message.receiver_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">System Messages</h1>
-      
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search messages..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Button 
-          onClick={fetchMessages} 
-          variant="outline" 
-          size="icon" 
-          className="h-10 w-10"
-          disabled={isLoading}
-        >
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </Button>
-      </div>
-
+    <div className="p-6">
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>All Messages</CardTitle>
-          <CardDescription>
-            View all communication between users on the platform
-          </CardDescription>
+        <CardHeader>
+          <CardTitle className="text-xl font-bold">Admin Messages Management</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+            <TabsList>
+              <TabsTrigger value="all">All Messages</TabsTrigger>
+              <TabsTrigger value="unread">Unread</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {loading ? (
+            <div className="flex justify-center p-6">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>From</TableHead>
                   <TableHead>To</TableHead>
-                  <TableHead>Message Preview</TableHead>
-                  <TableHead>Sent</TableHead>
+                  <TableHead>Content</TableHead>
+                  <TableHead>Sent At</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                      <p className="mt-2 text-gray-500">Loading messages...</p>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredMessages.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <p className="text-gray-500">No messages found</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredMessages.map((message) => (
-                    <TableRow key={message.id} className={!message.is_read ? "bg-primary/5" : ""}>
-                      <TableCell>{message.sender_name}</TableCell>
-                      <TableCell>{message.receiver_name}</TableCell>
+                {filterMessages().length > 0 ? (
+                  filterMessages().map((message) => (
+                    <TableRow key={message.id}>
                       <TableCell>
-                        {message.content.length > 30
-                          ? `${message.content.substring(0, 30)}...`
-                          : message.content}
+                        <div className="flex items-center gap-2">
+                          <UserIcon size={16} />
+                          <span className="font-medium">{message.sender?.full_name || 'Unknown'}</span>
+                          <span className="text-xs text-muted-foreground">({message.sender?.email || 'unknown'})</span>
+                        </div>
                       </TableCell>
-                      <TableCell>{new Date(message.created_at).toLocaleString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <UserIcon size={16} />
+                          <span className="font-medium">{message.receiver?.full_name || 'Unknown'}</span>
+                          <span className="text-xs text-muted-foreground">({message.receiver?.email || 'unknown'})</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="link" className="p-0 h-auto">
+                              {message.content.length > 30 ? message.content.substring(0, 30) + "..." : message.content}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Message</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <p className="whitespace-pre-wrap">{message.content}</p>
+                              </div>
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <Clock size={12} className="mr-1" />
+                                {message.created_at && format(new Date(message.created_at), 'PPpp')}
+                              </div>
+                              <div className="flex justify-between">
+                                <div className="flex items-center gap-2">
+                                  <UserIcon size={12} className="text-muted-foreground" />
+                                  <span className="text-xs">From: {message.sender?.full_name || 'Unknown'}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Mail size={12} className="text-muted-foreground" />
+                                  <span className="text-xs">{message.sender?.email || 'unknown'}</span>
+                                </div>
+                              </div>
+                              <div className="flex justify-between">
+                                <div className="flex items-center gap-2">
+                                  <UserIcon size={12} className="text-muted-foreground" />
+                                  <span className="text-xs">To: {message.receiver?.full_name || 'Unknown'}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Mail size={12} className="text-muted-foreground" />
+                                  <span className="text-xs">{message.receiver?.email || 'unknown'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-sm">
+                          <Clock size={14} className="text-muted-foreground" />
+                          {message.created_at && format(new Date(message.created_at), 'PP')}
+                          <span className="text-xs text-muted-foreground">
+                            {message.created_at && format(new Date(message.created_at), 'p')}
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {message.is_read ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Read
-                          </span>
+                          <Badge variant="outline" className="bg-green-100 text-green-800">Read</Badge>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            Unread
-                          </span>
+                          <Badge variant="outline" className="bg-amber-100 text-amber-800">Unread</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => viewMessage(message)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
+                      <TableCell>
+                        {!message.is_read && (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => markAsRead(message.id)}
+                          >
+                            Mark as Read
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      No messages found
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>
-          </div>
+          )}
         </CardContent>
       </Card>
-
-      <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Message</DialogTitle>
-            <DialogDescription>
-              <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                <div>
-                  <span className="font-medium">From:</span> {selectedMessage?.sender_name}
-                </div>
-                <div>
-                  <span className="font-medium">To:</span> {selectedMessage?.receiver_name}
-                </div>
-                <div>
-                  <span className="font-medium">Sent:</span> {selectedMessage && new Date(selectedMessage.created_at).toLocaleString()}
-                </div>
-                <div>
-                  <span className="font-medium">Status:</span> {selectedMessage?.is_read ? 'Read' : 'Unread'}
-                </div>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 p-4 bg-muted rounded-md whitespace-pre-wrap">
-            {selectedMessage?.content}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
