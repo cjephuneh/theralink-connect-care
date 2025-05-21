@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,7 +137,7 @@ const TherapistAccount = () => {
           .from("appointments")
           .select(`
             *,
-            profiles(full_name, profile_image_url)
+            client:client_id(full_name, profile_image_url)
           `)
           .eq("therapist_id", user.id)
           .order("start_time", { ascending: false })
@@ -150,8 +149,8 @@ const TherapistAccount = () => {
         
         if (appointmentsData) {
           setPastSessions(appointmentsData.map(appointment => ({
-            client: appointment.profiles?.full_name || "Client",
-            avatar: appointment.profiles?.profile_image_url || "/placeholder.svg",
+            client: appointment.client?.full_name || "Client",
+            avatar: appointment.client?.profile_image_url || "/placeholder.svg",
             date: format(new Date(appointment.start_time), "MMM d, yyyy"),
             time: format(new Date(appointment.start_time), "h:mm a"),
             type: appointment.session_type || "video",
