@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,10 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 
 // Define the availability structure type for better type checking
 interface AvailabilityStructure {
@@ -34,7 +35,11 @@ const TherapistSettings = () => {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [therapistDetails, setTherapistDetails] = useState(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [verificationDocuments, setVerificationDocuments] = useState<string[]>([]);
+  const [documentUploading, setDocumentUploading] = useState(false);
   
   const [formData, setFormData] = useState({
     full_name: "",
@@ -73,6 +78,11 @@ const TherapistSettings = () => {
           
         if (profileError) throw profileError;
         
+        // Set profile image if available
+        if (profileData?.profile_image_url) {
+          setProfileImage(profileData.profile_image_url);
+        }
+        
         // Get therapist data
         const { data: therapistData, error: therapistError } = await supabase
           .from("therapists")
@@ -92,6 +102,30 @@ const TherapistSettings = () => {
         if (detailsError && detailsError.code !== 'PGRST116') throw detailsError;
         
         setTherapistDetails(detailsData);
+        
+        // Fetch verification documents if they exist
+        if (detailsData) {
+          try {
+            const { data: filesList } = await supabase
+              .storage
+              .from('verification-documents')
+              .list(`${user.id}`);
+              
+            if (filesList && filesList.length > 0) {
+              const documentURLs = await Promise.all(filesList.map(async (file) => {
+                const { data: { publicUrl } } = supabase
+                  .storage
+                  .from('verification-documents')
+                  .getPublicUrl(`${user.id}/${file.name}`);
+                return publicUrl;
+              }));
+              
+              setVerificationDocuments(documentURLs);
+            }
+          } catch (error) {
+            console.log("No verification documents found");
+          }
+        }
         
         // Set form data with default availability structure if not present
         const defaultAvailability: AvailabilityStructure = {
@@ -211,6 +245,122 @@ const TherapistSettings = () => {
     }));
   };
   
+  const handleProfileImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!user || !e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+    
+    setUploading(true);
+    
+    try {
+      // Check if profile-images bucket exists and create it if it doesn't
+      const { data: buckets } = await supabase.storage.listBuckets();
+      if (!buckets?.find(bucket => bucket.name === 'profile-images')) {
+        toast({
+          title: "Error",
+          description: "Profile images bucket not found. Please contact support.",
+          variant: "destructive",
+        });
+        setUploading(false);
+        return;
+      }
+      
+      // Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('profile-images')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('profile-images')
+        .getPublicUrl(filePath);
+      
+      // Update the profile with the new image URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ profile_image_url: publicUrl })
+        .eq('id', user.id);
+      
+      if (updateError) throw updateError;
+      
+      setProfileImage(publicUrl);
+      
+      toast({
+        title: "Success",
+        description: "Profile image updated successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+  const handleVerificationDocUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    if (!user || !e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    const fileName = `${Date.now()}-${file.name}`;
+    const filePath = `${user.id}/${fileName}`;
+    
+    setDocumentUploading(true);
+    
+    try {
+      // Check if verification-documents bucket exists
+      const { data: buckets } = await supabase.storage.listBuckets();
+      if (!buckets?.find(bucket => bucket.name === 'verification-documents')) {
+        toast({
+          title: "Error",
+          description: "Verification documents bucket not found. Please contact support.",
+          variant: "destructive",
+        });
+        setDocumentUploading(false);
+        return;
+      }
+      
+      // Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('verification-documents')
+        .upload(filePath, file);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('verification-documents')
+        .getPublicUrl(filePath);
+      
+      // Add the new document to the list
+      setVerificationDocuments(prev => [...prev, publicUrl]);
+      
+      toast({
+        title: "Success",
+        description: "Document uploaded successfully",
+      });
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload document",
+        variant: "destructive",
+      });
+    } finally {
+      setDocumentUploading(false);
+    }
+  };
+  
   const handleSaveProfile = async () => {
     if (!user) return;
     
@@ -295,6 +445,7 @@ const TherapistSettings = () => {
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="availability">Availability</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="verification">Verification</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
         
@@ -307,6 +458,26 @@ const TherapistSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="flex flex-col items-center space-y-4 mb-6">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={profileImage || undefined} />
+                  <AvatarFallback>{formData.full_name ? formData.full_name[0] : "T"}</AvatarFallback>
+                </Avatar>
+                <div className="flex items-center">
+                  <Label htmlFor="profile-image" className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md">
+                    {uploading ? 'Uploading...' : 'Change Image'}
+                  </Label>
+                  <Input 
+                    id="profile-image" 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleProfileImageUpload}
+                    disabled={uploading}
+                  />
+                </div>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="full_name">Full Name</Label>
@@ -455,6 +626,110 @@ const TherapistSettings = () => {
                   'Save Changes'
                 )}
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="verification">
+          <Card>
+            <CardHeader>
+              <CardTitle>Document Verification</CardTitle>
+              <CardDescription>
+                Upload verification documents for your license and credentials
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-medium mb-2">Upload Verification Documents</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Please upload your license, certificates, and other credential verification documents.
+                  </p>
+                  
+                  <div className="flex items-center space-x-2 mb-6">
+                    <Label htmlFor="verification-doc" className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md flex items-center">
+                      <Upload className="h-4 w-4 mr-2" />
+                      {documentUploading ? 'Uploading...' : 'Upload Document'}
+                    </Label>
+                    <Input 
+                      id="verification-doc" 
+                      type="file" 
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
+                      className="hidden" 
+                      onChange={handleVerificationDocUpload}
+                      disabled={documentUploading}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Supported formats: PDF, DOC, DOCX, JPG, PNG
+                    </span>
+                  </div>
+                </div>
+                
+                {therapistDetails && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Verification Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-md">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">License Number</p>
+                        <p>{therapistDetails.license_number || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">License Type</p>
+                        <p>{therapistDetails.license_type || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Education</p>
+                        <p>{therapistDetails.education || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Therapy Approaches</p>
+                        <p>{therapistDetails.therapy_approaches || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Application Status</p>
+                        <p className={`font-medium ${
+                          therapistDetails.application_status === 'approved' 
+                            ? 'text-green-600' 
+                            : therapistDetails.application_status === 'rejected' 
+                              ? 'text-red-600' 
+                              : 'text-yellow-600'
+                        }`}>
+                          {(therapistDetails.application_status || 'Pending').charAt(0).toUpperCase() + 
+                          (therapistDetails.application_status || 'pending').slice(1)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {verificationDocuments.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Uploaded Documents</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {verificationDocuments.map((url, index) => (
+                        <div key={index} className="border rounded-md p-2">
+                          {url.toLowerCase().endsWith('.pdf') ? (
+                            <div className="flex items-center justify-between">
+                              <span>Document {index + 1} (.pdf)</span>
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700">
+                                View
+                              </a>
+                            </div>
+                          ) : (
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <img 
+                                src={url} 
+                                alt={`Document ${index + 1}`} 
+                                className="w-full h-32 object-cover rounded-md"
+                              />
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
