@@ -14,6 +14,8 @@ import {
   ArrowRight,
   Sparkles
 } from "lucide-react";
+import ForTherapistsSection from '@/components/sections/ForTherapistsSection';
+import ForFriendsSection from '@/components/sections/ForFriendsSection';
 
 const Index = () => {
   return (
@@ -27,8 +29,8 @@ const Index = () => {
               Your journey to <span className="gradient-text">better mental health</span> starts here
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground">
-              Connect with licensed therapists for video sessions, secure messaging, and personalized care. 
-              Experience therapy on your terms.
+              Connect with licensed therapists or experienced peers for support, secure messaging, and personalized care. 
+              Experience healing on your terms.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Button asChild size="lg" className="group bg-primary hover:bg-primary/90 text-white">
@@ -116,8 +118,8 @@ const Index = () => {
             {[
               {
                 icon: <Users className="h-8 w-8 text-white" />,
-                title: "Licensed Therapists",
-                description: "Connect with certified professionals who specialize in various mental health areas."
+                title: "Professional & Peer Support",
+                description: "Choose between licensed therapists or experienced peers who've walked in your shoes."
               },
               {
                 icon: <Calendar className="h-8 w-8 text-white" />,
@@ -127,7 +129,7 @@ const Index = () => {
               {
                 icon: <MessageCircle className="h-8 w-8 text-white" />,
                 title: "Secure Messaging",
-                description: "Stay connected with your therapist between sessions via encrypted messaging."
+                description: "Stay connected with your therapist or friend between sessions via encrypted messaging."
               },
               {
                 icon: <Video className="h-8 w-8 text-white" />,
@@ -142,7 +144,7 @@ const Index = () => {
               {
                 icon: <Heart className="h-8 w-8 text-white" />,
                 title: "Personalized Care",
-                description: "Receive tailored treatment plans that address your specific needs."
+                description: "Receive tailored support that addresses your specific needs and situation."
               }
             ].map((feature, index) => (
               <div 
@@ -160,13 +162,19 @@ const Index = () => {
         </div>
       </section>
       
+      {/* For Therapists Section */}
+      <ForTherapistsSection />
+      
+      {/* For Friends Section */}
+      <ForFriendsSection />
+      
       {/* How It Works */}
       <section className="container mx-auto px-4 py-24">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="bg-secondary/10 text-secondary text-sm px-4 py-1.5 rounded-full inline-block mb-4">Process</span>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">How TheraLink Works</h2>
           <p className="text-lg text-muted-foreground">
-            Connect with a therapist in three simple steps
+            Connect with a therapist or friend in three simple steps
           </p>
         </div>
         
@@ -175,7 +183,7 @@ const Index = () => {
             {
               step: "01",
               title: "Find Your Match",
-              description: "Browse our therapist directory and find the right professional for your needs using our matching system."
+              description: "Browse our directory and find the right professional or peer for your needs using our matching system."
             },
             {
               step: "02",
@@ -185,7 +193,7 @@ const Index = () => {
             {
               step: "03",
               title: "Start Your Journey",
-              description: "Connect with your therapist via secure video call or messaging at your scheduled time."
+              description: "Connect with your therapist or friend via secure video call or messaging at your scheduled time."
             }
           ].map((step, index) => (
             <div key={index} className="relative bg-card rounded-2xl p-8 border border-border/50 hover:border-primary/20 transition-colors duration-300 hover:shadow-md">
@@ -206,7 +214,7 @@ const Index = () => {
         <div className="text-center mt-16">
           <Button asChild size="lg" className="group">
             <Link to="/therapists" className="flex items-center">
-              Find Your Therapist Now
+              Find Support Now
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </Button>
@@ -219,7 +227,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <span className="bg-primary/10 text-primary text-sm px-4 py-1.5 rounded-full inline-block mb-4">Testimonials</span>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Clients Say</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Users Say</h2>
             <p className="text-lg text-muted-foreground">
               Real stories from people whose lives changed with TheraLink
             </p>
@@ -239,7 +247,7 @@ const Index = () => {
               },
               {
                 name: "Elena P.",
-                quote: "As someone with a busy schedule, being able to book therapy sessions that work around my calendar has made it possible for me to prioritize my mental health.",
+                quote: "Connecting with a Friend who understood my depression from personal experience made all the difference. It's not therapy, but having someone who's been there is incredibly comforting.",
                 rating: 4
               }
             ].map((testimonial, index) => (
@@ -275,20 +283,20 @@ const Index = () => {
               </div>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to begin your mental health journey?</h2>
               <p className="text-lg opacity-90 mb-8">
-                Take the first step towards better mental health today. Our licensed therapists are ready to support you.
+                Take the first step towards better mental health today. Our licensed therapists and experienced friends are ready to support you.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
-                  <Link to="/therapists">Find a Therapist</Link>
+                  <Link to="/therapists">Find Support</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                  <Link to="/signup">Create an Account</Link>
+                  <Link to="/auth/register">Create an Account</Link>
                 </Button>
               </div>
               
               <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mt-8 text-sm">
-                {['HIPAA Compliant', 'Secure & Encrypted', 'Licensed Professionals', 'Flexible Scheduling'].map((item, i) => (
+                {['HIPAA Compliant', 'Secure & Encrypted', 'Professional Support', 'Peer Connection'].map((item, i) => (
                   <div key={i} className="flex items-center gap-1">
                     <Check className="h-4 w-4" />
                     <span>{item}</span>

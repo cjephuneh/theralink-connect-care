@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 // Layouts
 import Layout from "@/components/layout/Layout";
 import TherapistLayout from "@/components/layout/TherapistLayout";
+import FriendLayout from "@/components/layout/FriendLayout";
 
 // Client Pages
 import Index from "./pages/Index";
@@ -60,6 +61,12 @@ import SessionNotes from "./pages/therapist/SessionNotes";
 import TherapistEarnings from "./pages/therapist/TherapistEarnings";
 import TherapistOnboarding from "./pages/therapist/TherapistOnboarding";
 import TherapistNotifications from "./pages/therapist/TherapistNotifications";
+
+// Friend Pages
+import FriendDashboard from "./pages/friend/FriendDashboard";
+import FriendClients from "./pages/friend/FriendClients";
+import FriendNotes from "./pages/friend/FriendNotes";
+import FriendOnboarding from "./pages/friend/FriendOnboarding";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -149,6 +156,20 @@ const App = () => (
               <Route path="notifications" element={<TherapistNotifications />} />
               <Route index element={<Navigate to="/therapist/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/therapist/dashboard" replace />} />
+            </Route>
+
+            {/* Friend Routes */}
+            <Route path="/friend/*" element={<FriendLayout />}>
+              <Route path="dashboard" element={<FriendDashboard />} />
+              <Route path="clients" element={<FriendClients />} />
+              <Route path="notes" element={<FriendNotes />} />
+              <Route path="messages" element={<TherapistMessages />} />
+              <Route path="notifications" element={<TherapistNotifications />} />
+              <Route path="account" element={<TherapistAccount />} />
+              <Route path="settings" element={<TherapistSettings />} />
+              <Route path="onboarding" element={<FriendOnboarding />} />
+              <Route index element={<Navigate to="/friend/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/friend/dashboard" replace />} />
             </Route>
 
             {/* Admin Routes */}

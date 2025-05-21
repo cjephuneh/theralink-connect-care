@@ -10,13 +10,14 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Register = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [accountType, setAccountType] = useState<"client" | "therapist">("client");
+  const [accountType, setAccountType] = useState<"client" | "therapist" | "friend">("client");
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
@@ -25,9 +26,11 @@ const Register = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      // Direct therapists straight to the onboarding page
+      // Direct to the appropriate onboarding or dashboard
       if (accountType === "therapist") {
         navigate("/therapist/onboarding");
+      } else if (accountType === "friend") {
+        navigate("/friend/onboarding");
       } else {
         navigate("/dashboard");
       }
@@ -69,32 +72,29 @@ const Register = () => {
 
         <Card className="w-full">
           <CardHeader>
-            <div className="flex items-center justify-center space-x-4 mb-4">
-              <button
-                className={`px-4 py-2 flex-1 text-center rounded-md ${
-                  accountType === "client"
-                    ? "bg-thera-600 text-white"
-                    : "bg-muted"
-                }`}
-                onClick={() => setAccountType("client")}
-              >
-                I'm a Client
-              </button>
-              <button
-                className={`px-4 py-2 flex-1 text-center rounded-md ${
-                  accountType === "therapist"
-                    ? "bg-thera-600 text-white"
-                    : "bg-muted"
-                }`}
-                onClick={() => setAccountType("therapist")}
-              >
-                I'm a Therapist
-              </button>
-            </div>
+            <Tabs defaultValue="client" onValueChange={(value) => setAccountType(value as "client" | "therapist" | "friend")}>
+              <TabsList className="grid grid-cols-3 mb-4">
+                <TabsTrigger value="client">I'm a Client</TabsTrigger>
+                <TabsTrigger value="therapist">I'm a Therapist</TabsTrigger>
+                <TabsTrigger value="friend">I'm a Friend</TabsTrigger>
+              </TabsList>
+              <TabsContent value="client">
+                <CardDescription>
+                  Create an account to find support for your mental health journey
+                </CardDescription>
+              </TabsContent>
+              <TabsContent value="therapist">
+                <CardDescription>
+                  Create an account to offer your therapeutic services on our platform
+                </CardDescription>
+              </TabsContent>
+              <TabsContent value="friend">
+                <CardDescription>
+                  Create an account to share your experiences and support others
+                </CardDescription>
+              </TabsContent>
+            </Tabs>
             <CardTitle>Create Account</CardTitle>
-            <CardDescription>
-              Enter your information to create your {accountType === "therapist" ? "therapist" : "client"} account
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
@@ -163,6 +163,26 @@ const Register = () => {
                     <li className="flex items-center">
                       <Check className="h-4 w-4 mr-2 text-green-500" />
                       Verification process after sign-up
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              {accountType === "friend" && (
+                <div className="border rounded-md p-4 bg-muted/30">
+                  <p className="text-sm font-medium mb-2">Friend Requirements:</p>
+                  <ul className="text-sm space-y-1">
+                    <li className="flex items-center">
+                      <Check className="h-4 w-4 mr-2 text-green-500" />
+                      Personal experience with mental health challenges
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="h-4 w-4 mr-2 text-green-500" />
+                      Willingness to share your story to help others
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="h-4 w-4 mr-2 text-green-500" />
+                      Agree to our community guidelines
                     </li>
                   </ul>
                 </div>
