@@ -12,6 +12,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
+// Define the availability structure type for better type checking
+interface AvailabilityStructure {
+  days: {
+    monday: boolean;
+    tuesday: boolean;
+    wednesday: boolean;
+    thursday: boolean;
+    friday: boolean;
+    saturday: boolean;
+    sunday: boolean;
+  };
+  hours: {
+    start: string;
+    end: string;
+  };
+}
+
 const TherapistSettings = () => {
   const { toast } = useToast();
   const { user, profile } = useAuth();
@@ -37,7 +54,7 @@ const TherapistSettings = () => {
         sunday: false
       },
       hours: { start: "09:00", end: "17:00" }
-    }
+    } as AvailabilityStructure
   });
 
   // Fetch therapist details
@@ -77,7 +94,7 @@ const TherapistSettings = () => {
         setTherapistDetails(detailsData);
         
         // Set form data with default availability structure if not present
-        const defaultAvailability = {
+        const defaultAvailability: AvailabilityStructure = {
           days: {
             monday: false,
             tuesday: false,
@@ -96,12 +113,43 @@ const TherapistSettings = () => {
         if (therapistData?.availability) {
           if (typeof therapistData.availability === 'string') {
             try {
-              parsedAvailability = JSON.parse(therapistData.availability);
+              const parsed = JSON.parse(therapistData.availability);
+              // Check if the parsed object has the expected structure
+              if (parsed && 
+                typeof parsed === 'object' &&
+                parsed.days && 
+                parsed.hours &&
+                typeof parsed.hours.start === 'string' &&
+                typeof parsed.hours.end === 'string') {
+                parsedAvailability = parsed as AvailabilityStructure;
+              }
             } catch (e) {
               console.error("Error parsing availability JSON:", e);
             }
           } else if (typeof therapistData.availability === 'object') {
-            parsedAvailability = therapistData.availability;
+            // Verify that the object has the expected structure
+            const availObj = therapistData.availability as any;
+            if (availObj && 
+                availObj.days && 
+                availObj.hours && 
+                typeof availObj.hours.start === 'string' && 
+                typeof availObj.hours.end === 'string') {
+              parsedAvailability = {
+                days: {
+                  monday: Boolean(availObj.days.monday),
+                  tuesday: Boolean(availObj.days.tuesday),
+                  wednesday: Boolean(availObj.days.wednesday),
+                  thursday: Boolean(availObj.days.thursday),
+                  friday: Boolean(availObj.days.friday),
+                  saturday: Boolean(availObj.days.saturday),
+                  sunday: Boolean(availObj.days.sunday)
+                },
+                hours: {
+                  start: String(availObj.hours.start),
+                  end: String(availObj.hours.end)
+                }
+              };
+            }
           }
         }
         
