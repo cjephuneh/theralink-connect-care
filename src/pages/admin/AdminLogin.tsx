@@ -5,20 +5,55 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Shield } from "lucide-react";
+import { Eye, EyeOff, Shield, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const AdminLogin = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("admin@theralink.com");
+  const [password, setPassword] = useState("TheraLink2025!");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSettingUpAdmin, setIsSettingUpAdmin] = useState(false);
   
   const navigate = useNavigate();
   const { signIn } = useAuth();
   const { toast } = useToast();
+
+  const handleSetupAdmin = async () => {
+    setIsSettingUpAdmin(true);
+    try {
+      console.log("Setting up admin user...");
+      
+      const { data, error } = await supabase.functions.invoke('create_admin');
+      
+      if (error) {
+        console.error("Function invocation error:", error);
+        throw error;
+      }
+      
+      console.log("Admin setup response:", data);
+      
+      if (data?.success) {
+        toast({
+          title: "Admin Setup Complete",
+          description: "Admin user has been created/updated successfully. You can now log in.",
+        });
+      } else {
+        throw new Error(data?.error || "Unknown error occurred");
+      }
+    } catch (error: any) {
+      console.error("Admin setup error:", error);
+      toast({
+        title: "Setup Failed",
+        description: error.message || "Failed to set up admin user",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettingUpAdmin(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +97,13 @@ const AdminLogin = () => {
           // Sign out if not an admin
           await supabase.auth.signOut();
         }
+      } else {
+        // If login fails, suggest setting up admin
+        toast({
+          title: "Login failed",
+          description: "Invalid credentials. Try setting up the admin user first.",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       toast({
@@ -93,6 +135,27 @@ const AdminLogin = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Admin Setup Section */}
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+              <div className="flex items-center mb-2">
+                <Settings className="h-4 w-4 text-yellow-600 mr-2" />
+                <span className="text-sm font-medium text-yellow-800">First time setup?</span>
+              </div>
+              <p className="text-xs text-yellow-700 mb-3">
+                If this is your first time or you're having login issues, click below to set up the admin user.
+              </p>
+              <Button 
+                type="button"
+                variant="outline" 
+                size="sm"
+                className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                onClick={handleSetupAdmin}
+                disabled={isSettingUpAdmin}
+              >
+                {isSettingUpAdmin ? "Setting up..." : "Setup Admin User"}
+              </Button>
+            </div>
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

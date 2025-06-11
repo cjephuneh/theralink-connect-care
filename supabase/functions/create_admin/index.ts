@@ -36,9 +36,9 @@ serve(async (req) => {
   const adminPassword = "TheraLink2025!";
 
   try {
-    console.log("Starting admin user creation/update process...");
+    console.log("=== ADMIN SETUP STARTING ===");
     
-    // First, try to find existing user by email
+    // First, get all users to find existing admin
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
     
     if (listError) {
@@ -46,59 +46,54 @@ serve(async (req) => {
       throw listError;
     }
     
+    console.log(`Found ${users?.length || 0} total users in system`);
+    
     const existingUser = users?.find(user => user.email === adminEmail);
     let userId = existingUser?.id;
+    let action = "";
     
     if (existingUser) {
-      console.log("Found existing admin user, updating password...");
+      console.log(`Found existing user with ID: ${existingUser.id}`);
+      action = "updated";
       
-      // Update the existing user's password
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
-        existingUser.id,
-        { 
-          password: adminPassword,
-          user_metadata: {
-            full_name: "TheraLink Admin",
-            role: "admin"
-          }
-        }
-      );
+      // Delete the existing user first to ensure clean slate
+      console.log("Deleting existing admin user to recreate...");
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(existingUser.id);
       
-      if (updateError) {
-        console.error("Error updating user:", updateError);
-        throw updateError;
+      if (deleteError) {
+        console.error("Error deleting existing user:", deleteError);
+        // Continue anyway, try to update
+      } else {
+        console.log("Successfully deleted existing user");
       }
-      
-      console.log("Successfully updated existing user password");
-    } else {
-      console.log("Creating new admin user...");
-      
-      // Create new admin user
-      const { data: { user }, error: createUserError } = await supabase.auth.admin.createUser({
-        email: adminEmail,
-        password: adminPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: "TheraLink Admin",
-          role: "admin"
-        },
-      });
-
-      if (createUserError) {
-        console.error("Error creating user:", createUserError);
-        throw createUserError;
-      }
-      
-      userId = user?.id;
-      console.log("Successfully created new admin user");
     }
+    
+    // Always create a fresh admin user
+    console.log("Creating fresh admin user...");
+    const { data: { user }, error: createUserError } = await supabase.auth.admin.createUser({
+      email: adminEmail,
+      password: adminPassword,
+      email_confirm: true,
+      user_metadata: {
+        full_name: "TheraLink Admin",
+        role: "admin"
+      },
+    });
 
-    if (!userId) {
-      throw new Error("Could not get user ID");
+    if (createUserError) {
+      console.error("Error creating user:", createUserError);
+      throw createUserError;
     }
+    
+    if (!user?.id) {
+      throw new Error("User creation succeeded but no user ID returned");
+    }
+    
+    userId = user.id;
+    console.log(`Successfully created admin user with ID: ${userId}`);
 
     // Ensure the profile has the admin role
-    console.log("Updating/creating profile...");
+    console.log("Creating/updating profile...");
     const { error: upsertError } = await supabase
       .from("profiles")
       .upsert({
@@ -115,15 +110,17 @@ serve(async (req) => {
       throw upsertError;
     }
 
-    console.log("Admin setup completed successfully!");
+    console.log("=== ADMIN SETUP COMPLETED SUCCESSFULLY ===");
 
     return new Response(
       JSON.stringify({
-        message: "Admin credentials are ready! You can now log in.",
+        success: true,
+        message: "Admin credentials are ready! You can now log in with the provided credentials.",
         email: adminEmail,
         password: adminPassword,
         userId: userId,
-        action: existingUser ? "updated" : "created"
+        action: existingUser ? "recreated" : "created",
+        timestamp: new Date().toISOString()
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -131,11 +128,13 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Admin creation/update error:", error);
+    console.error("=== ADMIN SETUP FAILED ===", error);
     return new Response(
       JSON.stringify({ 
+        success: false,
         error: error.message,
-        details: "Check the function logs for more information"
+        details: "Check the function logs for more information",
+        timestamp: new Date().toISOString()
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
