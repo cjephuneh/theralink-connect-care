@@ -151,10 +151,10 @@ const TherapistLayout = () => {
       <aside
         className={`bg-sidebar-background border-r border-sidebar-border transition-all duration-300 ease-in-out fixed md:static inset-y-0 left-0 z-50 ${
           isCollapsed ? 'w-20' : 'w-64'
-        } md:flex flex-col`}
+        } md:flex flex-col ${isCollapsed ? '' : 'bg-white md:bg-sidebar-background'}`}
       >
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border bg-white md:bg-transparent">
           <Link to={isAdmin ? "/admin/dashboard" : "/therapist/dashboard"} className="flex items-center space-x-2">
             <div className="bg-thera-600 text-white p-1.5 rounded-md">
               <span className="font-bold text-lg">T</span>
@@ -172,7 +172,7 @@ const TherapistLayout = () => {
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 overflow-auto py-4">
+        <div className="flex-1 overflow-auto py-4 bg-white md:bg-transparent">
           <nav className="px-2 space-y-1">
             {navItems.map((item) => (
               <Link
@@ -196,7 +196,7 @@ const TherapistLayout = () => {
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-sidebar-border bg-white md:bg-transparent">
           <Button
             variant="ghost"
             className={`w-full flex items-center justify-${isCollapsed ? 'center' : 'start'} text-sidebar-foreground hover:bg-sidebar-accent/50`}

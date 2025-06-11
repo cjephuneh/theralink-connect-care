@@ -34,59 +34,63 @@ serve(async (req) => {
 
   const adminEmail = "admin@theralink.com";
   const adminPassword = "TheraLink2025!";
-  const adminData = {
-    full_name: "TheraLink Admin",
-    role: "admin"
-  };
 
   try {
-    // Check if admin user already exists
-    const { data: existingUser, error: checkError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("email", adminEmail)
-      .eq("role", "admin")
-      .single();
-
-    if (checkError && checkError.code !== "PGRST116") {
-      throw checkError;
-    }
-
-    if (existingUser) {
-      return new Response(
-        JSON.stringify({ message: "Admin user already exists", user: existingUser }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
-    }
-
-    // Create the admin user
+    // First, try to create the admin user
     const { data: { user }, error: createUserError } = await supabase.auth.admin.createUser({
       email: adminEmail,
       password: adminPassword,
       email_confirm: true,
-      user_metadata: adminData,
+      user_metadata: {
+        full_name: "TheraLink Admin",
+        role: "admin"
+      },
     });
 
-    if (createUserError) throw createUserError;
+    if (createUserError && !createUserError.message.includes("already registered")) {
+      throw createUserError;
+    }
 
-    // Ensure the profile has role set to admin
-    const { error: updateError } = await supabase
+    // Get the user ID (either from creation or existing user)
+    let userId = user?.id;
+    
+    if (!userId) {
+      // If user already exists, get their ID
+      const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
+        email: adminEmail
+      });
+      
+      if (listError) throw listError;
+      
+      if (users && users.length > 0) {
+        userId = users[0].id;
+      }
+    }
+
+    if (!userId) {
+      throw new Error("Could not create or find admin user");
+    }
+
+    // Ensure the profile has the admin role
+    const { error: upsertError } = await supabase
       .from("profiles")
-      .update({ role: "admin" })
-      .eq("id", user!.id);
+      .upsert({
+        id: userId,
+        email: adminEmail,
+        full_name: "TheraLink Admin",
+        role: "admin"
+      }, {
+        onConflict: "id"
+      });
 
-    if (updateError) throw updateError;
+    if (upsertError) throw upsertError;
 
     return new Response(
       JSON.stringify({
-        message: "Admin user created successfully",
-        credentials: {
-          email: adminEmail,
-          password: adminPassword,
-        },
+        message: "Admin user ready",
+        email: adminEmail,
+        password: adminPassword,
+        userId: userId
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -94,6 +98,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
+    console.error("Admin creation error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
