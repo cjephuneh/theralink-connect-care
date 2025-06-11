@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -60,13 +59,16 @@ import {
   XCircle,
   UserCog,
   Shield,
-  FileText
+  FileText,
+  Eye,
+  AlertCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { createNotification } from '@/utils/notifications';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const therapistFormSchema = z.object({
   bio: z.string().min(10, { message: "Bio must be at least 10 characters" }),
@@ -77,6 +79,8 @@ const therapistFormSchema = z.object({
 
 const AdminTherapists = () => {
   const [therapists, setTherapists] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [friends, setFriends] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTherapist, setSelectedTherapist] = useState<any>(null);
@@ -109,7 +113,7 @@ const AdminTherapists = () => {
       return;
     }
 
-    fetchTherapists();
+    fetchAllData();
   }, [profile, navigate, toast]);
 
   useEffect(() => {
@@ -123,10 +127,11 @@ const AdminTherapists = () => {
     }
   }, [selectedTherapist, form]);
 
-  const fetchTherapists = async () => {
+  const fetchAllData = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch therapists with their profiles and details
+      const { data: therapistData, error: therapistError } = await supabase
         .from('therapists')
         .select(`
           id, 
@@ -135,16 +140,79 @@ const AdminTherapists = () => {
           years_experience, 
           hourly_rate, 
           rating,
-          profiles:id (full_name, email, profile_image_url, role)
+          profiles:id (full_name, email, profile_image_url, role, created_at)
         `);
       
-      if (error) throw error;
-      setTherapists(data || []);
+      if (therapistError) throw therapistError;
+
+      // Get therapist details for verification info
+      const therapistIds = therapistData?.map(t => t.id) || [];
+      let therapistDetailsData = [];
+      
+      if (therapistIds.length > 0) {
+        const { data: detailsData, error: detailsError } = await supabase
+          .from('therapist_details')
+          .select('*')
+          .in('therapist_id', therapistIds);
+        
+        if (detailsError) throw detailsError;
+        therapistDetailsData = detailsData || [];
+      }
+
+      // Combine therapist data with their details
+      const therapistsWithDetails = therapistData?.map(therapist => ({
+        ...therapist,
+        therapist_details: therapistDetailsData.find(d => d.therapist_id === therapist.id)
+      })) || [];
+
+      setTherapists(therapistsWithDetails);
+
+      // Fetch clients
+      const { data: clientData, error: clientError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'client')
+        .order('created_at', { ascending: false });
+      
+      if (clientError) throw clientError;
+      setClients(clientData || []);
+
+      // Fetch friends with their details
+      const { data: friendUsers, error: friendError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'friend')
+        .order('created_at', { ascending: false });
+      
+      if (friendError) throw friendError;
+      
+      // Get friend details
+      let friendsWithDetails = [];
+      if (friendUsers && friendUsers.length > 0) {
+        const { data: friendDetails, error: detailsError } = await supabase
+          .from('friend_details')
+          .select('*')
+          .in('friend_id', friendUsers.map(user => user.id));
+        
+        if (detailsError) throw detailsError;
+        
+        friendsWithDetails = friendUsers.map(user => {
+          const details = friendDetails?.find(detail => detail.friend_id === user.id) || null;
+          return {
+            ...user,
+            details,
+            status: details ? 'Active' : 'Pending Profile'
+          };
+        });
+      }
+      
+      setFriends(friendsWithDetails);
+
     } catch (error) {
-      console.error('Error fetching therapists:', error);
+      console.error('Error fetching data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load therapists',
+        description: 'Failed to load data',
         variant: 'destructive',
       });
     } finally {
@@ -162,7 +230,6 @@ const AdminTherapists = () => {
         
       if (error) {
         if (error.code === 'PGRST116') {
-          // No data found - therapist hasn't completed onboarding
           setTherapistDetails(null);
         } else {
           throw error;
@@ -188,7 +255,6 @@ const AdminTherapists = () => {
 
   const handleVerificationAction = async (status: 'approved' | 'rejected') => {
     try {
-      // Update therapist_details with verification status
       const { error } = await supabase
         .from('therapist_details')
         .update({ application_status: status })
@@ -196,7 +262,6 @@ const AdminTherapists = () => {
         
       if (error) throw error;
       
-      // Send notification to therapist
       await createNotification({
         user_id: selectedTherapist.id,
         title: status === 'approved' ? 'Your account is verified!' : 'Account verification update',
@@ -213,7 +278,7 @@ const AdminTherapists = () => {
       });
       
       setVerifyDialogOpen(false);
-      fetchTherapists();
+      fetchAllData();
     } catch (error: any) {
       console.error('Error updating verification status:', error);
       toast({
@@ -249,7 +314,7 @@ const AdminTherapists = () => {
       });
       
       setEditDialogOpen(false);
-      fetchTherapists();
+      fetchAllData();
     } catch (error: any) {
       console.error('Error updating therapist:', error);
       toast({
@@ -264,7 +329,6 @@ const AdminTherapists = () => {
     if (!confirm("Are you sure you want to delete this therapist? This will remove their profile but not their user account.")) return;
     
     try {
-      // Delete therapist record but keep the user account
       const { error } = await supabase
         .from('therapists')
         .delete()
@@ -277,7 +341,7 @@ const AdminTherapists = () => {
         description: 'Therapist has been successfully removed from the platform',
       });
       
-      fetchTherapists();
+      fetchAllData();
     } catch (error: any) {
       console.error('Error deleting therapist:', error);
       toast({
@@ -288,19 +352,13 @@ const AdminTherapists = () => {
     }
   };
 
-  const filteredTherapists = therapists.filter(therapist => 
-    therapist.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    therapist.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    therapist.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const getInitials = (name: string) => {
     if (!name) return 'NA';
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
   const getStatusBadge = (status: string | null) => {
-    if (!status) return <Badge variant="outline">Unknown</Badge>;
+    if (!status) return <Badge variant="outline">Pending</Badge>;
     
     switch (status) {
       case 'approved':
@@ -313,135 +371,316 @@ const AdminTherapists = () => {
     }
   };
 
+  const filteredTherapists = therapists.filter(therapist => 
+    therapist.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    therapist.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    therapist.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredClients = clients.filter(client => 
+    client.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredFriends = friends.filter(friend => 
+    friend.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    friend.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    friend.details?.areas_of_experience?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const pendingTherapists = therapists.filter(t => 
+    !t.therapist_details?.application_status || t.therapist_details?.application_status === 'pending'
+  );
+
+  const pendingFriends = friends.filter(f => f.status === 'Pending Profile');
+
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Therapist Management</h1>
-
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search therapists..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <p className="text-muted-foreground">Manage therapists, clients, and friends</p>
         </div>
         <Button 
-          onClick={fetchTherapists} 
+          onClick={fetchAllData} 
           variant="outline" 
           className="flex gap-2"
           disabled={isLoading}
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Refresh
+          Refresh All
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Therapists</CardTitle>
-          <CardDescription>Manage therapist profiles and credentials</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Therapist</TableHead>
-                  <TableHead>Specialization</TableHead>
-                  <TableHead>Experience</TableHead>
-                  <TableHead>Hourly Rate</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                      <p className="mt-2 text-gray-500">Loading therapists...</p>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredTherapists.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
-                      <p className="text-gray-500">No therapists found</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredTherapists.map((therapist) => (
-                    <TableRow key={therapist.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={therapist.profiles?.profile_image_url} />
-                            <AvatarFallback>{getInitials(therapist.profiles?.full_name)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{therapist.profiles?.full_name}</div>
-                            <div className="text-sm text-gray-500">{therapist.profiles?.email}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{therapist.specialization || 'Not specified'}</TableCell>
-                      <TableCell>{therapist.years_experience ? `${therapist.years_experience} years` : 'N/A'}</TableCell>
-                      <TableCell>{therapist.hourly_rate ? `₦${therapist.hourly_rate}` : 'N/A'}</TableCell>
-                      <TableCell>
-                        {therapist.rating ? (
-                          <div className="flex items-center">
-                            <Star className="h-4 w-4 text-yellow-500 mr-1 fill-yellow-500" />
-                            <span>{therapist.rating.toFixed(1)}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-500">No ratings</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {therapist.therapist_details?.application_status ? 
-                          getStatusBadge(therapist.therapist_details.application_status) : 
-                          <Badge variant="outline">Pending</Badge>
-                        }
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => handleVerifyTherapist(therapist.id)}
-                            title="Verify credentials"
-                          >
-                            <Shield className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => handleEditTherapist(therapist)}
-                          >
-                            <FileEdit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="destructive" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={() => handleDeleteTherapist(therapist.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+      {/* Pending Approvals Alert */}
+      {(pendingTherapists.length > 0 || pendingFriends.length > 0) && (
+        <Card className="mb-6 border-yellow-200 bg-yellow-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <AlertCircle className="h-5 w-5" />
+              <span className="font-medium">
+                Pending Approvals: {pendingTherapists.length} therapist(s) and {pendingFriends.length} friend(s) awaiting verification
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="mb-6">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search users..."
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <Tabs defaultValue="therapists" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="therapists" className="relative">
+            Therapists
+            {pendingTherapists.length > 0 && (
+              <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+                {pendingTherapists.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="clients">Clients</TabsTrigger>
+          <TabsTrigger value="friends" className="relative">
+            Friends
+            {pendingFriends.length > 0 && (
+              <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs">
+                {pendingFriends.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="therapists">
+          <Card>
+            <CardHeader>
+              <CardTitle>Therapists ({therapists.length})</CardTitle>
+              <CardDescription>Manage therapist profiles and verification status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Therapist</TableHead>
+                      <TableHead>Specialization</TableHead>
+                      <TableHead>Experience</TableHead>
+                      <TableHead>Rate</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
+                          <p className="mt-2 text-gray-500">Loading therapists...</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredTherapists.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          <p className="text-gray-500">No therapists found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredTherapists.map((therapist) => (
+                        <TableRow key={therapist.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={therapist.profiles?.profile_image_url} />
+                                <AvatarFallback>{getInitials(therapist.profiles?.full_name)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{therapist.profiles?.full_name}</div>
+                                <div className="text-sm text-gray-500">{therapist.profiles?.email}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{therapist.specialization || 'Not specified'}</TableCell>
+                          <TableCell>{therapist.years_experience ? `${therapist.years_experience} years` : 'N/A'}</TableCell>
+                          <TableCell>{therapist.hourly_rate ? `₦${therapist.hourly_rate}` : 'N/A'}</TableCell>
+                          <TableCell>
+                            {getStatusBadge(therapist.therapist_details?.application_status)}
+                          </TableCell>
+                          <TableCell>{new Date(therapist.profiles?.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleVerifyTherapist(therapist.id)}
+                                title="Verify credentials"
+                              >
+                                <Shield className="h-4 w-4 mr-1" />
+                                Verify
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleEditTherapist(therapist)}
+                              >
+                                <FileEdit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="clients">
+          <Card>
+            <CardHeader>
+              <CardTitle>Clients ({clients.length})</CardTitle>
+              <CardDescription>Manage client accounts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center">
+                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
+                          <p className="mt-2 text-gray-500">Loading clients...</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredClients.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center">
+                          <p className="text-gray-500">No clients found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredClients.map((client) => (
+                        <TableRow key={client.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={client.profile_image_url} />
+                                <AvatarFallback>{getInitials(client.full_name)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{client.full_name || 'N/A'}</div>
+                                <div className="text-sm text-gray-500">Client</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{client.email}</TableCell>
+                          <TableCell>{new Date(client.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="friends">
+          <Card>
+            <CardHeader>
+              <CardTitle>Friends ({friends.length})</CardTitle>
+              <CardDescription>Manage peer support friends</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Friend</TableHead>
+                      <TableHead>Areas of Experience</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
+                          <p className="mt-2 text-gray-500">Loading friends...</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredFriends.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                          <p className="text-gray-500">No friends found</p>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredFriends.map((friend) => (
+                        <TableRow key={friend.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={friend.profile_image_url} />
+                                <AvatarFallback>{getInitials(friend.full_name)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{friend.full_name || 'N/A'}</div>
+                                <div className="text-sm text-gray-500">{friend.email}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{friend.details?.areas_of_experience?.split(',').slice(0, 2).join(', ') || 'Not specified'}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              friend.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {friend.status}
+                            </span>
+                          </TableCell>
+                          <TableCell>{new Date(friend.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Therapist Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
