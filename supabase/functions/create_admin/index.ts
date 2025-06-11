@@ -36,42 +36,69 @@ serve(async (req) => {
   const adminPassword = "TheraLink2025!";
 
   try {
-    // First, try to create the admin user
-    const { data: { user }, error: createUserError } = await supabase.auth.admin.createUser({
-      email: adminEmail,
-      password: adminPassword,
-      email_confirm: true,
-      user_metadata: {
-        full_name: "TheraLink Admin",
-        role: "admin"
-      },
-    });
-
-    if (createUserError && !createUserError.message.includes("already registered")) {
-      throw createUserError;
-    }
-
-    // Get the user ID (either from creation or existing user)
-    let userId = user?.id;
+    console.log("Starting admin user creation/update process...");
     
-    if (!userId) {
-      // If user already exists, get their ID
-      const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
-        email: adminEmail
-      });
+    // First, try to find existing user by email
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error("Error listing users:", listError);
+      throw listError;
+    }
+    
+    const existingUser = users?.find(user => user.email === adminEmail);
+    let userId = existingUser?.id;
+    
+    if (existingUser) {
+      console.log("Found existing admin user, updating password...");
       
-      if (listError) throw listError;
+      // Update the existing user's password
+      const { error: updateError } = await supabase.auth.admin.updateUserById(
+        existingUser.id,
+        { 
+          password: adminPassword,
+          user_metadata: {
+            full_name: "TheraLink Admin",
+            role: "admin"
+          }
+        }
+      );
       
-      if (users && users.length > 0) {
-        userId = users[0].id;
+      if (updateError) {
+        console.error("Error updating user:", updateError);
+        throw updateError;
       }
+      
+      console.log("Successfully updated existing user password");
+    } else {
+      console.log("Creating new admin user...");
+      
+      // Create new admin user
+      const { data: { user }, error: createUserError } = await supabase.auth.admin.createUser({
+        email: adminEmail,
+        password: adminPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: "TheraLink Admin",
+          role: "admin"
+        },
+      });
+
+      if (createUserError) {
+        console.error("Error creating user:", createUserError);
+        throw createUserError;
+      }
+      
+      userId = user?.id;
+      console.log("Successfully created new admin user");
     }
 
     if (!userId) {
-      throw new Error("Could not create or find admin user");
+      throw new Error("Could not get user ID");
     }
 
     // Ensure the profile has the admin role
+    console.log("Updating/creating profile...");
     const { error: upsertError } = await supabase
       .from("profiles")
       .upsert({
@@ -83,14 +110,20 @@ serve(async (req) => {
         onConflict: "id"
       });
 
-    if (upsertError) throw upsertError;
+    if (upsertError) {
+      console.error("Error upserting profile:", upsertError);
+      throw upsertError;
+    }
+
+    console.log("Admin setup completed successfully!");
 
     return new Response(
       JSON.stringify({
-        message: "Admin user ready",
+        message: "Admin credentials are ready! You can now log in.",
         email: adminEmail,
         password: adminPassword,
-        userId: userId
+        userId: userId,
+        action: existingUser ? "updated" : "created"
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -98,9 +131,12 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Admin creation error:", error);
+    console.error("Admin creation/update error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: "Check the function logs for more information"
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
