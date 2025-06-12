@@ -452,14 +452,14 @@ const BookingPaymentPage = () => {
               </div>
               <div className="flex justify-between border-t pt-4 mt-4">
                 <span className="text-muted-foreground">Total Amount:</span>
-                <span className="font-bold">₦{appointmentData.hourly_rate.toLocaleString()}</span>
+                <span className="font-bold">Ksh{appointmentData.hourly_rate.toLocaleString()}</span>
               </div>
               
               <Tabs defaultValue="card" className="w-full mt-6" onValueChange={setPaymentTab}>
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="card">Credit Card</TabsTrigger>
                   <TabsTrigger value="wallet">
-                    Wallet (₦{walletBalance.toLocaleString()})
+                    Wallet (Ksh{walletBalance.toLocaleString()})
                   </TabsTrigger>
                 </TabsList>
                 
@@ -509,16 +509,16 @@ const BookingPaymentPage = () => {
                   <div className="bg-muted/50 p-4 rounded-lg">
                     <div className="flex justify-between mb-2">
                       <span>Current Balance:</span>
-                      <span className="font-bold">₦{walletBalance.toLocaleString()}</span>
+                      <span className="font-bold">Ksh{walletBalance.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Required:</span>
-                      <span className="font-medium">₦{appointmentData.hourly_rate.toLocaleString()}</span>
+                      <span className="font-medium">Ksh{appointmentData.hourly_rate.toLocaleString()}</span>
                     </div>
                     <div className="border-t mt-2 pt-2 flex justify-between font-medium">
                       <span>Balance after payment:</span>
                       <span className={walletBalance >= appointmentData.hourly_rate ? 'text-green-600' : 'text-red-600'}>
-                        ₦{(walletBalance - appointmentData.hourly_rate).toLocaleString()}
+                        Ksh{(walletBalance - appointmentData.hourly_rate).toLocaleString()}
                       </span>
                     </div>
                   </div>

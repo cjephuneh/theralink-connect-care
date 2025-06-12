@@ -411,7 +411,7 @@ const AdminTherapists = () => {
                   <>
                     <TableCell>{user.specialization || 'Not specified'}</TableCell>
                     <TableCell>{user.years_experience ? `${user.years_experience} years` : 'N/A'}</TableCell>
-                    <TableCell>{user.hourly_rate ? `₦${user.hourly_rate}` : 'N/A'}</TableCell>
+                    <TableCell>{user.hourly_rate ? `Ksh${user.hourly_rate}` : 'N/A'}</TableCell>
                     <TableCell>{getStatusBadge(user.therapist_details?.application_status)}</TableCell>
                   </>
                 )}
@@ -619,7 +619,7 @@ const AdminTherapists = () => {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">Hourly Rate</label>
-                      <p>{selectedUser.hourly_rate ? `₦${selectedUser.hourly_rate}` : 'Not set'}</p>
+                      <p>{selectedUser.hourly_rate ? `Ksh${selectedUser.hourly_rate}` : 'Not set'}</p>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">Rating</label>
@@ -836,7 +836,7 @@ const AdminTherapists = () => {
                 name="hourly_rate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hourly Rate (₦)</FormLabel>
+                    <FormLabel>Hourly Rate (Ksh)</FormLabel>
                     <FormControl>
                       <Input type="number" min="10" step="0.01" {...field} />
                     </FormControl>
@@ -960,7 +960,7 @@ const AdminTherapists = () => {
                           )}
                           <div className="flex items-center gap-2">
                             <h4 className="text-sm font-medium text-gray-500">Hourly Rate:</h4>
-                            <span>₦{selectedUser.hourly_rate || 'Not set'}</span>
+                            <span>Ksh{selectedUser.hourly_rate || 'Not set'}</span>
                           </div>
                         </div>
                       </AccordionContent>

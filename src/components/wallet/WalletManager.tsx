@@ -190,7 +190,7 @@ const WalletManager = () => {
         <CardContent>
           <div className="bg-muted/50 p-6 rounded-lg mb-6">
             <div className="text-muted-foreground text-sm">Available Balance</div>
-            <div className="text-4xl font-bold mt-1">₦{walletData?.balance?.toFixed(2) || '0.00'}</div>
+            <div className="text-4xl font-bold mt-1">Ksh{walletData?.balance?.toFixed(2) || '0.00'}</div>
           </div>
           
           <Button 
@@ -243,7 +243,7 @@ const WalletManager = () => {
                   <div className={`font-medium ${
                     transaction.transaction_type === 'deposit' ? 'text-green-600' : 'text-amber-600'
                   }`}>
-                    {transaction.transaction_type === 'deposit' ? '+' : '-'}₦{transaction.amount.toFixed(2)}
+                    {transaction.transaction_type === 'deposit' ? '+' : '-'}Ksh{transaction.amount.toFixed(2)}
                   </div>
                 </div>
               ))}
@@ -266,7 +266,7 @@ const WalletManager = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount (₦)</Label>
+              <Label htmlFor="amount">Amount (Ksh)</Label>
               <Input
                 id="amount"
                 type="number"

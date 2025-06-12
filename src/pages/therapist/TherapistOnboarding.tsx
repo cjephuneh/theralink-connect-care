@@ -477,7 +477,7 @@ const TherapistOnboarding = () => {
                         name="hourly_rate"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Hourly Rate (₦)</FormLabel>
+                            <FormLabel>Hourly Rate (Ksh)</FormLabel>
                             <FormControl>
                               <Input type="number" min="10" {...field} />
                             </FormControl>
@@ -800,7 +800,7 @@ const TherapistOnboarding = () => {
                           <div><span className="font-medium">License Number:</span> {form.getValues('license_number')}</div>
                           <div><span className="font-medium">License Type:</span> {form.getValues('license_type')}</div>
                           <div><span className="font-medium">Years Experience:</span> {form.getValues('years_experience')}</div>
-                          <div><span className="font-medium">Hourly Rate:</span> ₦{form.getValues('hourly_rate')}</div>
+                          <div><span className="font-medium">Hourly Rate:</span> Ksh{form.getValues('hourly_rate')}</div>
                         </div>
                       </div>
 
