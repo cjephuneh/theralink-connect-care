@@ -130,31 +130,42 @@ const AdminTherapists = () => {
   const fetchAllData = async () => {
     setIsLoading(true);
     try {
-      // Fetch therapists with their profiles
-      const { data: therapistData, error: therapistError } = await supabase
-        .from('therapists')
-        .select(`
-          id, 
-          bio, 
-          specialization, 
-          years_experience, 
-          hourly_rate, 
-          rating,
-          created_at,
-          profiles!inner (
-            id,
-            full_name, 
-            email, 
-            profile_image_url, 
-            role, 
-            created_at
-          )
-        `);
+      console.log('Fetching all data...');
       
-      if (therapistError) throw therapistError;
+      // Fetch therapists with their profiles - fix the query structure
+      const { data: therapistProfiles, error: therapistError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name, 
+          email, 
+          profile_image_url, 
+          role, 
+          created_at
+        `)
+        .eq('role', 'therapist');
+      
+      if (therapistError) {
+        console.error('Error fetching therapist profiles:', therapistError);
+        throw therapistError;
+      }
+
+      console.log('Therapist profiles fetched:', therapistProfiles);
+
+      // Fetch therapist data separately
+      const { data: therapistData, error: therapistDataError } = await supabase
+        .from('therapists')
+        .select('*');
+      
+      if (therapistDataError) {
+        console.error('Error fetching therapist data:', therapistDataError);
+        throw therapistDataError;
+      }
+
+      console.log('Therapist data fetched:', therapistData);
 
       // Get therapist details for verification info
-      const therapistIds = therapistData?.map(t => t.id) || [];
+      const therapistIds = therapistProfiles?.map(t => t.id) || [];
       let therapistDetailsData = [];
       
       if (therapistIds.length > 0) {
@@ -163,16 +174,29 @@ const AdminTherapists = () => {
           .select('*')
           .in('therapist_id', therapistIds);
         
-        if (detailsError) throw detailsError;
+        if (detailsError) {
+          console.error('Error fetching therapist details:', detailsError);
+          throw detailsError;
+        }
         therapistDetailsData = detailsData || [];
       }
 
-      const therapistsWithDetails = therapistData?.map(therapist => ({
-        ...therapist,
-        role: 'therapist',
-        therapist_details: therapistDetailsData.find(d => d.therapist_id === therapist.id)
-      })) || [];
+      console.log('Therapist details fetched:', therapistDetailsData);
 
+      // Combine all therapist data
+      const therapistsWithDetails = therapistProfiles?.map(profile => {
+        const therapistInfo = therapistData?.find(t => t.id === profile.id);
+        const therapistDetail = therapistDetailsData.find(d => d.therapist_id === profile.id);
+        
+        return {
+          ...profile,
+          ...therapistInfo,
+          role: 'therapist',
+          therapist_details: therapistDetail
+        };
+      }) || [];
+
+      console.log('Combined therapist data:', therapistsWithDetails);
       setTherapists(therapistsWithDetails);
 
       // Fetch clients
@@ -182,7 +206,10 @@ const AdminTherapists = () => {
         .eq('role', 'client')
         .order('created_at', { ascending: false });
       
-      if (clientError) throw clientError;
+      if (clientError) {
+        console.error('Error fetching clients:', clientError);
+        throw clientError;
+      }
       setClients(clientData || []);
 
       // Fetch friends with their details
@@ -192,7 +219,10 @@ const AdminTherapists = () => {
         .eq('role', 'friend')
         .order('created_at', { ascending: false });
       
-      if (friendError) throw friendError;
+      if (friendError) {
+        console.error('Error fetching friends:', friendError);
+        throw friendError;
+      }
       
       let friendsWithDetails = [];
       if (friendUsers && friendUsers.length > 0) {
@@ -201,7 +231,10 @@ const AdminTherapists = () => {
           .select('*')
           .in('friend_id', friendUsers.map(user => user.id));
         
-        if (detailsError) throw detailsError;
+        if (detailsError) {
+          console.error('Error fetching friend details:', detailsError);
+          throw detailsError;
+        }
         
         friendsWithDetails = friendUsers.map(user => {
           const details = friendDetails?.find(detail => detail.friend_id === user.id) || null;
@@ -213,6 +246,7 @@ const AdminTherapists = () => {
         });
       }
       
+      console.log('Friends with details:', friendsWithDetails);
       setFriends(friendsWithDetails);
 
     } catch (error) {
@@ -340,9 +374,9 @@ const AdminTherapists = () => {
   };
 
   const filteredTherapists = therapists.filter(therapist => 
-    therapist.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    therapist.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     therapist.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    therapist.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    therapist.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredClients = clients.filter(client => 
@@ -398,12 +432,12 @@ const AdminTherapists = () => {
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.profiles?.profile_image_url || user.profile_image_url} />
-                      <AvatarFallback>{getInitials(user.profiles?.full_name || user.full_name)}</AvatarFallback>
+                      <AvatarImage src={user.profile_image_url} />
+                      <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{user.profiles?.full_name || user.full_name}</div>
-                      <div className="text-sm text-muted-foreground">{user.profiles?.email || user.email}</div>
+                      <div className="font-medium">{user.full_name}</div>
+                      <div className="text-sm text-muted-foreground">{user.email}</div>
                     </div>
                   </div>
                 </TableCell>
@@ -425,7 +459,7 @@ const AdminTherapists = () => {
                     </TableCell>
                   </>
                 )}
-                <TableCell>{new Date(user.profiles?.created_at || user.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button 
@@ -585,21 +619,21 @@ const AdminTherapists = () => {
               {/* User Basic Info */}
               <div className="flex items-center gap-4 border-b pb-4">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={selectedUser.profiles?.profile_image_url || selectedUser.profile_image_url} />
-                  <AvatarFallback className="text-lg">{getInitials(selectedUser.profiles?.full_name || selectedUser.full_name)}</AvatarFallback>
+                  <AvatarImage src={selectedUser.profile_image_url} />
+                  <AvatarFallback className="text-lg">{getInitials(selectedUser.full_name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold">{selectedUser.profiles?.full_name || selectedUser.full_name}</h3>
+                  <h3 className="text-xl font-semibold">{selectedUser.full_name}</h3>
                   <div className="flex items-center gap-2 text-muted-foreground mt-1">
                     <Mail className="h-4 w-4" />
-                    <span>{selectedUser.profiles?.email || selectedUser.email}</span>
+                    <span>{selectedUser.email}</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground mt-1">
                     <Calendar className="h-4 w-4" />
-                    <span>Joined {new Date(selectedUser.profiles?.created_at || selectedUser.created_at).toLocaleDateString()}</span>
+                    <span>Joined {new Date(selectedUser.created_at).toLocaleDateString()}</span>
                   </div>
                   <Badge className="mt-2" variant="secondary">
-                    {selectedUser.role || selectedUser.profiles?.role}
+                    {selectedUser.role}
                   </Badge>
                 </div>
               </div>
@@ -762,12 +796,12 @@ const AdminTherapists = () => {
           {selectedUser && (
             <div className="flex items-center gap-4 mb-6">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={selectedUser.profiles?.profile_image_url} />
-                <AvatarFallback>{getInitials(selectedUser.profiles?.full_name)}</AvatarFallback>
+                <AvatarImage src={selectedUser.profile_image_url} />
+                <AvatarFallback>{getInitials(selectedUser.full_name)}</AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="text-lg font-semibold">{selectedUser.profiles?.full_name}</h3>
-                <p className="text-muted-foreground">{selectedUser.profiles?.email}</p>
+                <h3 className="text-lg font-semibold">{selectedUser.full_name}</h3>
+                <p className="text-muted-foreground">{selectedUser.email}</p>
               </div>
             </div>
           )}
@@ -876,12 +910,12 @@ const AdminTherapists = () => {
             <div className="space-y-6">
               <div className="flex items-center gap-4 border-b pb-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedUser.profiles?.profile_image_url} />
-                  <AvatarFallback>{getInitials(selectedUser.profiles?.full_name)}</AvatarFallback>
+                  <AvatarImage src={selectedUser.profile_image_url} />
+                  <AvatarFallback>{getInitials(selectedUser.full_name)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-lg font-semibold">{selectedUser.profiles?.full_name}</h3>
-                  <p className="text-muted-foreground">{selectedUser.profiles?.email}</p>
+                  <h3 className="text-lg font-semibold">{selectedUser.full_name}</h3>
+                  <p className="text-muted-foreground">{selectedUser.email}</p>
                   {selectedUser.specialization && (
                     <Badge variant="secondary" className="mt-1">{selectedUser.specialization}</Badge>
                   )}
