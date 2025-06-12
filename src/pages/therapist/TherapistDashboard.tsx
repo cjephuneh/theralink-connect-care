@@ -283,7 +283,7 @@ const TherapistDashboard = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Earnings</p>
-                <h3 className="text-2xl font-bold">₦{stats.totalEarnings.toLocaleString()}</h3>
+                <h3 className="text-2xl font-bold">Ksh{stats.totalEarnings.toLocaleString()}</h3>
               </div>
             </div>
           </CardContent>

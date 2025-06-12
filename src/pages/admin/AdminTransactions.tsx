@@ -303,7 +303,7 @@ const AdminTransactions = () => {
                         {transaction.reference}
                       </TableCell>
                       <TableCell className="font-semibold">
-                        ₦{transaction.amount.toLocaleString()}
+                        Ksh{transaction.amount.toLocaleString()}
                       </TableCell>
                       <TableCell>
                         {getTypeBadge(transaction.transaction_type)}

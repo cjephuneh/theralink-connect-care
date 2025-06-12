@@ -74,7 +74,7 @@ export const generateLocalBusinessSchema = (locations: string[] = []): SchemaTyp
     "logo": "https://theralink.online/logo.png",
     "image": "https://theralink.online/og-image.png",
     "description": "TheraLink offers secure online therapy sessions with licensed professionals and peer support. Connect via video, chat, or messaging for personalized mental health support.",
-    "telephone": "+18001234567",
+    "telephone": "+254708419386",
     "priceRange": "₦₦-₦₦₦₦",
     "sameAs": [
       "https://twitter.com/theralinkapp",

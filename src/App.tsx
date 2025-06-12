@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
 import TherapistLayout from "@/components/layout/TherapistLayout";
 import FriendLayout from "@/components/layout/FriendLayout";
+import ClientLayout from "@/components/layout/ClientLayout";
 
 // Client Pages
 import Index from "./pages/Index";
@@ -19,7 +21,6 @@ import FriendListing from "./pages/FriendListing";
 import TherapistProfile from "./pages/TherapistProfile";
 import ChatPage from "./pages/ChatPage";
 import VideoChat from "./pages/VideoChat";
-import ClientDashboard from "./pages/ClientDashboard";
 import NotFound from "./pages/NotFound";
 import BookingPage from "./pages/BookingPage";
 import BookingPaymentPage from "./pages/BookingPaymentPage";
@@ -43,6 +44,9 @@ import ClientMessages from "./pages/client/ClientMessages";
 import ClientProfile from "./pages/client/ClientProfile";
 import ClientResources from "./pages/client/ClientResources";
 import ClientBilling from "./pages/client/ClientBilling";
+import ClientFeedback from "./pages/client/ClientFeedback";
+import ClientTherapists from "./pages/client/ClientTherapists";
+import ClientSettings from "./pages/client/ClientSettings";
 
 // Auth Pages
 import Login from "./pages/auth/Login";
@@ -127,15 +131,18 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Route>
 
-            {/* Client Dashboard Routes */}
-            <Route path="/client/*" element={<ClientDashboard />}>
+            {/* Client Dashboard Routes with New Layout */}
+            <Route path="/client/*" element={<ClientLayout />}>
               <Route path="dashboard" element={<ClientOverview />} />
               <Route path="appointments" element={<ClientAppointments />} />
-              <Route path="notes" element={<ClientNotes />} />
+              <Route path="therapists" element={<ClientTherapists />} />
               <Route path="messages" element={<ClientMessages />} />
+              <Route path="notes" element={<ClientNotes />} />
               <Route path="resources" element={<ClientResources />} />
               <Route path="billing" element={<ClientBilling />} />
+              <Route path="feedback" element={<ClientFeedback />} />
               <Route path="profile" element={<ClientProfile />} />
+              <Route path="settings" element={<ClientSettings />} />
               <Route index element={<Navigate to="/client/dashboard" replace />} />
               <Route path="*" element={<Navigate to="/client/dashboard" replace />} />
             </Route>

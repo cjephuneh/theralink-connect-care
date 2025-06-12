@@ -209,7 +209,7 @@ const ContactPage = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-700">Phone</p>
-                  <p className="text-gray-600">+234 123 456 7890</p>
+                  <p className="text-gray-600">+254708419386</p>
                   <p className="text-sm text-gray-500">Mon-Fri from 8am to 5pm</p>
                 </div>
               </div>
@@ -220,7 +220,7 @@ const ContactPage = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-700">Email</p>
-                  <p className="text-gray-600">support@theralink.com</p>
+                  <p className="text-gray-600">support@bricklabsai.org</p>
                   <p className="text-sm text-gray-500">We'll respond as soon as possible</p>
                 </div>
               </div>
@@ -232,7 +232,7 @@ const ContactPage = () => {
                 <div>
                   <p className="font-semibold text-gray-700">Office</p>
                   <p className="text-gray-600">123 Therapy Lane</p>
-                  <p className="text-gray-600">Mental Health City, MH 12345</p>
+                  <p className="text-gray-600">UpperHill</p>
                 </div>
               </div>
             </CardContent>

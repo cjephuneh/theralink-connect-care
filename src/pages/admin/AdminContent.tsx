@@ -1,36 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
-} from '@/components/ui/table';
-import { 
   Card, 
   CardContent, 
   CardHeader, 
   CardTitle, 
-  CardDescription, 
-  CardFooter 
+  CardDescription 
 } from '@/components/ui/card';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { 
   Form,
   FormControl,
@@ -41,82 +17,89 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from '@/components/ui/button';
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { 
-  Search, 
-  RefreshCw, 
-  PlusCircle, 
-  FileEdit, 
-  Trash2, 
-  Eye, 
-  Loader2,
-  FilePlus,
+  Settings, 
+  Globe, 
+  Mail, 
+  Bell, 
+  Shield, 
+  Database, 
+  Users,
   FileText,
-  BookOpen,
-  Link as LinkIcon
+  CreditCard,
+  Palette,
+  Save,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const blogFormSchema = z.object({
-  title: z.string().min(5, { message: "Title must be at least 5 characters" }),
-  content: z.string().min(20, { message: "Content must be at least 20 characters" }),
-  excerpt: z.string().min(10, { message: "Excerpt must be at least 10 characters" }),
-  category: z.string().min(3, { message: "Category is required" }),
-  imageUrl: z.string().url({ message: "Valid image URL is required" }).optional().or(z.literal('')),
+const platformSettingsSchema = z.object({
+  platform_name: z.string().min(1, "Platform name is required"),
+  platform_description: z.string().min(10, "Description must be at least 10 characters"),
+  platform_email: z.string().email("Valid email is required"),
+  support_email: z.string().email("Valid email is required"),
+  maintenance_mode: z.boolean(),
+  registration_enabled: z.boolean(),
+  email_notifications: z.boolean(),
+  sms_notifications: z.boolean(),
 });
 
-const resourceFormSchema = z.object({
-  title: z.string().min(5, { message: "Title must be at least 5 characters" }),
-  content: z.string().min(20, { message: "Content must be at least 20 characters" }),
-  resourceType: z.string().min(3, { message: "Resource type is required" }),
-  externalUrl: z.string().url({ message: "Valid URL is required" }).optional().or(z.literal('')),
+const paymentSettingsSchema = z.object({
+  paystack_public_key: z.string().min(1, "Paystack public key is required"),
+  paystack_secret_key: z.string().min(1, "Paystack secret key is required"),
+  default_currency: z.string().min(1, "Currency is required"),
+  minimum_withdrawal: z.coerce.number().min(1),
+  platform_fee_percentage: z.coerce.number().min(0).max(100),
 });
 
 const AdminContent = () => {
-  const [activeTab, setActiveTab] = useState("blogs");
-  const [blogs, setBlogs] = useState<any[]>([]);
-  const [resources, setResources] = useState<any[]>([]);
-  const [isLoadingBlogs, setIsLoadingBlogs] = useState(true);
-  const [isLoadingResources, setIsLoadingResources] = useState(true);
-  const [searchBlogTerm, setSearchBlogTerm] = useState('');
-  const [searchResourceTerm, setSearchResourceTerm] = useState('');
-  const [addBlogDialogOpen, setAddBlogDialogOpen] = useState(false);
-  const [addResourceDialogOpen, setAddResourceDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSecrets, setShowSecrets] = useState(false);
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
 
-  const blogForm = useForm<z.infer<typeof blogFormSchema>>({
-    resolver: zodResolver(blogFormSchema),
+  const platformForm = useForm<z.infer<typeof platformSettingsSchema>>({
+    resolver: zodResolver(platformSettingsSchema),
     defaultValues: {
-      title: "",
-      content: "",
-      excerpt: "",
-      category: "",
-      imageUrl: "",
+      platform_name: "TheraLink",
+      platform_description: "Connecting you with licensed therapists and peer support",
+      platform_email: "hello@theralink.com",
+      support_email: "support@theralink.com",
+      maintenance_mode: false,
+      registration_enabled: true,
+      email_notifications: true,
+      sms_notifications: false,
     },
   });
 
-  const resourceForm = useForm<z.infer<typeof resourceFormSchema>>({
-    resolver: zodResolver(resourceFormSchema),
+  const paymentForm = useForm<z.infer<typeof paymentSettingsSchema>>({
+    resolver: zodResolver(paymentSettingsSchema),
     defaultValues: {
-      title: "",
-      content: "",
-      resourceType: "",
-      externalUrl: "",
+      paystack_public_key: "pk_test_",
+      paystack_secret_key: "sk_test_",
+      default_currency: "NGN",
+      minimum_withdrawal: 1000,
+      platform_fee_percentage: 10,
     },
   });
 
   useEffect(() => {
-    // Check if user is admin
     if (profile && profile.role !== 'admin') {
       toast({
         title: "Access Denied",
@@ -126,578 +109,606 @@ const AdminContent = () => {
       navigate('/');
       return;
     }
-
-    // Mock data for now - in a real app, this would fetch from the database
-    const mockBlogs = [
-      {
-        id: '1',
-        title: 'Understanding Anxiety Disorders',
-        excerpt: 'Learn about the different types of anxiety disorders and their symptoms.',
-        content: 'Anxiety disorders are the most common mental health conditions affecting millions worldwide...',
-        category: 'Mental Health',
-        author: 'Dr. Sarah Johnson',
-        publishDate: '2025-04-15',
-        imageUrl: 'https://plus.unsplash.com/premium_photo-1682284353481-91bcbee5f11a?ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8YW54aWV0eXxlbnwwfHwwfHx8MA%3D%3D&ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60'
-      },
-      {
-        id: '2',
-        title: 'The Benefits of Mindfulness Meditation',
-        excerpt: 'Discover how mindfulness meditation can improve your mental wellbeing.',
-        content: 'Mindfulness meditation is a powerful practice that can help reduce stress, anxiety, and depression...',
-        category: 'Self-Care',
-        author: 'Dr. Michael Chen',
-        publishDate: '2025-05-02',
-        imageUrl: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8bWVkaXRhdGlvbnxlbnwwfHwwfHx8MA%3D%3D&ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60'
-      },
-      {
-        id: '3',
-        title: 'Coping with Grief and Loss',
-        excerpt: 'Strategies for managing grief and processing loss in healthy ways.',
-        content: "Grief is a natural response to loss. Whether you're dealing with the death of a loved one...",
-        category: 'Emotional Wellness',
-        author: 'Dr. Emily Rodriguez',
-        publishDate: '2025-05-10',
-        imageUrl: 'https://images.unsplash.com/photo-1516589091380-5d8e87df6999?ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8Z3JpZWZ8ZW58MHx8MHx8fDA%3D&ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=60'
-      }
-    ];
-
-    const mockResources = [
-      {
-        id: '1',
-        title: 'Anxiety Self-Assessment Tool',
-        content: 'A questionnaire to help identify anxiety symptoms and their severity.',
-        resourceType: 'Assessment',
-        externalUrl: 'https://example.com/anxiety-assessment'
-      },
-      {
-        id: '2',
-        title: 'Cognitive Behavioral Therapy Workbook',
-        content: 'Practical exercises based on CBT principles to help manage negative thoughts.',
-        resourceType: 'Worksheet',
-        externalUrl: ''
-      },
-      {
-        id: '3',
-        title: 'Crisis Support Hotlines',
-        content: 'A comprehensive list of mental health crisis support contacts.',
-        resourceType: 'Guide',
-        externalUrl: 'https://example.com/crisis-support'
-      }
-    ];
-
-    setBlogs(mockBlogs);
-    setIsLoadingBlogs(false);
-    
-    setResources(mockResources);
-    setIsLoadingResources(false);
   }, [profile, navigate, toast]);
 
-  const addBlog = (values: z.infer<typeof blogFormSchema>) => {
-    // In a real app, this would send data to the database
-    const newBlog = {
-      id: `${blogs.length + 1}`,
-      title: values.title,
-      excerpt: values.excerpt,
-      content: values.content,
-      category: values.category,
-      author: profile?.full_name || 'Admin',
-      publishDate: new Date().toISOString().split('T')[0],
-      imageUrl: values.imageUrl || '',
-    };
-
-    setBlogs([newBlog, ...blogs]);
-    toast({
-      title: 'Blog Post Added',
-      description: 'The blog post has been successfully added',
-    });
-    
-    setAddBlogDialogOpen(false);
-    blogForm.reset();
+  const onPlatformSubmit = async (values: z.infer<typeof platformSettingsSchema>) => {
+    setIsLoading(true);
+    try {
+      // Here you would typically save to your settings table
+      console.log('Platform settings:', values);
+      
+      toast({
+        title: "Settings Updated",
+        description: "Platform settings have been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update platform settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const addResource = (values: z.infer<typeof resourceFormSchema>) => {
-    // In a real app, this would send data to the database
-    const newResource = {
-      id: `${resources.length + 1}`,
-      title: values.title,
-      content: values.content,
-      resourceType: values.resourceType,
-      externalUrl: values.externalUrl || '',
-    };
-
-    setResources([newResource, ...resources]);
-    toast({
-      title: 'Resource Added',
-      description: 'The resource has been successfully added',
-    });
-    
-    setAddResourceDialogOpen(false);
-    resourceForm.reset();
+  const onPaymentSubmit = async (values: z.infer<typeof paymentSettingsSchema>) => {
+    setIsLoading(true);
+    try {
+      // Here you would typically save to your settings table or Supabase secrets
+      console.log('Payment settings:', values);
+      
+      toast({
+        title: "Payment Settings Updated",
+        description: "Payment configuration has been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update payment settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDeleteBlog = (blogId: string) => {
-    if (!confirm("Are you sure you want to delete this blog post? This action cannot be undone.")) return;
-    
-    // In a real app, this would delete from the database
-    const updatedBlogs = blogs.filter(blog => blog.id !== blogId);
-    setBlogs(updatedBlogs);
-    
-    toast({
-      title: 'Blog Post Deleted',
-      description: 'The blog post has been successfully deleted',
-    });
-  };
-
-  const handleDeleteResource = (resourceId: string) => {
-    if (!confirm("Are you sure you want to delete this resource? This action cannot be undone.")) return;
-    
-    // In a real app, this would delete from the database
-    const updatedResources = resources.filter(resource => resource.id !== resourceId);
-    setResources(updatedResources);
-    
-    toast({
-      title: 'Resource Deleted',
-      description: 'The resource has been successfully deleted',
-    });
-  };
-
-  // Filter blogs and resources based on search terms
-  const filteredBlogs = blogs.filter(blog => 
-    blog.title.toLowerCase().includes(searchBlogTerm.toLowerCase()) ||
-    blog.category.toLowerCase().includes(searchBlogTerm.toLowerCase()) ||
-    blog.excerpt.toLowerCase().includes(searchBlogTerm.toLowerCase())
-  );
-
-  const filteredResources = resources.filter(resource => 
-    resource.title.toLowerCase().includes(searchResourceTerm.toLowerCase()) ||
-    resource.resourceType.toLowerCase().includes(searchResourceTerm.toLowerCase()) ||
-    resource.content.toLowerCase().includes(searchResourceTerm.toLowerCase())
-  );
-
-  const truncate = (text: string, length: number) => {
-    if (text.length <= length) return text;
-    return text.substr(0, length) + '...';
+  const systemStats = {
+    totalUsers: 245,
+    activeTherapists: 12,
+    pendingApprovals: 5,
+    totalTransactions: 89,
+    systemHealth: "Good",
+    lastBackup: "2 hours ago",
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Content Management</h1>
+    <div className="container mx-auto py-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Platform Settings</h1>
+          <p className="text-muted-foreground">Manage platform configuration and system settings</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <CheckCircle className="h-3 w-3 text-green-500" />
+            System Healthy
+          </Badge>
+        </div>
+      </div>
 
-      <Tabs defaultValue="blogs" onValueChange={setActiveTab} value={activeTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="blogs" className="flex items-center gap-1">
-            <FileText className="h-4 w-4" />
-            Blog Posts
+      {/* System Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Users</p>
+                <p className="text-2xl font-bold">{systemStats.totalUsers}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-green-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Active Therapists</p>
+                <p className="text-2xl font-bold">{systemStats.activeTherapists}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Approvals</p>
+                <p className="text-2xl font-bold">{systemStats.pendingApprovals}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-purple-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Transactions</p>
+                <p className="text-2xl font-bold">{systemStats.totalTransactions}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-cyan-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">System Health</p>
+                <p className="text-lg font-bold text-green-600">{systemStats.systemHealth}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4 text-gray-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Last Backup</p>
+                <p className="text-sm font-medium">{systemStats.lastBackup}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="platform" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="platform" className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Platform
           </TabsTrigger>
-          <TabsTrigger value="resources" className="flex items-center gap-1">
-            <BookOpen className="h-4 w-4" />
-            Self-Help Resources
+          <TabsTrigger value="payment" className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Payment
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Security
           </TabsTrigger>
         </TabsList>
 
-        {/* Blog Posts Tab */}
-        <TabsContent value="blogs">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search blog posts..."
-                className="pl-10"
-                value={searchBlogTerm}
-                onChange={(e) => setSearchBlogTerm(e.target.value)}
-              />
-            </div>
-            <Dialog open={addBlogDialogOpen} onOpenChange={setAddBlogDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-thera-600 hover:bg-thera-700">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Blog Post
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Blog Post</DialogTitle>
-                  <DialogDescription>
-                    Create a new blog post for the mental health blog
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <Form {...blogForm}>
-                  <form onSubmit={blogForm.handleSubmit(addBlog)} className="space-y-6">
+        <TabsContent value="platform">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Platform Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure basic platform settings and features
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...platformForm}>
+                <form onSubmit={platformForm.handleSubmit(onPlatformSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
-                      control={blogForm.control}
-                      name="title"
+                      control={platformForm.control}
+                      name="platform_name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Title</FormLabel>
+                          <FormLabel>Platform Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter blog post title" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={blogForm.control}
-                        name="category"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Category</FormLabel>
-                            <FormControl>
-                              <Input placeholder="E.g. Mental Health, Self-Care" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={blogForm.control}
-                        name="imageUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Featured Image URL</FormLabel>
-                            <FormControl>
-                              <Input placeholder="https://example.com/image.jpg" {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              Optional: URL to an image for the blog post
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <FormField
-                      control={blogForm.control}
-                      name="excerpt"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Excerpt</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Brief summary of the blog post..." 
-                              className="resize-none"
-                              {...field} 
-                            />
+                            <Input placeholder="TheraLink" {...field} />
                           </FormControl>
                           <FormDescription>
-                            A short summary displayed in blog listings
+                            The name of your platform
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
-                      control={blogForm.control}
-                      name="content"
+                      control={platformForm.control}
+                      name="platform_email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Content</FormLabel>
+                          <FormLabel>Platform Email</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Write your blog post content here..." 
-                              className="min-h-[200px]"
-                              {...field} 
-                            />
+                            <Input type="email" placeholder="hello@theralink.com" {...field} />
                           </FormControl>
+                          <FormDescription>
+                            Main contact email for the platform
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setAddBlogDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit">Publish Post</Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
+                  </div>
 
+                  <FormField
+                    control={platformForm.control}
+                    name="platform_description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Platform Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Connecting you with licensed therapists and peer support" 
+                            className="min-h-[100px]"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          A brief description of what your platform does
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={platformForm.control}
+                    name="support_email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Support Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="support@theralink.com" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Email address for user support inquiries
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Platform Features</h3>
+                    
+                    <FormField
+                      control={platformForm.control}
+                      name="maintenance_mode"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Maintenance Mode</FormLabel>
+                            <FormDescription>
+                              Temporarily disable the platform for maintenance
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={platformForm.control}
+                      name="registration_enabled"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">User Registration</FormLabel>
+                            <FormDescription>
+                              Allow new users to register on the platform
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <Button type="submit" disabled={isLoading} className="w-full">
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Platform Settings
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payment">
           <Card>
             <CardHeader>
-              <CardTitle>Blog Posts</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Payment Configuration
+              </CardTitle>
               <CardDescription>
-                Manage blog content for mental health topics
+                Configure payment processing and fee settings
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Author</TableHead>
-                      <TableHead>Published</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingBlogs ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
-                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                          <p className="mt-2 text-gray-500">Loading blog posts...</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredBlogs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
-                          <p className="text-gray-500">No blog posts found</p>
-                        </TableCell>
-                      </TableRow>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">API Keys</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSecrets(!showSecrets)}
+                  className="flex items-center gap-2"
+                >
+                  {showSecrets ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showSecrets ? 'Hide' : 'Show'} Keys
+                </Button>
+              </div>
+
+              <Form {...paymentForm}>
+                <form onSubmit={paymentForm.handleSubmit(onPaymentSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={paymentForm.control}
+                      name="paystack_public_key"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Paystack Public Key</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type={showSecrets ? "text" : "password"}
+                              placeholder="pk_test_..." 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your Paystack public key
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={paymentForm.control}
+                      name="paystack_secret_key"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Paystack Secret Key</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type={showSecrets ? "text" : "password"}
+                              placeholder="sk_test_..." 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Your Paystack secret key (keep secure)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <FormField
+                      control={paymentForm.control}
+                      name="default_currency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Default Currency</FormLabel>
+                          <FormControl>
+                            <Input placeholder="NGN" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Platform currency (e.g., NGN, USD)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={paymentForm.control}
+                      name="minimum_withdrawal"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Minimum Withdrawal</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="1000" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Minimum amount for withdrawals
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={paymentForm.control}
+                      name="platform_fee_percentage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Platform Fee (%)</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="0" max="100" placeholder="10" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Platform commission percentage
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <Button type="submit" disabled={isLoading} className="w-full">
+                    {isLoading ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
                     ) : (
-                      filteredBlogs.map((blog) => (
-                        <TableRow key={blog.id}>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-semibold">{blog.title}</span>
-                              <span className="text-gray-500 text-sm">{truncate(blog.excerpt, 60)}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{blog.category}</Badge>
-                          </TableCell>
-                          <TableCell>{blog.author}</TableCell>
-                          <TableCell>{blog.publishDate}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-8 w-8"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-8 w-8"
-                              >
-                                <FileEdit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="destructive" 
-                                size="icon" 
-                                className="h-8 w-8"
-                                onClick={() => handleDeleteBlog(blog.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Payment Settings
+                      </>
                     )}
-                  </TableBody>
-                </Table>
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Notification Settings
+              </CardTitle>
+              <CardDescription>
+                Configure how the platform sends notifications to users
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <FormField
+                  control={platformForm.control}
+                  name="email_notifications"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Email Notifications</FormLabel>
+                        <FormDescription>
+                          Send notifications via email to users
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={platformForm.control}
+                  name="sms_notifications"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">SMS Notifications</FormLabel>
+                        <FormDescription>
+                          Send notifications via SMS to users
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="rounded-lg border p-4">
+                  <h4 className="font-medium mb-2">Notification Templates</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Customize email and SMS templates for different events
+                  </p>
+                  <div className="space-y-2">
+                    <Button variant="outline" size="sm">Edit Welcome Email</Button>
+                    <Button variant="outline" size="sm">Edit Appointment Reminder</Button>
+                    <Button variant="outline" size="sm">Edit Payment Confirmation</Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Self-Help Resources Tab */}
-        <TabsContent value="resources">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search resources..."
-                className="pl-10"
-                value={searchResourceTerm}
-                onChange={(e) => setSearchResourceTerm(e.target.value)}
-              />
-            </div>
-            <Dialog open={addResourceDialogOpen} onOpenChange={setAddResourceDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-thera-600 hover:bg-thera-700">
-                  <FilePlus className="mr-2 h-4 w-4" />
-                  Add Resource
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Self-Help Resource</DialogTitle>
-                  <DialogDescription>
-                    Create a new resource to help clients with mental health management
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <Form {...resourceForm}>
-                  <form onSubmit={resourceForm.handleSubmit(addResource)} className="space-y-6">
-                    <FormField
-                      control={resourceForm.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Title</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter resource title" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={resourceForm.control}
-                        name="resourceType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Resource Type</FormLabel>
-                            <FormControl>
-                              <Input placeholder="E.g. Worksheet, Guide, Assessment" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={resourceForm.control}
-                        name="externalUrl"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>External URL</FormLabel>
-                            <FormControl>
-                              <Input placeholder="https://example.com/resource" {...field} />
-                            </FormControl>
-                            <FormDescription>
-                              Optional: Link to external resource
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <FormField
-                      control={resourceForm.control}
-                      name="content"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Describe the resource and its benefits..." 
-                              className="min-h-[120px]"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setAddResourceDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit">Add Resource</Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
+        <TabsContent value="security">
           <Card>
             <CardHeader>
-              <CardTitle>Self-Help Resources</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Security Settings
+              </CardTitle>
               <CardDescription>
-                Manage downloadable content and self-help materials
+                Configure security policies and access controls
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>External Link</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingResources ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                          <p className="mt-2 text-gray-500">Loading resources...</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredResources.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          <p className="text-gray-500">No resources found</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredResources.map((resource) => (
-                        <TableRow key={resource.id}>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-semibold">{resource.title}</span>
-                              <span className="text-gray-500 text-sm">{truncate(resource.content, 60)}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{resource.resourceType}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {resource.externalUrl ? (
-                              <div className="flex items-center text-blue-600">
-                                <LinkIcon className="h-4 w-4 mr-1" />
-                                <span className="truncate max-w-[200px]">
-                                  {resource.externalUrl}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-500">None</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-8 w-8"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-8 w-8"
-                              >
-                                <FileEdit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="destructive" 
-                                size="icon" 
-                                className="h-8 w-8"
-                                onClick={() => handleDeleteResource(resource.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+              <div className="space-y-6">
+                <div className="rounded-lg border p-4">
+                  <h4 className="font-medium mb-2">Password Policy</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Set requirements for user passwords
+                  </p>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2">
+                      <input type="checkbox" defaultChecked className="rounded" />
+                      <span className="text-sm">Minimum 8 characters</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                      <input type="checkbox" defaultChecked className="rounded" />
+                      <span className="text-sm">Require uppercase letter</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                      <input type="checkbox" defaultChecked className="rounded" />
+                      <span className="text-sm">Require number</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                      <input type="checkbox" className="rounded" />
+                      <span className="text-sm">Require special character</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border p-4">
+                  <h4 className="font-medium mb-2">Session Management</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Configure user session settings
+                  </p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Session Timeout (minutes)</label>
+                      <Input type="number" defaultValue="60" className="mt-1" />
+                    </div>
+                    <label className="flex items-center space-x-2">
+                      <input type="checkbox" defaultChecked className="rounded" />
+                      <span className="text-sm">Force logout on browser close</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border p-4">
+                  <h4 className="font-medium mb-2">Access Control</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Manage IP restrictions and access policies
+                  </p>
+                  <div className="space-y-2">
+                    <Button variant="outline" size="sm">Manage IP Whitelist</Button>
+                    <Button variant="outline" size="sm">View Access Logs</Button>
+                    <Button variant="outline" size="sm">Configure 2FA</Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

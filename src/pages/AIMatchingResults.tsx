@@ -152,7 +152,7 @@ const AIMatchingResults = () => {
                       </div>
                       <div className="text-right">
                         <div className="text-sm text-gray-500">Session Fee</div>
-                        <div className="font-bold text-gray-900">₦{therapist.hourly_rate.toLocaleString()}</div>
+                        <div className="font-bold text-gray-900">Ksh{therapist.hourly_rate.toLocaleString()}</div>
                       </div>
                     </div>
                     

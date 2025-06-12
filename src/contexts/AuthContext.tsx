@@ -13,7 +13,7 @@ interface AuthContextProps {
   signUp: (email: string, password: string, userData: any) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
   updateProfile: (data: any) => Promise<{ error: any | null }>;
-  refreshProfile: () => Promise<void>; // Added this method
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -44,7 +44,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // Added refreshProfile method that can be used by components
   const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user.id);
@@ -54,11 +53,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
+        console.log('Auth state change:', event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
+          // For OAuth logins, we might need to update the profile with the role
+          if (event === 'SIGNED_IN') {
+            const queryParams = new URLSearchParams(window.location.search);
+            const role = queryParams.get('role');
+            
+            // If we have a role in the URL and it's a new OAuth sign-in
+            if (role && ['client', 'therapist', 'friend'].includes(role)) {
+              try {
+                await supabase.from('profiles')
+                  .update({ role })
+                  .eq('id', currentSession.user.id);
+              } catch (error) {
+                console.error('Error updating profile role:', error);
+              }
+            }
+          }
+          
+          // Fetch the profile
           setTimeout(() => {
             fetchProfile(currentSession.user.id);
           }, 0);
@@ -185,7 +203,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     signOut,
     updateProfile,
-    refreshProfile, // Added this to the context value
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

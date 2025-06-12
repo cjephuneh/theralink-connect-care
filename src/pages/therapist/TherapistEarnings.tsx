@@ -267,7 +267,7 @@ const TherapistEarnings = () => {
               <CardContent>
                 <div className="flex items-center">
                   <DollarSign className="h-4 w-4 text-muted-foreground mr-1" />
-                  <span className="text-2xl font-bold">₦{summary.totalEarnings.toLocaleString()}</span>
+                  <span className="text-2xl font-bold">Ksh{summary.totalEarnings.toLocaleString()}</span>
                 </div>
               </CardContent>
             </Card>
@@ -279,7 +279,7 @@ const TherapistEarnings = () => {
               <CardContent>
                 <div className="flex items-center">
                   <DollarSign className="h-4 w-4 text-muted-foreground mr-1" />
-                  <span className="text-2xl font-bold">₦{summary.pendingPayouts.toLocaleString()}</span>
+                  <span className="text-2xl font-bold">Ksh{summary.pendingPayouts.toLocaleString()}</span>
                 </div>
               </CardContent>
             </Card>
@@ -303,7 +303,7 @@ const TherapistEarnings = () => {
               <CardContent>
                 <div className="flex items-center">
                   <TrendingUp className="h-4 w-4 text-muted-foreground mr-1" />
-                  <span className="text-2xl font-bold">₦{summary.avgPerSession.toLocaleString()}</span>
+                  <span className="text-2xl font-bold">Ksh{summary.avgPerSession.toLocaleString()}</span>
                 </div>
               </CardContent>
             </Card>
@@ -350,7 +350,7 @@ const TherapistEarnings = () => {
                               <TableCell className="capitalize">
                                 {tx.transaction_type.replace('_', ' ')}
                               </TableCell>
-                              <TableCell>₦{tx.amount.toLocaleString()}</TableCell>
+                              <TableCell>Ksh{tx.amount.toLocaleString()}</TableCell>
                               <TableCell>
                                 <span className={`px-2 py-1 rounded-full text-xs ${
                                   tx.status === 'completed' 
@@ -407,7 +407,7 @@ const TherapistEarnings = () => {
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="month" />
                             <YAxis />
-                            <Tooltip formatter={(value) => `₦${value}`} />
+                            <Tooltip formatter={(value) => `Ksh${value}`} />
                             <Bar dataKey="amount" fill="#3B82F6" />
                           </BarChart>
                         </ResponsiveContainer>
@@ -446,7 +446,7 @@ const TherapistEarnings = () => {
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                               ))}
                             </Pie>
-                            <Tooltip formatter={(value) => `₦${value}`} />
+                            <Tooltip formatter={(value) => `${value}`} />
                             <Legend />
                           </PieChart>
                         </ResponsiveContainer>
