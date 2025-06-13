@@ -24,16 +24,26 @@ const Login = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      if (profile?.role === "therapist") {
-        navigate("/therapist/dashboard");
-      } else if (profile?.role === "friend") {
-        navigate("/friend/dashboard");
-      } else {
-        navigate("/dashboard");
+    if (user && profile) {
+      console.log('User role:', profile.role);
+      
+      // Redirect based on user role
+      switch (profile.role) {
+        case "therapist":
+          navigate("/therapist/dashboard");
+          break;
+        case "friend":
+          navigate("/friend/dashboard");
+          break;
+        case "admin":
+          navigate("/admin/dashboard");
+          break;
+        default:
+          navigate("/client/dashboard");
+          break;
       }
     }
-  }, [user, navigate, profile]);
+  }, [user, profile, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
