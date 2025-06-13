@@ -19,92 +19,41 @@ interface Friend {
   communication_preferences: string;
 }
 
-// Hardcoded friends data as fallback
-const hardcodedFriends: Friend[] = [
-  {
-    id: "1",
-    full_name: "Sarah Johnson",
-    profile_image_url: null,
-    experience_description: "I've been through anxiety and depression and found ways to cope through mindfulness and community support.",
-    areas_of_experience: "Anxiety, Depression, Mindfulness",
-    personal_story: "After struggling with anxiety for years, I discovered the power of peer support and want to help others on their journey.",
-    communication_preferences: "Text messages, Video calls"
-  },
-  {
-    id: "2",
-    full_name: "Michael Chen",
-    profile_image_url: null,
-    experience_description: "Overcame addiction and now help others navigate recovery with compassion and understanding.",
-    areas_of_experience: "Addiction Recovery, Life Coaching",
-    personal_story: "My recovery journey taught me the importance of having someone who truly understands what you're going through.",
-    communication_preferences: "Phone calls, In-person meetings"
-  },
-  {
-    id: "3",
-    full_name: "Emma Rodriguez",
-    profile_image_url: null,
-    experience_description: "Living with ADHD and helping others develop coping strategies and organizational skills.",
-    areas_of_experience: "ADHD, Organization, Time Management",
-    personal_story: "I learned to work with my ADHD rather than against it, and I love sharing practical tips that actually work.",
-    communication_preferences: "Text messages, Video calls"
-  },
-  {
-    id: "4",
-    full_name: "David Thompson",
-    profile_image_url: null,
-    experience_description: "Grief counselor and someone who has walked through loss, offering support and understanding.",
-    areas_of_experience: "Grief, Loss, Bereavement",
-    personal_story: "After losing my spouse, I found healing through helping others navigate their own grief journey.",
-    communication_preferences: "Phone calls, Video calls"
-  },
-  {
-    id: "5",
-    full_name: "Lisa Park",
-    profile_image_url: null,
-    experience_description: "Mental health advocate focusing on workplace stress and work-life balance.",
-    areas_of_experience: "Workplace Stress, Burnout, Work-Life Balance",
-    personal_story: "I experienced severe burnout in my corporate career and learned how to create healthy boundaries.",
-    communication_preferences: "Text messages, Email"
-  },
-  {
-    id: "6",
-    full_name: "James Wilson",
-    profile_image_url: null,
-    experience_description: "Supporting individuals with social anxiety and helping them build confidence in social situations.",
-    areas_of_experience: "Social Anxiety, Confidence Building",
-    personal_story: "I was extremely shy and anxious in social situations. Now I help others break out of their shells.",
-    communication_preferences: "Video calls, In-person meetings"
-  }
-];
-
 const FriendListing = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [areaFilter, setAreaFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Try to fetch verified friends, but use hardcoded data as fallback
-  const { data: friends = hardcodedFriends, isLoading: friendsLoading } = useQuery({
-    queryKey: ['verified-friends'],
+  // Fetch friends with their details from the database
+  const { data: friends = [], isLoading: friendsLoading } = useQuery({
+    queryKey: ['friends-with-details'],
     queryFn: async () => {
-      try {
-        // Try to fetch from database first
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'friend');
+      // First get all friends from profiles
+      const { data: friendProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'friend');
 
-        if (error) {
-          console.log('Database query failed, using hardcoded data:', error);
-          return hardcodedFriends;
-        }
+      if (profilesError) {
+        console.error('Error fetching friend profiles:', profilesError);
+        return [];
+      }
 
-        if (!data || data.length === 0) {
-          console.log('No friends found in database, using hardcoded data');
-          return hardcodedFriends;
-        }
+      if (!friendProfiles || friendProfiles.length === 0) {
+        return [];
+      }
 
-        // If we have database data, transform it to match our interface
-        return data.map(profile => ({
+      // Then get their details
+      const friendIds = friendProfiles.map(p => p.id);
+      const { data: friendDetails, error: detailsError } = await supabase
+        .from('friend_details')
+        .select('*')
+        .in('friend_id', friendIds);
+
+      if (detailsError) {
+        console.error('Error fetching friend details:', detailsError);
+        // Return friends without details if details fetch fails
+        return friendProfiles.map(profile => ({
           id: profile.id,
           full_name: profile.full_name || 'Anonymous Friend',
           profile_image_url: profile.profile_image_url,
@@ -113,10 +62,21 @@ const FriendListing = () => {
           personal_story: 'Ready to help and support others in their journey',
           communication_preferences: 'Available for chat and support',
         })) as Friend[];
-      } catch (error) {
-        console.log('Error fetching friends, using hardcoded data:', error);
-        return hardcodedFriends;
       }
+
+      // Combine profiles with their details
+      return friendProfiles.map(profile => {
+        const details = friendDetails?.find(d => d.friend_id === profile.id);
+        return {
+          id: profile.id,
+          full_name: profile.full_name || 'Anonymous Friend',
+          profile_image_url: profile.profile_image_url,
+          experience_description: details?.experience_description || 'Experienced in providing peer support',
+          areas_of_experience: details?.areas_of_experience || 'General Support',
+          personal_story: details?.personal_story || 'Ready to help and support others in their journey',
+          communication_preferences: details?.communication_preferences || 'Available for chat and support',
+        };
+      }) as Friend[];
     }
   });
 
