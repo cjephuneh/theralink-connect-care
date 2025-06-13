@@ -21,60 +21,44 @@ interface Friend {
 
 const FriendListing = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [areaFilter, setAreaFilter] = useState("all");
+  const [areaFilter, setAreaFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch friends with their details from the database
+  // Fetch verified friends
   const { data: friends = [], isLoading: friendsLoading } = useQuery({
-    queryKey: ['friends-with-details'],
+    queryKey: ['verified-friends'],
     queryFn: async () => {
-      // First get all friends from profiles
-      const { data: friendProfiles, error: profilesError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('role', 'friend');
+        .select(`
+          id,
+          full_name,
+          profile_image_url,
+          friend_details (
+            experience_description,
+            areas_of_experience,
+            personal_story,
+            communication_preferences
+          )
+        `)
+        .eq('role', 'friend')
+        .not('friend_details', 'is', null);
 
-      if (profilesError) {
-        console.error('Error fetching friend profiles:', profilesError);
-        return [];
-      }
+      if (error) throw error;
 
-      if (!friendProfiles || friendProfiles.length === 0) {
-        return [];
-      }
-
-      // Then get their details
-      const friendIds = friendProfiles.map(p => p.id);
-      const { data: friendDetails, error: detailsError } = await supabase
-        .from('friend_details')
-        .select('*')
-        .in('friend_id', friendIds);
-
-      if (detailsError) {
-        console.error('Error fetching friend details:', detailsError);
-        // Return friends without details if details fetch fails
-        return friendProfiles.map(profile => ({
-          id: profile.id,
-          full_name: profile.full_name || 'Anonymous Friend',
-          profile_image_url: profile.profile_image_url,
-          experience_description: 'Experienced in providing peer support',
-          areas_of_experience: 'General Support',
-          personal_story: 'Ready to help and support others in their journey',
-          communication_preferences: 'Available for chat and support',
-        })) as Friend[];
-      }
-
-      // Combine profiles with their details
-      return friendProfiles.map(profile => {
-        const details = friendDetails?.find(d => d.friend_id === profile.id);
+      return data.map(profile => {
+        const friendDetail = Array.isArray(profile.friend_details) 
+          ? profile.friend_details[0] 
+          : profile.friend_details;
+        
         return {
           id: profile.id,
           full_name: profile.full_name || 'Anonymous Friend',
           profile_image_url: profile.profile_image_url,
-          experience_description: details?.experience_description || 'Experienced in providing peer support',
-          areas_of_experience: details?.areas_of_experience || 'General Support',
-          personal_story: details?.personal_story || 'Ready to help and support others in their journey',
-          communication_preferences: details?.communication_preferences || 'Available for chat and support',
+          experience_description: friendDetail?.experience_description || '',
+          areas_of_experience: friendDetail?.areas_of_experience || '',
+          personal_story: friendDetail?.personal_story || '',
+          communication_preferences: friendDetail?.communication_preferences || '',
         };
       }) as Friend[];
     }
@@ -98,7 +82,7 @@ const FriendListing = () => {
       friend.experience_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       friend.areas_of_experience.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesArea = areaFilter === "all" || 
+    const matchesArea = !areaFilter || 
       friend.areas_of_experience.toLowerCase().includes(areaFilter.toLowerCase());
 
     return matchesSearch && matchesArea;
@@ -145,7 +129,7 @@ const FriendListing = () => {
                     <SelectValue placeholder="Experience Area" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Areas</SelectItem>
+                    <SelectItem value="">All Areas</SelectItem>
                     {allAreas.map(area => (
                       <SelectItem key={area} value={area}>{area}</SelectItem>
                     ))}
@@ -179,7 +163,7 @@ const FriendListing = () => {
                 </div>
                 <h3 className="text-xl font-medium mb-2">No friends match your criteria</h3>
                 <p className="text-muted-foreground mb-6">Try adjusting your search or browse all available friends.</p>
-                <Button onClick={() => { setSearchQuery(""); setAreaFilter("all"); }}>Show All Friends</Button>
+                <Button onClick={() => { setSearchQuery(""); setAreaFilter(""); }}>Show All Friends</Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
