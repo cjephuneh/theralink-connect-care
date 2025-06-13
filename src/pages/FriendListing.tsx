@@ -46,15 +46,21 @@ const FriendListing = () => {
 
       if (error) throw error;
 
-      return data.map(profile => ({
-        id: profile.id,
-        full_name: profile.full_name || 'Anonymous Friend',
-        profile_image_url: profile.profile_image_url,
-        experience_description: profile.friend_details?.[0]?.experience_description || '',
-        areas_of_experience: profile.friend_details?.[0]?.areas_of_experience || '',
-        personal_story: profile.friend_details?.[0]?.personal_story || '',
-        communication_preferences: profile.friend_details?.[0]?.communication_preferences || '',
-      })) as Friend[];
+      return data.map(profile => {
+        const friendDetail = Array.isArray(profile.friend_details) 
+          ? profile.friend_details[0] 
+          : profile.friend_details;
+        
+        return {
+          id: profile.id,
+          full_name: profile.full_name || 'Anonymous Friend',
+          profile_image_url: profile.profile_image_url,
+          experience_description: friendDetail?.experience_description || '',
+          areas_of_experience: friendDetail?.areas_of_experience || '',
+          personal_story: friendDetail?.personal_story || '',
+          communication_preferences: friendDetail?.communication_preferences || '',
+        };
+      }) as Friend[];
     }
   });
 
