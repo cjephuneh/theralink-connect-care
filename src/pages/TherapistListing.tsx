@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Star, Search, Calendar, MapPin, Filter, User } from "lucide-react";
+import { Star, Search, Calendar, MessageCircle, MapPin, Filter, User } from "lucide-react";
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,22 +18,22 @@ interface Therapist {
   years_experience: number;
   hourly_rate: number;
   rating: number;
+  session_formats: string;
   therapy_approaches: string;
   languages: string;
-  session_formats: string;
   has_insurance: boolean;
 }
 
 const TherapistListing = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [specializationFilter, setSpecializationFilter] = useState("");
-  const [priceRange, setPriceRange] = useState("");
-  const [sessionFormat, setSessionFormat] = useState("");
+  const [specializationFilter, setSpecializationFilter] = useState("all");
+  const [sessionTypeFilter, setSessionTypeFilter] = useState("all");
+  const [maxRate, setMaxRate] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch verified therapists only
+  // Fetch approved therapists only
   const { data: therapists = [], isLoading: therapistsLoading } = useQuery({
-    queryKey: ['verified-therapists'],
+    queryKey: ['approved-therapists'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
@@ -49,50 +49,47 @@ const TherapistListing = () => {
             rating
           ),
           therapist_details (
+            session_formats,
             therapy_approaches,
             languages,
-            session_formats,
             has_insurance,
             application_status
           )
         `)
         .eq('role', 'therapist')
-        .not('therapists', 'is', null)
-        .not('therapist_details', 'is', null);
+        .not('therapists', 'is', null);
 
       if (error) throw error;
 
-      // Filter only verified therapists
-      return data
-        .filter(profile => {
-          const therapistDetail = Array.isArray(profile.therapist_details) 
-            ? profile.therapist_details[0] 
-            : profile.therapist_details;
-          return therapistDetail?.application_status === 'approved';
-        })
-        .map(profile => {
-          const therapist = Array.isArray(profile.therapists) 
-            ? profile.therapists[0] 
-            : profile.therapists;
-          const therapistDetail = Array.isArray(profile.therapist_details) 
-            ? profile.therapist_details[0] 
-            : profile.therapist_details;
-          
-          return {
-            id: profile.id,
-            full_name: profile.full_name || 'Dr. Anonymous',
-            profile_image_url: profile.profile_image_url,
-            bio: therapist?.bio || '',
-            specialization: therapist?.specialization || '',
-            years_experience: therapist?.years_experience || 0,
-            hourly_rate: therapist?.hourly_rate || 0,
-            rating: therapist?.rating || 5,
-            therapy_approaches: therapistDetail?.therapy_approaches || '',
-            languages: therapistDetail?.languages || '',
-            session_formats: therapistDetail?.session_formats || '',
-            has_insurance: therapistDetail?.has_insurance || false,
-          };
-        }) as Therapist[];
+      // Filter only approved therapists
+      const approvedTherapists = data.filter(profile => {
+        const therapistDetail = Array.isArray(profile.therapist_details) 
+          ? profile.therapist_details[0] 
+          : profile.therapist_details;
+        return therapistDetail?.application_status === 'approved';
+      });
+
+      return approvedTherapists.map(profile => {
+        const therapist = Array.isArray(profile.therapists) ? profile.therapists[0] : profile.therapists;
+        const therapistDetail = Array.isArray(profile.therapist_details) 
+          ? profile.therapist_details[0] 
+          : profile.therapist_details;
+        
+        return {
+          id: profile.id,
+          full_name: profile.full_name || 'Dr. Anonymous',
+          profile_image_url: profile.profile_image_url,
+          bio: therapist?.bio || '',
+          specialization: therapist?.specialization || '',
+          years_experience: therapist?.years_experience || 0,
+          hourly_rate: therapist?.hourly_rate || 0,
+          rating: therapist?.rating || 0,
+          session_formats: therapistDetail?.session_formats || '',
+          therapy_approaches: therapistDetail?.therapy_approaches || '',
+          languages: therapistDetail?.languages || '',
+          has_insurance: therapistDetail?.has_insurance || false,
+        };
+      }) as Therapist[];
     }
   });
 
@@ -100,9 +97,18 @@ const TherapistListing = () => {
   const allSpecializations = Array.from(
     new Set(
       therapists
-        .map(therapist => therapist.specialization.split(','))
+        .map(therapist => therapist.specialization)
+        .filter(Boolean)
+    )
+  ).sort();
+
+  // Get unique session types for filtering
+  const allSessionTypes = Array.from(
+    new Set(
+      therapists
+        .map(therapist => therapist.session_formats.split(','))
         .flat()
-        .map(spec => spec.trim())
+        .map(format => format.trim())
         .filter(Boolean)
     )
   ).sort();
@@ -111,28 +117,18 @@ const TherapistListing = () => {
   const filteredTherapists = therapists.filter(therapist => {
     const matchesSearch = !searchQuery || 
       therapist.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      therapist.specialization.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      therapist.bio.toLowerCase().includes(searchQuery.toLowerCase());
+      therapist.bio.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      therapist.specialization.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesSpecialization = !specializationFilter || 
+    const matchesSpecialization = specializationFilter === "all" || 
       therapist.specialization.toLowerCase().includes(specializationFilter.toLowerCase());
 
-    const matchesPriceRange = !priceRange || (() => {
-      const rate = therapist.hourly_rate;
-      switch (priceRange) {
-        case 'under-50': return rate < 50;
-        case '50-100': return rate >= 50 && rate <= 100;
-        case '100-150': return rate >= 100 && rate <= 150;
-        case 'over-150': return rate > 150;
-        case 'free': return rate === 0;
-        default: return true;
-      }
-    })();
+    const matchesSessionType = sessionTypeFilter === "all" || 
+      therapist.session_formats.toLowerCase().includes(sessionTypeFilter.toLowerCase());
 
-    const matchesSessionFormat = !sessionFormat || 
-      therapist.session_formats.toLowerCase().includes(sessionFormat.toLowerCase());
+    const matchesRate = !maxRate || therapist.hourly_rate <= parseFloat(maxRate);
 
-    return matchesSearch && matchesSpecialization && matchesPriceRange && matchesSessionFormat;
+    return matchesSearch && matchesSpecialization && matchesSessionType && matchesRate;
   });
 
   useEffect(() => {
@@ -143,13 +139,13 @@ const TherapistListing = () => {
   return (
     <div className="w-full animation-fade-in">
       {/* Hero Banner */}
-      <div className="w-full bg-gradient-to-r from-primary to-secondary text-white">
+      <div className="w-full bg-gradient-to-r from-secondary to-primary text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="max-w-3xl">
-            <span className="bg-white/20 backdrop-blur-sm text-white text-sm px-4 py-1.5 rounded-full mb-6 inline-block">Professional Therapy</span>
-            <h1 className="text-3xl md:text-5xl font-bold mb-4">Find Your Perfect Therapist</h1>
+            <span className="bg-white/20 backdrop-blur-sm text-white text-sm px-4 py-1.5 rounded-full mb-6 inline-block">Professional Care</span>
+            <h1 className="text-3xl md:text-5xl font-bold mb-4">Find Your Therapist</h1>
             <p className="text-lg opacity-90">
-              Connect with licensed, verified mental health professionals who understand your unique needs and can guide you on your healing journey.
+              Connect with licensed, verified therapists who specialize in your specific needs and offer personalized care.
             </p>
           </div>
         </div>
@@ -160,11 +156,11 @@ const TherapistListing = () => {
           {/* Search and Filters */}
           <div className="bg-card rounded-xl shadow-sm border border-border/50">
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div className="relative lg:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="relative col-span-1 md:col-span-2">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name, specialization, or approach"
+                    placeholder="Search by name, specialization, or bio"
                     className="pl-10"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -176,46 +172,41 @@ const TherapistListing = () => {
                     <SelectValue placeholder="Specialization" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Specializations</SelectItem>
+                    <SelectItem value="all">All Specializations</SelectItem>
                     {allSpecializations.map(spec => (
                       <SelectItem key={spec} value={spec}>{spec}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
-                <Select value={priceRange} onValueChange={setPriceRange}>
+                <Select value={sessionTypeFilter} onValueChange={setSessionTypeFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Price Range" />
+                    <SelectValue placeholder="Session Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Prices</SelectItem>
-                    <SelectItem value="free">Free (Community)</SelectItem>
-                    <SelectItem value="under-50">Under $50/hr</SelectItem>
-                    <SelectItem value="50-100">$50-100/hr</SelectItem>
-                    <SelectItem value="100-150">$100-150/hr</SelectItem>
-                    <SelectItem value="over-150">Over $150/hr</SelectItem>
+                    <SelectItem value="all">All Session Types</SelectItem>
+                    {allSessionTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-
-                <Select value={sessionFormat} onValueChange={setSessionFormat}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Session Format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Formats</SelectItem>
-                    <SelectItem value="video">Video Call</SelectItem>
-                    <SelectItem value="phone">Phone Call</SelectItem>
-                    <SelectItem value="chat">Text Chat</SelectItem>
-                    <SelectItem value="in-person">In-Person</SelectItem>
-                  </SelectContent>
-                </Select>
+              </div>
+              
+              <div className="mt-4">
+                <Input
+                  type="number"
+                  placeholder="Max hourly rate (₦)"
+                  value={maxRate}
+                  onChange={(e) => setMaxRate(e.target.value)}
+                  className="w-full md:w-64"
+                />
               </div>
             </div>
           </div>
 
           {/* Results */}
           <div className="mt-2">
-            <p className="text-muted-foreground mb-6">{filteredTherapists.length} verified therapists available</p>
+            <p className="text-muted-foreground mb-6">{filteredTherapists.length} therapists available</p>
             
             {therapistsLoading || isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -237,14 +228,16 @@ const TherapistListing = () => {
                 </div>
                 <h3 className="text-xl font-medium mb-2">No therapists match your criteria</h3>
                 <p className="text-muted-foreground mb-6">Try adjusting your search or browse all available therapists.</p>
-                <Button onClick={() => { setSearchQuery(""); setSpecializationFilter(""); setPriceRange(""); setSessionFormat(""); }}>Show All Therapists</Button>
+                <Button onClick={() => { setSearchQuery(""); setSpecializationFilter("all"); setSessionTypeFilter("all"); setMaxRate(""); }}>
+                  Show All Therapists
+                </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredTherapists.map(therapist => (
                   <Card key={therapist.id} className="overflow-hidden rounded-xl hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group border border-border/50">
                     <div className="relative">
-                      <div className="w-full h-52 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                      <div className="w-full h-52 bg-gradient-to-br from-secondary/20 to-primary/20 flex items-center justify-center">
                         {therapist.profile_image_url ? (
                           <img 
                             src={therapist.profile_image_url} 
@@ -258,60 +251,53 @@ const TherapistListing = () => {
                       <div className="absolute top-3 right-3">
                         <div className="bg-white/90 backdrop-blur-sm text-primary text-xs font-medium px-3 py-1 rounded-full flex items-center">
                           <Star className="h-3 w-3 mr-1 fill-current" />
-                          {therapist.rating}
+                          {therapist.rating || 'New'}
                         </div>
                       </div>
-                      {therapist.hourly_rate === 0 && (
-                        <div className="absolute top-3 left-3">
-                          <div className="bg-green-500/90 backdrop-blur-sm text-white text-xs font-medium px-3 py-1 rounded-full">
-                            Community
-                          </div>
-                        </div>
-                      )}
                     </div>
                     
                     <CardContent className="p-6">
                       <h3 className="text-lg font-bold mb-2">{therapist.full_name}</h3>
+                      <p className="text-secondary text-sm font-medium mb-2">{therapist.specialization}</p>
                       
-                      <div className="mb-4">
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {therapist.specialization.split(',').slice(0, 3).map((spec, index) => (
-                            <span 
-                              key={index} 
-                              className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full"
-                            >
-                              {spec.trim()}
-                            </span>
-                          ))}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {therapist.years_experience} years experience
-                        </p>
+                      <div className="flex items-center text-sm text-muted-foreground mb-4">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        <span>{therapist.years_experience} years experience</span>
                       </div>
                       
                       <div className="text-sm text-muted-foreground mb-4">
                         <p className="line-clamp-3">{therapist.bio}</p>
                       </div>
                       
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>{therapist.session_formats}</span>
+                      <div className="flex items-center justify-between">
+                        <div className="text-lg font-bold text-primary">
+                          ₦{therapist.hourly_rate?.toLocaleString()}/hr
                         </div>
-                        <div className="font-medium text-primary">
-                          {therapist.hourly_rate === 0 ? 'Free' : `$${therapist.hourly_rate}/hr`}
-                        </div>
+                        {therapist.has_insurance && (
+                          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                            Insurance
+                          </span>
+                        )}
                       </div>
                     </CardContent>
                     
-                    <CardFooter className="p-6 pt-0 border-t border-border/50">
+                    <CardFooter className="p-6 pt-0 border-t border-border/50 flex gap-2">
                       <Button 
-                        className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                        variant="outline" 
+                        className="flex-1"
                         asChild
                       >
                         <Link to={`/therapist/${therapist.id}`}>
+                          View Profile
+                        </Link>
+                      </Button>
+                      <Button 
+                        className="flex-1 bg-gradient-to-r from-secondary to-primary hover:opacity-90"
+                        asChild
+                      >
+                        <Link to={`/booking/${therapist.id}`}>
                           <Calendar className="h-4 w-4 mr-2" />
-                          View Profile & Book
+                          Book Now
                         </Link>
                       </Button>
                     </CardFooter>
