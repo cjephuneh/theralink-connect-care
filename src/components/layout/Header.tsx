@@ -1,197 +1,294 @@
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Menu, X, LogOut, User } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Menu, X, Home, User, MessageSquare, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { NotificationBell } from "./NotificationBell";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { cn } from "@/lib/utils";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
   const { user, profile, signOut } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/');
-      toast({
-        title: "Signed out",
-        description: "You have been successfully signed out.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const isActive = (path: string) => {
+    return location.pathname === path;
   };
 
-  const getDashboardRoute = () => {
-    if (!profile?.role) return '/';
-    switch (profile.role) {
-      case 'client': return '/client';
-      case 'therapist': return '/therapist';
-      case 'friend': return '/friend';
-      default: return '/';
+  // Close mobile menu when changing routes
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location]);
+
+  const ListItem = React.forwardRef<
+    React.ElementRef<"a">,
+    React.ComponentPropsWithoutRef<"a">
+  >(({ className, title, children, ...props }, ref) => {
+    return (
+      <li>
+        <NavigationMenuLink asChild>
+          <a
+            ref={ref}
+            className={cn(
+              "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+              className
+            )}
+            {...props}
+          >
+            <div className="text-sm font-medium leading-none">{title}</div>
+            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+              {children}
+            </p>
+          </a>
+        </NavigationMenuLink>
+      </li>
+    );
+  });
+  ListItem.displayName = "ListItem";
+
+  const renderAuthLinks = () => {
+    if (user) {
+      const dashboardLink = profile?.role === 'therapist' 
+        ? '/therapist/dashboard' 
+        : '/client/dashboard';
+        
+      return (
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <Button variant="ghost" size="sm" asChild>
+            <Link to={dashboardLink} className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Dashboard
+            </Link>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => signOut()}
+          >
+            Sign Out
+          </Button>
+        </div>
+      );
     }
+
+    return (
+      <>
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/auth/login">Sign In</Link>
+        </Button>
+        <Button size="sm" className="bg-primary hover:bg-primary/90" asChild>
+          <Link to="/auth/register">Register</Link>
+        </Button>
+      </>
+    );
   };
 
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="bg-primary text-primary-foreground p-2 rounded-md">
-                <span className="font-bold text-lg">T</span>
-              </div>
-              <span className="font-bold text-xl text-foreground">TheraLink</span>
-            </Link>
-          </div>
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <Link to="/" className="flex items-center">
+          <span className="text-xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">TheraLink</span>
+        </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/therapists" className="text-foreground hover:text-primary transition-colors">
-              Therapists
-            </Link>
-            <Link to="/friends" className="text-foreground hover:text-primary transition-colors">
-              Friends
-            </Link>
-            <Link to="/how-it-works" className="text-foreground hover:text-primary transition-colors">
-              How It Works
-            </Link>
-            <Link to="/about" className="text-foreground hover:text-primary transition-colors">
-              About
-            </Link>
-            <Link to="/contact" className="text-foreground hover:text-primary transition-colors">
-              Contact
-            </Link>
-          </nav>
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden p-2"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="Toggle Menu"
+        >
+          {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
 
-          {/* Desktop Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            {user ? (
-              <div className="flex items-center space-x-4">
-                <Link to={getDashboardRoute()}>
-                  <Button variant="ghost" size="sm">
-                    <User className="h-4 w-4 mr-2" />
-                    Dashboard
-                  </Button>
-                </Link>
-                <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-              </div>
-            ) : (
-              <>
-                <Link to="/auth/login">
-                  <Button variant="ghost" size="sm">Sign In</Button>
-                </Link>
-                <Link to="/auth/register">
-                  <Button size="sm">Get Started</Button>
-                </Link>
-              </>
-            )}
-          </div>
+        {/* Desktop Navigation */}
+        <NavigationMenu className="hidden md:flex">
+          <NavigationMenuList>
+            <NavigationMenuItem>
+              <Link to="/">
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  <Home className="h-4 w-4 mr-2" />
+                  Home
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+            
+            <NavigationMenuItem>
+              <NavigationMenuTrigger>Services</NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                  <ListItem 
+                    href="/therapists" 
+                    title="Find Therapists"
+                  >
+                    Connect with licensed professionals tailored to your needs.
+                  </ListItem>
+                  <ListItem 
+                    href="/ai-matching" 
+                    title="AI Matching"
+                  >
+                    Let our AI find the perfect therapist match for you.
+                  </ListItem>
+                  <ListItem 
+                    href="/how-it-works" 
+                    title="How It Works"
+                  >
+                    Learn about our therapy process and what to expect.
+                  </ListItem>
+                  <ListItem 
+                    href="/for-therapists" 
+                    title="For Therapists"
+                  >
+                    Join our network of mental health professionals.
+                  </ListItem>
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+            
+            <NavigationMenuItem>
+              <NavigationMenuTrigger>Resources</NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px]">
+                  <li className="row-span-3">
+                    <NavigationMenuLink asChild>
+                      <a
+                        className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-primary/20 to-muted p-6 no-underline outline-none focus:shadow-md"
+                        href="/blog"
+                      >
+                        <MessageSquare className="h-6 w-6 mb-2" />
+                        <div className="mb-2 mt-4 text-lg font-medium">
+                          Mental Health Blog
+                        </div>
+                        <p className="text-sm leading-tight text-muted-foreground">
+                          Expert articles and resources for your mental wellness journey.
+                        </p>
+                      </a>
+                    </NavigationMenuLink>
+                  </li>
+                  <ListItem href="/about" title="About Us">
+                    Learn about our mission and the team behind TherapyConnect.
+                  </ListItem>
+                  <ListItem href="/contact" title="Contact">
+                    Get in touch with our support team for assistance.
+                  </ListItem>
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-          </div>
+            <NavigationMenuItem>
+              <Link to="/contact">
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  Contact
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </NavigationMenu>
+
+        {/* Desktop Auth Buttons */}
+        <div className="hidden md:flex items-center gap-2">
+          {renderAuthLinks()}
         </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 border-t">
-              <Link
-                to="/therapists"
-                className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary hover:bg-accent rounded-md"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Therapists
+          <div className="absolute top-16 left-0 right-0 bg-background border-b shadow-lg z-50 md:hidden p-4 flex flex-col space-y-2">
+            <Button
+              variant={isActive("/") ? "secondary" : "ghost"}
+              size="sm"
+              className="justify-start"
+              asChild
+            >
+              <Link to="/">
+                <Home className="h-4 w-4 mr-2" />
+                Home
               </Link>
-              <Link
-                to="/friends"
-                className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary hover:bg-accent rounded-md"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Friends
+            </Button>
+            <Button
+              variant={isActive("/therapists") ? "secondary" : "ghost"}
+              size="sm"
+              className="justify-start"
+              asChild
+            >
+              <Link to="/therapists">
+                <Search className="h-4 w-4 mr-2" />
+                Find Therapists
               </Link>
-              <Link
-                to="/how-it-works"
-                className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary hover:bg-accent rounded-md"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                How It Works
-              </Link>
-              <Link
-                to="/about"
-                className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary hover:bg-accent rounded-md"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
-              </Link>
-              <Link
-                to="/contact"
-                className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary hover:bg-accent rounded-md"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Contact
-              </Link>
-              
-              <div className="border-t pt-4">
-                {user ? (
-                  <div className="space-y-1">
-                    <Link
-                      to={getDashboardRoute()}
-                      className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary hover:bg-accent rounded-md"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <User className="h-4 w-4 mr-2 inline" />
+            </Button>
+            <Button
+              variant={isActive("/how-it-works") ? "secondary" : "ghost"}
+              size="sm"
+              className="justify-start"
+              asChild
+            >
+              <Link to="/how-it-works">How It Works</Link>
+            </Button>
+            <Button
+              variant={isActive("/for-therapists") ? "secondary" : "ghost"}
+              size="sm"
+              className="justify-start"
+              asChild
+            >
+              <Link to="/for-therapists">For Therapists</Link>
+            </Button>
+            <Button
+              variant={isActive("/blog") ? "secondary" : "ghost"}
+              size="sm"
+              className="justify-start"
+              asChild
+            >
+              <Link to="/blog">Blog</Link>
+            </Button>
+            <Button
+              variant={isActive("/contact") ? "secondary" : "ghost"}
+              size="sm"
+              className="justify-start"
+              asChild
+            >
+              <Link to="/contact">Contact</Link>
+            </Button>
+            <div className="pt-2 border-t flex flex-col gap-2">
+              {user ? (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="justify-start"
+                    asChild
+                  >
+                    <Link to={profile?.role === 'therapist' ? '/therapist/dashboard' : '/client/dashboard'}>
+                      <User className="h-4 w-4 mr-2" />
                       Dashboard
                     </Link>
-                    <button
-                      onClick={() => {
-                        handleSignOut();
-                        setIsMenuOpen(false);
-                      }}
-                      className="block w-full text-left px-3 py-2 text-base font-medium text-foreground hover:text-primary hover:bg-accent rounded-md"
-                    >
-                      <LogOut className="h-4 w-4 mr-2 inline" />
-                      Sign Out
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <Link
-                      to="/auth/login"
-                      className="block px-3 py-2 text-base font-medium text-foreground hover:text-primary hover:bg-accent rounded-md"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      to="/auth/register"
-                      className="block px-3 py-2 text-base font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Get Started
-                    </Link>
-                  </div>
-                )}
-              </div>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="justify-start"
+                    onClick={() => signOut()}
+                  >
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" className="justify-start" asChild>
+                    <Link to="/auth/login">Sign In</Link>
+                  </Button>
+                  <Button size="sm" className="justify-start" asChild>
+                    <Link to="/auth/register">Register</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}

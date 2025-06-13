@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, User, FileText, X } from "lucide-react";
+import { Upload, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,6 @@ const ProfileImageUpload = () => {
   const { user, profile, updateProfile } = useAuth();
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -25,7 +24,7 @@ const ProfileImageUpload = () => {
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}.${fileExt}`;
-      const filePath = `${user?.id}/${fileName}`;
+      const filePath = `profile-images/${fileName}`;
 
       // Upload file to Supabase Storage
       const { error: uploadError } = await supabase.storage
@@ -59,114 +58,42 @@ const ProfileImageUpload = () => {
     }
   };
 
-  const handleDocumentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploadingDoc(true);
-      
-      if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('You must select a document to upload.');
-      }
-
-      const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${file.name}`;
-      const filePath = `${user?.id}/documents/${fileName}`;
-
-      // Upload file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      toast({
-        title: "Success",
-        description: "Document uploaded successfully!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setUploadingDoc(false);
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile Picture</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={profile?.profile_image_url} />
-              <AvatarFallback>
-                <User className="h-8 w-8" />
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <Button
-                variant="outline"
-                disabled={uploading}
-                onClick={() => document.getElementById('profile-image-upload')?.click()}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {uploading ? "Uploading..." : "Upload Image"}
-              </Button>
-              <input
-                id="profile-image-upload"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Profile Picture</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center space-x-4">
+          <Avatar className="h-20 w-20">
+            <AvatarImage src={profile?.profile_image_url} />
+            <AvatarFallback>
+              <User className="h-8 w-8" />
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <Button
+              variant="outline"
+              disabled={uploading}
+              onClick={() => document.getElementById('profile-image-upload')?.click()}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {uploading ? "Uploading..." : "Upload Image"}
+            </Button>
+            <input
+              id="profile-image-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Upload a professional photo to help clients connect with you.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Documents</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center justify-center w-20 h-20 bg-muted rounded-lg">
-              <FileText className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <div>
-              <Button
-                variant="outline"
-                disabled={uploadingDoc}
-                onClick={() => document.getElementById('document-upload')?.click()}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {uploadingDoc ? "Uploading..." : "Upload Document"}
-              </Button>
-              <input
-                id="document-upload"
-                type="file"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                onChange={handleDocumentUpload}
-                className="hidden"
-              />
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Upload licenses, certifications, or other professional documents. Accepted formats: PDF, DOC, DOCX, JPG, PNG.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Upload a professional photo to help clients connect with you.
+        </p>
+      </CardContent>
+    </Card>
   );
 };
 
