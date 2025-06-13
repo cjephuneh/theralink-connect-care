@@ -21,7 +21,7 @@ interface Friend {
 
 const FriendListing = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [areaFilter, setAreaFilter] = useState("all");
+  const [areaFilter, setAreaFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch verified friends
@@ -82,7 +82,7 @@ const FriendListing = () => {
       friend.experience_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       friend.areas_of_experience.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesArea = areaFilter === "all" || 
+    const matchesArea = !areaFilter || 
       friend.areas_of_experience.toLowerCase().includes(areaFilter.toLowerCase());
 
     return matchesSearch && matchesArea;
@@ -129,7 +129,7 @@ const FriendListing = () => {
                     <SelectValue placeholder="Experience Area" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Areas</SelectItem>
+                    <SelectItem value="">All Areas</SelectItem>
                     {allAreas.map(area => (
                       <SelectItem key={area} value={area}>{area}</SelectItem>
                     ))}
@@ -163,7 +163,7 @@ const FriendListing = () => {
                 </div>
                 <h3 className="text-xl font-medium mb-2">No friends match your criteria</h3>
                 <p className="text-muted-foreground mb-6">Try adjusting your search or browse all available friends.</p>
-                <Button onClick={() => { setSearchQuery(""); setAreaFilter("all"); }}>Show All Friends</Button>
+                <Button onClick={() => { setSearchQuery(""); setAreaFilter(""); }}>Show All Friends</Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
