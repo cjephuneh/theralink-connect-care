@@ -64,16 +64,27 @@ export const TherapistAppointmentsModal = ({
           session_type,
           notes,
           client_id,
-          client_profile:profiles!appointments_client_id_fkey (
+          profiles!inner (
             full_name,
             email
           )
         `)
         .eq('therapist_id', therapistId)
+        .eq('profiles.id', supabase.rpc('appointments.client_id'))
         .order('start_time', { ascending: false });
 
       if (error) throw error;
-      setAppointments(data || []);
+      
+      // Transform the data to match our interface
+      const transformedData = data?.map(appointment => ({
+        ...appointment,
+        client_profile: appointment.profiles ? {
+          full_name: appointment.profiles.full_name,
+          email: appointment.profiles.email
+        } : null
+      })) || [];
+
+      setAppointments(transformedData);
     } catch (error) {
       console.error('Error fetching appointments:', error);
       toast({
