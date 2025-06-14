@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -85,9 +83,11 @@ const ClientTherapists = () => {
         `);
 
       if (therapistsError) throw therapistsError;
+      console.log('therapistsData:', therapistsData);
 
       // 2. Get therapist IDs
       const therapistIds = therapistsData?.map((t: any) => t.id) || [];
+      console.log('therapistIds:', therapistIds);
 
       if (!therapistIds.length) {
         setTherapists([]);
@@ -109,6 +109,7 @@ const ClientTherapists = () => {
         .in('id', therapistIds)
         .eq('role', 'therapist');
       if (profilesError) throw profilesError;
+      console.log('profilesData:', profilesData);
 
       // 4. Get therapist_details for those therapists
       const { data: detailsData, error: detailsError } = await supabase
@@ -124,15 +125,18 @@ const ClientTherapists = () => {
         .in('therapist_id', therapistIds);
 
       if (detailsError) throw detailsError;
+      console.log('detailsData:', detailsData);
 
-      // Merge data together by id
+      // Merge all by id, and DO NOT filter by is_verified for debugging
       const mergedTherapists: Therapist[] =
         therapistsData
           ?.map((therapist: any) => {
             const profile = profilesData?.find((p: any) => p.id === therapist.id);
             const details = detailsData?.find((d: any) => d.therapist_id === therapist.id);
-            // We must only include those with verified therapist_details
-            if (!profile || !details?.is_verified) return null;
+
+            // If missing a profile skip this therapist (must have matching profile)
+            if (!profile) return null;
+
             return {
               id: therapist.id,
               full_name: profile.full_name,
@@ -145,16 +149,20 @@ const ClientTherapists = () => {
               hourly_rate: therapist.hourly_rate,
               rating: therapist.rating || 4.5,
               availability: therapist.availability,
-              therapist_details: {
-                license_type: details.license_type,
-                therapy_approaches: details.therapy_approaches,
-                languages: details.languages,
-                session_formats: details.session_formats,
-                is_verified: details.is_verified || false,
-              }
+              therapist_details: details
+                ? {
+                    license_type: details.license_type,
+                    therapy_approaches: details.therapy_approaches,
+                    languages: details.languages,
+                    session_formats: details.session_formats,
+                    is_verified: details.is_verified || false,
+                  }
+                : undefined,
             } as Therapist;
           })
           .filter(Boolean) || [];
+
+      console.log('mergedTherapists:', mergedTherapists);
 
       setTherapists(mergedTherapists);
 
@@ -247,10 +255,11 @@ const ClientTherapists = () => {
 
   return (
     <div className="space-y-6">
+      {/* Show number of therapists fetched */}
       <div>
         <h1 className="text-3xl font-bold">Find Therapists</h1>
         <p className="text-muted-foreground mt-2">
-          Discover qualified therapists that match your needs and preferences.
+          {therapists.length} therapist(s) loaded. Discover qualified therapists that match your needs and preferences.
         </p>
       </div>
 
@@ -316,7 +325,8 @@ const ClientTherapists = () => {
               <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No therapists found</h3>
               <p className="text-muted-foreground">
-                No verified therapists match your current search criteria.
+                No (filtered) therapists match your current search criteria. <br />
+                (Debug: therapists loaded: {therapists.length})
               </p>
             </CardContent>
           </Card>
@@ -341,9 +351,16 @@ const ClientTherapists = () => {
                             {therapist.specialization}
                           </Badge>
                         )}
-                        <Badge variant="outline" className="mt-1 ml-2">
-                          Verified
-                        </Badge>
+                        {/* Show verification status */}
+                        {therapist.therapist_details?.is_verified ? (
+                          <Badge variant="outline" className="mt-1 ml-2">
+                            Verified
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="mt-1 ml-2">
+                            Not Verified
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-right">
                         <p className="text-2xl font-bold">
