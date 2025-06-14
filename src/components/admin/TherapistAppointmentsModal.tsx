@@ -12,7 +12,7 @@ import { Calendar, Clock, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-interface AppointmentWithProfile {
+interface Appointment {
   id: string;
   start_time: string;
   end_time: string;
@@ -20,10 +20,10 @@ interface AppointmentWithProfile {
   session_type: string;
   notes?: string;
   client_id: string;
-  client_profile: {
+  profiles?: {
     full_name: string;
     email: string;
-  } | null;
+  };
 }
 
 interface TherapistAppointmentsModalProps {
@@ -39,7 +39,7 @@ export const TherapistAppointmentsModal = ({
   isOpen, 
   onClose 
 }: TherapistAppointmentsModalProps) => {
-  const [appointments, setAppointments] = useState<AppointmentWithProfile[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -57,34 +57,17 @@ export const TherapistAppointmentsModal = ({
       const { data, error } = await supabase
         .from('appointments')
         .select(`
-          id,
-          start_time,
-          end_time,
-          status,
-          session_type,
-          notes,
-          client_id,
-          profiles!inner (
+          *,
+          profiles!appointments_client_id_fkey (
             full_name,
             email
           )
         `)
         .eq('therapist_id', therapistId)
-        .eq('profiles.id', supabase.rpc('appointments.client_id'))
         .order('start_time', { ascending: false });
 
       if (error) throw error;
-      
-      // Transform the data to match our interface
-      const transformedData = data?.map(appointment => ({
-        ...appointment,
-        client_profile: appointment.profiles ? {
-          full_name: appointment.profiles.full_name,
-          email: appointment.profiles.email
-        } : null
-      })) || [];
-
-      setAppointments(transformedData);
+      setAppointments(data || []);
     } catch (error) {
       console.error('Error fetching appointments:', error);
       toast({
@@ -139,10 +122,10 @@ export const TherapistAppointmentsModal = ({
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
-                        {appointment.client_profile?.full_name || 'Unknown Client'}
+                        {appointment.profiles?.full_name || 'Unknown Client'}
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        ({appointment.client_profile?.email})
+                        ({appointment.profiles?.email})
                       </span>
                     </div>
                     {getStatusBadge(appointment.status)}
