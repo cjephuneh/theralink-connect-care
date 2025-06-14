@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -76,38 +77,37 @@ const ClientTherapists = () => {
           email,
           profile_image_url,
           location,
-          therapists (
+          therapists!inner (
             bio,
             specialization,
             years_experience,
             hourly_rate,
             rating,
-            availability
-          ),
-          therapist_details (
-            license_type,
-            therapy_approaches,
-            languages,
-            session_formats,
-            is_verified
+            availability,
+            therapist_details (
+              license_type,
+              therapy_approaches,
+              languages,
+              session_formats,
+              is_verified
+            )
           )
         `)
-        .eq('role', 'therapist')
-        .eq('therapist_details.is_verified', true);
+        .eq('role', 'therapist');
 
       if (error) throw error;
 
-      // Transform the data to match our interface
-      const transformedData = data?.map(therapist => {
-        const therapistInfo = Array.isArray(therapist.therapists) ? therapist.therapists[0] : therapist.therapists;
-        const therapistDetails = Array.isArray(therapist.therapist_details) ? therapist.therapist_details[0] : therapist.therapist_details;
+      // Transform the data to match our interface and filter for verified therapists
+      const transformedData = data?.map(profile => {
+        const therapistInfo = profile.therapists;
+        const therapistDetails = therapistInfo.therapist_details?.[0] || therapistInfo.therapist_details;
         
         return {
-          id: therapist.id,
-          full_name: therapist.full_name,
-          email: therapist.email,
-          profile_image_url: therapist.profile_image_url,
-          location: therapist.location,
+          id: profile.id,
+          full_name: profile.full_name,
+          email: profile.email,
+          profile_image_url: profile.profile_image_url,
+          location: profile.location,
           bio: therapistInfo?.bio,
           specialization: therapistInfo?.specialization,
           years_experience: therapistInfo?.years_experience,
