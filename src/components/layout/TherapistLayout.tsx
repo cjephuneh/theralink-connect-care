@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -28,6 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { TherapistNotificationBell } from './TherapistNotificationBell';
+import { useTherapistNotifications } from '@/hooks/useTherapistNotifications';
 
 const TherapistLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -39,6 +39,9 @@ const TherapistLayout = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState(true);
   
+  // Use the notification hook
+  const { unreadCount } = useTherapistNotifications();
+
   useEffect(() => {
     // Check if user is logged in and has the right role
     if (!user) {
@@ -121,7 +124,12 @@ const TherapistLayout = () => {
     { path: '/therapist/messages', label: 'Messages', icon: MessageCircle },
     { path: '/therapist/session-notes', label: 'Session Notes', icon: FileText },
     { path: '/therapist/earnings', label: 'Earnings', icon: DollarSign },
-    { path: '/therapist/notifications', label: 'Notifications', icon: Bell },
+    { 
+      path: '/therapist/notifications', 
+      label: 'Notifications', 
+      icon: Bell,
+      badge: unreadCount > 0 ? unreadCount : undefined
+    },
     { path: '/therapist/onboarding', label: 'Complete Profile', icon: ClipboardList },
     { path: '/therapist/reviews', label: 'Reviews', icon: Star },
     { path: '/therapist/analytics', label: 'Analytics', icon: BarChart3 },
@@ -178,7 +186,7 @@ const TherapistLayout = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center px-3 py-2 rounded-md transition-colors ${
+                className={`flex items-center px-3 py-2 rounded-md transition-colors relative ${
                   isActive(item.path)
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
@@ -189,7 +197,24 @@ const TherapistLayout = () => {
                 }`}
               >
                 <item.icon className="h-5 w-5" />
-                {!isCollapsed && <span className="ml-3">{item.label}</span>}
+                {!isCollapsed && (
+                  <>
+                    <span className="ml-3">{item.label}</span>
+                    {item.badge && (
+                      <Badge variant="destructive" className="ml-auto text-xs">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </>
+                )}
+                {isCollapsed && item.badge && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center"
+                  >
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </Badge>
+                )}
               </Link>
             ))}
           </nav>

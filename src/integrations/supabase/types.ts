@@ -224,6 +224,8 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          location: string | null
+          phone: string | null
           profile_image_url: string | null
           role: string
           updated_at: string
@@ -233,6 +235,8 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          location?: string | null
+          phone?: string | null
           profile_image_url?: string | null
           role?: string
           updated_at?: string
@@ -242,6 +246,8 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          location?: string | null
+          phone?: string | null
           profile_image_url?: string | null
           role?: string
           updated_at?: string
@@ -353,6 +359,7 @@ export type Database = {
           has_insurance: boolean | null
           id: string
           insurance_info: string | null
+          is_verified: boolean | null
           languages: string | null
           license_number: string | null
           license_type: string | null
@@ -368,6 +375,7 @@ export type Database = {
           has_insurance?: boolean | null
           id?: string
           insurance_info?: string | null
+          is_verified?: boolean | null
           languages?: string | null
           license_number?: string | null
           license_type?: string | null
@@ -383,6 +391,7 @@ export type Database = {
           has_insurance?: boolean | null
           id?: string
           insurance_info?: string | null
+          is_verified?: boolean | null
           languages?: string | null
           license_number?: string | null
           license_type?: string | null
