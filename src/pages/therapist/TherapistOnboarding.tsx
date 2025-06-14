@@ -17,6 +17,7 @@ import { Heart, DollarSign, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import ProfileImageUpload from "@/components/profile/ProfileImageUpload";
+import AvailabilityPicker from "@/components/profile/AvailabilityPicker";
 
 const formSchema = z.object({
   education: z.string().min(10, {
@@ -55,6 +56,7 @@ const TherapistOnboarding = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availability, setAvailability] = useState<{ date: string; slots: string[] }[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -95,6 +97,11 @@ const TherapistOnboarding = () => {
       return;
     }
 
+    if (availability.length === 0) {
+      toast({ title: "Select availability", description: "Please select at least one available slot.", variant: "destructive" });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -125,6 +132,7 @@ const TherapistOnboarding = () => {
           id: user.id,
           hourly_rate: values.therapist_type === 'community' ? 0 : null,
           preferred_currency: values.preferred_currency,
+          availability: availability, // save as JSON
         });
 
       toast({
@@ -393,6 +401,11 @@ const TherapistOnboarding = () => {
                   )}
                 />
               )}
+
+              <div>
+                <label className="font-bold mb-2 block">Availability</label>
+                <AvailabilityPicker value={availability} onChange={setAvailability} />
+              </div>
 
               <FormField
                 control={form.control}
