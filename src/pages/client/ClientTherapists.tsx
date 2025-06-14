@@ -1,57 +1,206 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Star, MapPin, Clock, Filter } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Search, Star, MapPin, Clock, Filter, Calendar, User } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Therapist {
+  id: string;
+  full_name: string;
+  email: string;
+  profile_image_url?: string;
+  location?: string;
+  bio?: string;
+  specialization?: string;
+  years_experience?: number;
+  hourly_rate?: number;
+  rating?: number;
+  availability?: any;
+  therapist_details?: {
+    license_type?: string;
+    therapy_approaches?: string;
+    languages?: string;
+    session_formats?: string;
+    is_verified: boolean;
+  };
+}
+
+interface TimeSlot {
+  time: string;
+  available: boolean;
+}
 
 const ClientTherapists = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [specialization, setSpecialization] = useState("");
   const [sortBy, setSortBy] = useState("");
+  const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [bookingLoading, setBookingLoading] = useState(false);
+  
+  const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Mock therapist data
-  const therapists = [
-    {
-      id: 1,
-      name: "Dr. Sarah Johnson",
-      specialization: "Anxiety & Depression",
-      rating: 4.8,
-      reviews: 124,
-      hourlyRate: 120,
-      location: "New York, NY",
-      availability: "Available Today",
-      bio: "Specialized in cognitive behavioral therapy with 8 years of experience.",
-      image: null,
-    },
-    {
-      id: 2,
-      name: "Dr. Michael Chen",
-      specialization: "Relationship Counseling",
-      rating: 4.9,
-      reviews: 89,
-      hourlyRate: 150,
-      location: "Los Angeles, CA",
-      availability: "Available Tomorrow",
-      bio: "Expert in couples therapy and family counseling.",
-      image: null,
-    },
-    {
-      id: 3,
-      name: "Dr. Emily Rodriguez",
-      specialization: "Trauma Therapy",
-      rating: 4.7,
-      reviews: 156,
-      hourlyRate: 140,
-      location: "Chicago, IL",
-      availability: "Available This Week",
-      bio: "EMDR certified therapist specializing in trauma recovery.",
-      image: null,
-    },
+  // Mock available time slots - in a real app, this would come from the therapist's availability
+  const availableSlots: TimeSlot[] = [
+    { time: "09:00", available: true },
+    { time: "10:00", available: false },
+    { time: "11:00", available: true },
+    { time: "14:00", available: true },
+    { time: "15:00", available: true },
+    { time: "16:00", available: false },
   ];
+
+  useEffect(() => {
+    fetchTherapists();
+  }, []);
+
+  const fetchTherapists = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name,
+          email,
+          profile_image_url,
+          location,
+          therapists (
+            bio,
+            specialization,
+            years_experience,
+            hourly_rate,
+            rating,
+            availability
+          ),
+          therapist_details (
+            license_type,
+            therapy_approaches,
+            languages,
+            session_formats,
+            is_verified
+          )
+        `)
+        .eq('role', 'therapist')
+        .eq('therapist_details.is_verified', true);
+
+      if (error) throw error;
+
+      // Transform the data to match our interface
+      const transformedData = data?.map(therapist => ({
+        id: therapist.id,
+        full_name: therapist.full_name,
+        email: therapist.email,
+        profile_image_url: therapist.profile_image_url,
+        location: therapist.location,
+        bio: therapist.therapists?.[0]?.bio,
+        specialization: therapist.therapists?.[0]?.specialization,
+        years_experience: therapist.therapists?.[0]?.years_experience,
+        hourly_rate: therapist.therapists?.[0]?.hourly_rate,
+        rating: therapist.therapists?.[0]?.rating || 4.5,
+        availability: therapist.therapists?.[0]?.availability,
+        therapist_details: therapist.therapist_details?.[0]
+      })).filter(t => t.therapist_details?.is_verified) || [];
+
+      setTherapists(transformedData);
+    } catch (error) {
+      console.error('Error fetching therapists:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load therapists. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBookSession = async () => {
+    if (!user || !selectedTherapist || !selectedDate || !selectedTime) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a date and time for your session.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBookingLoading(true);
+    try {
+      const startDateTime = new Date(`${selectedDate}T${selectedTime}:00`);
+      const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour session
+
+      const { error } = await supabase
+        .from('appointments')
+        .insert({
+          client_id: user.id,
+          therapist_id: selectedTherapist.id,
+          start_time: startDateTime.toISOString(),
+          end_time: endDateTime.toISOString(),
+          session_type: 'therapy',
+          status: 'scheduled'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Session Booked!",
+        description: "Your therapy session has been successfully scheduled.",
+      });
+
+      // Reset selection
+      setSelectedTherapist(null);
+      setSelectedDate("");
+      setSelectedTime("");
+    } catch (error) {
+      console.error('Error booking session:', error);
+      toast({
+        title: "Booking Failed",
+        description: "Failed to book your session. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  const filteredTherapists = therapists.filter(therapist => {
+    const matchesSearch = !searchQuery || 
+      therapist.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      therapist.bio?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      therapist.specialization?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesSpecialization = !specialization || 
+      therapist.specialization?.toLowerCase().includes(specialization.toLowerCase());
+    
+    return matchesSearch && matchesSpecialization;
+  });
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Find Therapists</h1>
+          <p className="text-muted-foreground mt-2">Loading verified therapists...</p>
+        </div>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -87,6 +236,7 @@ const ClientTherapists = () => {
                 <SelectValue placeholder="Specialization" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="">All Specializations</SelectItem>
                 <SelectItem value="anxiety">Anxiety & Depression</SelectItem>
                 <SelectItem value="relationships">Relationship Counseling</SelectItem>
                 <SelectItem value="trauma">Trauma Therapy</SelectItem>
@@ -102,7 +252,7 @@ const ClientTherapists = () => {
                 <SelectItem value="rating">Highest Rated</SelectItem>
                 <SelectItem value="price-low">Price: Low to High</SelectItem>
                 <SelectItem value="price-high">Price: High to Low</SelectItem>
-                <SelectItem value="availability">Availability</SelectItem>
+                <SelectItem value="experience">Most Experience</SelectItem>
               </SelectContent>
             </Select>
 
@@ -116,63 +266,139 @@ const ClientTherapists = () => {
 
       {/* Therapist List */}
       <div className="grid gap-6">
-        {therapists.map((therapist) => (
-          <Card key={therapist.id} className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex gap-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarFallback className="text-lg">
-                    {therapist.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className="flex-1 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-semibold">{therapist.name}</h3>
-                      <Badge variant="secondary" className="mt-1">
-                        {therapist.specialization}
-                      </Badge>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">${therapist.hourlyRate}</p>
-                      <p className="text-sm text-muted-foreground">per session</p>
-                    </div>
-                  </div>
-
-                  <p className="text-muted-foreground">{therapist.bio}</p>
-
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                      <span className="font-medium">{therapist.rating}</span>
-                      <span className="text-muted-foreground">({therapist.reviews} reviews)</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{therapist.location}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-1 text-green-600">
-                      <Clock className="h-4 w-4" />
-                      <span>{therapist.availability}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 pt-2">
-                    <Button variant="outline" className="flex-1">
-                      View Profile
-                    </Button>
-                    <Button className="flex-1">
-                      Book Session
-                    </Button>
-                  </div>
-                </div>
-              </div>
+        {filteredTherapists.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No therapists found</h3>
+              <p className="text-muted-foreground">
+                No verified therapists match your current search criteria.
+              </p>
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          filteredTherapists.map((therapist) => (
+            <Card key={therapist.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex gap-6">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={therapist.profile_image_url} />
+                    <AvatarFallback className="text-lg">
+                      {therapist.full_name?.split(' ').map(n => n[0]).join('') || 'T'}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-xl font-semibold">{therapist.full_name}</h3>
+                        {therapist.specialization && (
+                          <Badge variant="secondary" className="mt-1">
+                            {therapist.specialization}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="mt-1 ml-2">
+                          Verified
+                        </Badge>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold">
+                          ${therapist.hourly_rate || 100}
+                        </p>
+                        <p className="text-sm text-muted-foreground">per session</p>
+                      </div>
+                    </div>
+
+                    <p className="text-muted-foreground">
+                      {therapist.bio || "Professional therapist dedicated to helping clients achieve their mental health goals."}
+                    </p>
+
+                    <div className="flex items-center gap-6 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                        <span className="font-medium">{therapist.rating}</span>
+                        <span className="text-muted-foreground">(Reviews)</span>
+                      </div>
+                      
+                      {therapist.location && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{therapist.location}</span>
+                        </div>
+                      )}
+                      
+                      {therapist.years_experience && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          <span>{therapist.years_experience} years experience</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <Button variant="outline" className="flex-1">
+                        View Profile
+                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            className="flex-1"
+                            onClick={() => setSelectedTherapist(therapist)}
+                          >
+                            Book Session
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Book Session with {therapist.full_name}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-sm font-medium">Select Date</label>
+                              <Input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="text-sm font-medium">Available Times</label>
+                              <div className="grid grid-cols-3 gap-2 mt-2">
+                                {availableSlots.map((slot) => (
+                                  <Button
+                                    key={slot.time}
+                                    variant={selectedTime === slot.time ? "default" : "outline"}
+                                    disabled={!slot.available}
+                                    onClick={() => setSelectedTime(slot.time)}
+                                    className="text-sm"
+                                  >
+                                    {slot.time}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={handleBookSession}
+                                disabled={!selectedDate || !selectedTime || bookingLoading}
+                                className="flex-1"
+                              >
+                                {bookingLoading ? "Booking..." : "Confirm Booking"}
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );
