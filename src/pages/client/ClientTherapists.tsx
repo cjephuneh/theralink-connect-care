@@ -99,20 +99,31 @@ const ClientTherapists = () => {
       if (error) throw error;
 
       // Transform the data to match our interface
-      const transformedData = data?.map(therapist => ({
-        id: therapist.id,
-        full_name: therapist.full_name,
-        email: therapist.email,
-        profile_image_url: therapist.profile_image_url,
-        location: therapist.location,
-        bio: therapist.therapists?.[0]?.bio,
-        specialization: therapist.therapists?.[0]?.specialization,
-        years_experience: therapist.therapists?.[0]?.years_experience,
-        hourly_rate: therapist.therapists?.[0]?.hourly_rate,
-        rating: therapist.therapists?.[0]?.rating || 4.5,
-        availability: therapist.therapists?.[0]?.availability,
-        therapist_details: therapist.therapist_details?.[0]
-      })).filter(t => t.therapist_details?.is_verified) || [];
+      const transformedData = data?.map(therapist => {
+        const therapistInfo = Array.isArray(therapist.therapists) ? therapist.therapists[0] : therapist.therapists;
+        const therapistDetails = Array.isArray(therapist.therapist_details) ? therapist.therapist_details[0] : therapist.therapist_details;
+        
+        return {
+          id: therapist.id,
+          full_name: therapist.full_name,
+          email: therapist.email,
+          profile_image_url: therapist.profile_image_url,
+          location: therapist.location,
+          bio: therapistInfo?.bio,
+          specialization: therapistInfo?.specialization,
+          years_experience: therapistInfo?.years_experience,
+          hourly_rate: therapistInfo?.hourly_rate,
+          rating: therapistInfo?.rating || 4.5,
+          availability: therapistInfo?.availability,
+          therapist_details: therapistDetails ? {
+            license_type: therapistDetails.license_type,
+            therapy_approaches: therapistDetails.therapy_approaches,
+            languages: therapistDetails.languages,
+            session_formats: therapistDetails.session_formats,
+            is_verified: therapistDetails.is_verified || false
+          } : undefined
+        };
+      }).filter(t => t.therapist_details?.is_verified) || [];
 
       setTherapists(transformedData);
     } catch (error) {
