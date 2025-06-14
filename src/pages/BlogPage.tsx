@@ -186,7 +186,7 @@ const BlogPage = () => {
                 <h2 className="text-2xl font-bold mb-3">{filteredPosts[0].title}</h2>
                 <p className="text-gray-600 mb-6">{filteredPosts[0].excerpt}</p>
                 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-1">
                     <User className="h-4 w-4 text-gray-400" />
                     <span className="font-medium">{filteredPosts[0].author}</span>
@@ -194,8 +194,10 @@ const BlogPage = () => {
                   <div className="text-sm text-gray-500">{calculateReadTime(filteredPosts[0].content)} min read</div>
                 </div>
                 
-                <Button className="mt-6 bg-thera-600 hover:bg-thera-700">
-                  Read Article
+                <Button asChild className="bg-thera-600 hover:bg-thera-700">
+                  <Link to={`/blog/${filteredPosts[0].id}`}>
+                    Read Article
+                  </Link>
                 </Button>
               </div>
             </div>
@@ -236,6 +238,13 @@ const BlogPage = () => {
                 {formatDate(post.created_at)}
               </div>
             </CardFooter>
+            <div className="px-6 pb-4">
+              <Button asChild variant="outline" className="w-full">
+                <Link to={`/blog/${post.id}`}>
+                  Read Article
+                </Link>
+              </Button>
+            </div>
           </Card>
         ))}
       </div>
