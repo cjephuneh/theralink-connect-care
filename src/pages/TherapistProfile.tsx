@@ -44,13 +44,13 @@ const TherapistProfile = () => {
         const { data: therapistRow } = await supabase
           .from("therapists")
           .select("hourly_rate, availability, specialization, years_experience, rating, bio")
-          .eq("id", id)
+          .eq("id", String(id))
           .maybeSingle();
 
         const { data: detailsRow } = await supabase
           .from("therapist_details")
           .select("license_type, therapy_approaches, languages, session_formats, is_verified, education")
-          .eq("therapist_id", id)
+          .eq("therapist_id", String(id))
           .maybeSingle();
 
         // Format availability into same structure as used everywhere else
