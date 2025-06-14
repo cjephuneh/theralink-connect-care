@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Calendar,
   Users,
@@ -28,6 +29,13 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { TherapistNotificationBell } from './TherapistNotificationBell';
 import { useTherapistNotifications } from '@/hooks/useTherapistNotifications';
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: any;
+  badge?: number;
+}
 
 const TherapistLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -117,7 +125,7 @@ const TherapistLayout = () => {
   };
 
   // Define nav items based on user role
-  const therapistNavItems = [
+  const therapistNavItems: NavItem[] = [
     { path: '/therapist/dashboard', label: 'Dashboard', icon: BarChart3 },
     { path: '/therapist/appointments', label: 'Appointments', icon: Calendar },
     { path: '/therapist/clients', label: 'Clients', icon: Users },
@@ -137,7 +145,7 @@ const TherapistLayout = () => {
     { path: '/therapist/settings', label: 'Settings', icon: Settings },
   ];
 
-  const adminNavItems = [
+  const adminNavItems: NavItem[] = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: BarChart3 },
     { path: '/admin/users', label: 'Manage Users', icon: Users },
     { path: '/admin/therapists', label: 'Manage Therapists', icon: UserCog },

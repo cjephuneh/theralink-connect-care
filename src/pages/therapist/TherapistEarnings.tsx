@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +16,7 @@ interface Transaction {
   created_at: string;
   description: string;
   reference: string;
+  transaction_type: string;
 }
 
 interface EarningsData {

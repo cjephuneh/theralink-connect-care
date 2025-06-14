@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Calendar, MessageSquare, DollarSign, CheckCircle, MarkAsRead } from 'lucide-react';
+import { Bell, Calendar, MessageSquare, DollarSign, CheckCircle, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTherapistNotifications } from '@/hooks/useTherapistNotifications';
 
@@ -177,7 +177,7 @@ const TherapistNotifications = () => {
                             variant="ghost"
                             onClick={() => handleMarkAsRead(notification.id)}
                           >
-                            <MarkAsRead className="h-4 w-4" />
+                            <Check className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
