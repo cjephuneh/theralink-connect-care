@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { TherapistNotificationBell } from './TherapistNotificationBell';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const FriendLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -26,7 +27,8 @@ const FriendLayout = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [onboardingComplete, setOnboardingComplete] = useState(true);
-  
+  const isMobile = useIsMobile();
+
   useEffect(() => {
     // Check if user is logged in and has the right role
     if (!user) {
@@ -129,71 +131,89 @@ const FriendLayout = () => {
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <aside
-        className={`bg-sidebar-background border-r border-sidebar-border transition-all duration-300 ease-in-out fixed md:static inset-y-0 left-0 z-50 ${
-          isCollapsed ? 'w-20' : 'w-64'
-        } md:flex flex-col`}
-      >
-        {/* Sidebar Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
-          <Link to="/friend/dashboard" className="flex items-center space-x-2">
-            <div className="bg-secondary text-secondary-foreground p-1.5 rounded-md">
-              <span className="font-bold text-lg">T</span>
-            </div>
-            {!isCollapsed && <span className="font-bold text-lg text-sidebar-foreground">TheraLink</span>}
-          </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-sidebar-foreground"
-          >
-            {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
-          </Button>
-        </div>
+      {(!isMobile || (isMobile && !isCollapsed)) && (
+        <aside
+          className={`bg-sidebar-background border-r border-sidebar-border transition-all duration-300 ease-in-out fixed md:static inset-y-0 left-0 z-50 ${
+            isCollapsed ? 'w-20' : 'w-64'
+          } md:flex flex-col ${isMobile ? 'bg-white shadow-2xl' : ''}`}
+          style={{
+            display: isMobile && isCollapsed ? "none" : "flex",
+            ...(isMobile ? { position: "fixed", width: isCollapsed ? "4rem" : "16rem", transition: "width 0.3s" } : {}),
+          }}
+        >
+          {/* Sidebar Header */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+            <Link to="/friend/dashboard" className="flex items-center space-x-2">
+              <div className="bg-secondary text-secondary-foreground p-1.5 rounded-md">
+                <span className="font-bold text-lg">T</span>
+              </div>
+              {!isCollapsed && <span className="font-bold text-lg text-sidebar-foreground">TheraLink</span>}
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="text-sidebar-foreground"
+            >
+              {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+            </Button>
+          </div>
 
-        {/* Navigation Links */}
-        <div className="flex-1 overflow-auto py-4">
-          <nav className="px-2 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center px-3 py-2 rounded-md transition-colors ${
-                  isActive(item.path)
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-                } ${
-                  !onboardingComplete && item.path !== '/friend/onboarding'
-                    ? 'opacity-50 pointer-events-none'
-                    : ''
-                }`}
-              >
-                <item.icon className="h-5 w-5" />
-                {!isCollapsed && <span className="ml-3">{item.label}</span>}
-              </Link>
-            ))}
-          </nav>
-        </div>
+          {/* Navigation Links */}
+          <div className="flex-1 overflow-auto py-4">
+            <nav className="px-2 space-y-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center px-3 py-2 rounded-md transition-colors ${
+                    isActive(item.path)
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+                  } ${
+                    !onboardingComplete && item.path !== '/friend/onboarding'
+                      ? 'opacity-50 pointer-events-none'
+                      : ''
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {!isCollapsed && <span className="ml-3">{item.label}</span>}
+                </Link>
+              ))}
+            </nav>
+          </div>
 
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-sidebar-border">
-          <Button
-            variant="ghost"
-            className={`w-full flex items-center justify-${isCollapsed ? 'center' : 'start'} text-sidebar-foreground hover:bg-sidebar-accent/50`}
-            onClick={handleLogout}
-          >
-            <LogOut className="h-5 w-5" />
-            {!isCollapsed && <span className="ml-2">Log Out</span>}
-          </Button>
-        </div>
-      </aside>
+          {/* Sidebar Footer */}
+          <div className="p-4 border-t border-sidebar-border">
+            <Button
+              variant="ghost"
+              className={`w-full flex items-center justify-${isCollapsed ? 'center' : 'start'} text-sidebar-foreground hover:bg-sidebar-accent/50`}
+              onClick={handleLogout}
+            >
+              <LogOut className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-2">Log Out</span>}
+            </Button>
+          </div>
+        </aside>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        {/* Top bar with notification bell */}
-        <div className="border-b px-4 py-2 flex justify-end items-center">
-          <TherapistNotificationBell />
+        {/* Top bar with notification bell and hamburger (only mobile) */}
+        <div className="border-b px-4 py-2 flex justify-between items-center">
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCollapsed((c) => !c)}
+              className="text-sidebar-foreground"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+          <div className="flex-1 flex justify-end items-center">
+            <TherapistNotificationBell />
+          </div>
         </div>
         
         {!onboardingComplete && location.pathname !== '/friend/onboarding' && (
