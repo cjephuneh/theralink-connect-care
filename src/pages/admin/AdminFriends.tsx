@@ -42,6 +42,7 @@ interface Friend {
   location?: string;
   profile_image_url?: string;
   created_at: string;
+  role: string;
   friend_details?: {
     experience_description?: string;
     areas_of_experience?: string;
@@ -58,6 +59,7 @@ interface Client {
   location?: string;
   profile_image_url?: string;
   created_at: string;
+  role: string;
 }
 
 const AdminFriends = () => {
@@ -76,46 +78,59 @@ const AdminFriends = () => {
 
   useEffect(() => {
     filterData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [friends, clients, searchTerm, statusFilter]);
 
   const fetchData = async () => {
     try {
-      // Fetch friends
-      const { data: friendsData, error: friendsError } = await supabase
+      console.log('Fetching friends and clients...');
+      
+      // Fetch all profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'friend');
+        .order('created_at', { ascending: false });
 
-      if (friendsError) throw friendsError;
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
 
-      // Fetch clients
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'client');
+      console.log('All profiles fetched:', profilesData);
 
-      if (clientsError) throw clientsError;
+      // Separate friends and clients
+      const friendsData = profilesData?.filter(profile => profile.role === 'friend') || [];
+      const clientsData = profilesData?.filter(profile => profile.role === 'client') || [];
 
+      console.log('Friends data:', friendsData);
+      console.log('Clients data:', clientsData);
+
+      // Fetch friend details for friends
       const { data: friendDetailsData, error: detailsError } = await supabase
         .from('friend_details')
         .select('*');
 
-      if (detailsError) throw detailsError;
+      if (detailsError) {
+        console.error('Error fetching friend details:', detailsError);
+        // Don't throw here, just log the error
+      }
+
+      console.log('Friend details:', friendDetailsData);
 
       // Combine friends with friend details
       const combinedFriendsData = friendsData.map(profile => ({
         ...profile,
-        friend_details: friendDetailsData.find(detail => detail.friend_id === profile.id)
+        friend_details: friendDetailsData?.find(detail => detail.friend_id === profile.id)
       }));
 
+      console.log('Combined friends data:', combinedFriendsData);
+
       setFriends(combinedFriendsData);
-      setClients(clientsData || []);
+      setClients(clientsData);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch data.",
+        description: "Failed to fetch data. Please check the console for details.",
         variant: "destructive",
       });
     } finally {
@@ -165,7 +180,6 @@ const AdminFriends = () => {
   };
 
   const sendMessage = async (userId: string) => {
-    // Implement message sending logic
     toast({
       title: "Message",
       description: "Message functionality would be implemented here.",
@@ -284,10 +298,10 @@ const AdminFriends = () => {
       <Tabs defaultValue="friends" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="friends" className="relative">
-            Friends ({friends.length})
+            Friends ({filteredFriends.length})
           </TabsTrigger>
           <TabsTrigger value="clients" className="relative">
-            Clients ({clients.length})
+            Clients ({filteredClients.length})
           </TabsTrigger>
         </TabsList>
 
@@ -304,13 +318,13 @@ const AdminFriends = () => {
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={friend.profile_image_url} />
                         <AvatarFallback>
-                          {friend.full_name?.split(' ').map(n => n[0]).join('') || 'F'}
+                          {friend.full_name?.charAt(0) || friend.email?.charAt(0) || 'F'}
                         </AvatarFallback>
                       </Avatar>
                       
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{friend.full_name || 'No name provided'}</h3>
+                          <h3 className="font-medium">{friend.full_name || friend.email}</h3>
                           {getStatusBadge(friend)}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -394,13 +408,13 @@ const AdminFriends = () => {
                       <Avatar className="h-12 w-12">
                         <AvatarImage src={client.profile_image_url} />
                         <AvatarFallback>
-                          {client.full_name?.split(' ').map(n => n[0]).join('') || 'C'}
+                          {client.full_name?.charAt(0) || client.email?.charAt(0) || 'C'}
                         </AvatarFallback>
                       </Avatar>
                       
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{client.full_name || 'No name provided'}</h3>
+                          <h3 className="font-medium">{client.full_name || client.email}</h3>
                           <Badge variant="default" className="bg-blue-100 text-blue-800">Client</Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
