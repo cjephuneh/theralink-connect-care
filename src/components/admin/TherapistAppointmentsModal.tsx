@@ -64,7 +64,7 @@ export const TherapistAppointmentsModal = ({
           session_type,
           notes,
           client_id,
-          profiles:client_id (
+          profiles!appointments_client_id_fkey (
             full_name,
             email
           )
