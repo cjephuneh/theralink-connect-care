@@ -194,9 +194,11 @@ const BlogPage = () => {
                   <div className="text-sm text-gray-500">{calculateReadTime(filteredPosts[0].content)} min read</div>
                 </div>
                 
-                <Button className="mt-6 bg-thera-600 hover:bg-thera-700">
-                  Read Article
-                </Button>
+                <Link to={`/blog/${filteredPosts[0].id}`}>
+                  <Button className="mt-6 bg-thera-600 hover:bg-thera-700">
+                    Read Article
+                  </Button>
+                </Link>
               </div>
             </div>
           </Card>
@@ -236,6 +238,13 @@ const BlogPage = () => {
                 {formatDate(post.created_at)}
               </div>
             </CardFooter>
+            <div className="px-6 pb-4">
+              <Link to={`/blog/${post.id}`}>
+                <Button variant="outline" className="w-full">
+                  Read Article
+                </Button>
+              </Link>
+            </div>
           </Card>
         ))}
       </div>

@@ -32,6 +32,7 @@ import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsPage from "./pages/TermsPage";
 import HIPAAPage from "./pages/HIPAAPage";
 import NotFound from "./pages/NotFound";
+import BlogDetail from "./pages/BlogDetail";
 
 // Auth pages
 import Login from "./pages/auth/Login";
@@ -117,6 +118,7 @@ const App = () => (
                 <Route path="friends" element={<FriendListing />} />
                 <Route path="therapists/:id" element={<TherapistProfile />} />
                 <Route path="blog" element={<BlogPage />} />
+                <Route path="blog/:id" element={<BlogDetail />} />
                 <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
                 <Route path="terms" element={<TermsPage />} />
                 <Route path="hipaa" element={<HIPAAPage />} />

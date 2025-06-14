@@ -39,11 +39,14 @@ const BookingPage = () => {
     const fetchTherapist = async () => {
       setLoading(true);
       try {
+        // Ensure therapistId is always a string for Supabase
+        const therapistIdString = typeof therapistId === "string" ? therapistId : String(therapistId);
+
         // Therapist profile
         const { data: profile, error: pErr } = await supabase
           .from("profiles")
           .select("id, full_name, email, profile_image_url, location, role")
-          .eq("id", String(therapistId))
+          .eq("id", therapistIdString)
           .maybeSingle();
         if (pErr) throw pErr;
         if (!profile) {
@@ -56,7 +59,7 @@ const BookingPage = () => {
         const { data: therapistRow, error: tErr } = await supabase
           .from("therapists")
           .select("hourly_rate, availability, specialization, years_experience, bio")
-          .eq("id", String(therapistId))
+          .eq("id", therapistIdString)
           .maybeSingle();
         if (tErr) throw tErr;
 
@@ -64,7 +67,7 @@ const BookingPage = () => {
         const { data: details, error: dErr } = await supabase
           .from("therapist_details")
           .select("session_formats")
-          .eq("therapist_id", String(therapistId))
+          .eq("therapist_id", therapistIdString)
           .maybeSingle();
 
         // Parse session formats if present (comma separated)
@@ -83,12 +86,10 @@ const BookingPage = () => {
             }));
         }
 
-        // Availability parsing (stored as JSON array of objects with date/slots or as array of slots?), fallback to empty if not set
         const rawAvail = therapistRow?.availability || [];
-        // Accept both [{date, slots}] and [{date,slots}] or fallback to one week if missing
         let availability: any[] = [];
         try {
-          availability = Array.isArray(rawAvail) ? rawAvail : JSON.parse(rawAvail ?? "[]");
+          availability = Array.isArray(rawAvail) ? rawAvail : JSON.parse(JSON.stringify(rawAvail) || "[]");
         } catch {
           availability = [];
         }
@@ -100,7 +101,6 @@ const BookingPage = () => {
           availability: availability,
         });
 
-        // Set selection defaults if possible
         if (sessionTypes.length > 0) setSelectedSession(sessionTypes[0]);
         if (availability.length > 0) setSelectedDate(availability[0].date);
       } catch (error) {
