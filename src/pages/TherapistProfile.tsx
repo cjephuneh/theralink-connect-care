@@ -38,7 +38,7 @@ const TherapistProfile = () => {
         const { data: profile } = await supabase
           .from("profiles")
           .select("id, full_name, profile_image_url, role, location, email")
-          .eq("id", id)
+          .eq("id", String(id))
           .maybeSingle();
 
         const { data: therapistRow } = await supabase
@@ -138,7 +138,7 @@ const TherapistProfile = () => {
 
   const handleBookSession = () => {
     if (selectedDate && selectedTime) {
-      navigate(`/booking/complete/${therapist.id}/${encodeURIComponent(selectedDate)}/${encodeURIComponent(selectedTime)}`);
+      navigate(`/booking/complete/${String(therapist.id)}/${encodeURIComponent(selectedDate)}/${encodeURIComponent(selectedTime)}`);
     }
   };
 
@@ -162,6 +162,7 @@ const TherapistProfile = () => {
                     {therapist.full_name
                       ? therapist.full_name
                           .split(" ")
+                          .filter(n => n && n[0])
                           .map((n) => n[0])
                           .join("")
                           .toUpperCase()
@@ -326,12 +327,12 @@ const TherapistProfile = () => {
                 </Button>
                 <div className="flex gap-2">
                   <Button asChild variant="outline" className="w-1/2">
-                    <Link to={`/chat/${therapist.id}`}>
+                    <Link to={`/chat/${String(therapist.id)}`}>
                       <MessageCircle className="h-4 w-4 mr-1" /> Message
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="w-1/2">
-                    <Link to={`/video/${therapist.id}`}>
+                    <Link to={`/video/${String(therapist.id)}`}>
                       <Video className="h-4 w-4 mr-1" /> Quick Consult
                     </Link>
                   </Button>

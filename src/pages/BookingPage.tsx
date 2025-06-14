@@ -181,7 +181,7 @@ const BookingPage = () => {
     <div className="container mx-auto px-4 py-8 animation-fade-in">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <Link to={`/therapists/${therapistId}`} className="text-primary hover:underline flex items-center">
+          <Link to={`/therapists/${String(therapistId)}`} className="text-primary hover:underline flex items-center">
             <ChevronLeft className="h-4 w-4 mr-1" /> Back to profile
           </Link>
           <h1 className="text-3xl font-bold mt-2">
@@ -436,7 +436,7 @@ const BookingPage = () => {
                 variant="outline"
                 asChild
               >
-                <Link to={`/therapists/${therapistId}`}>Cancel</Link>
+                <Link to={`/therapists/${String(therapistId)}`}>Cancel</Link>
               </Button>
             )}
             {bookingStep < 3 ? (
@@ -451,7 +451,7 @@ const BookingPage = () => {
                 <Link
                   to={
                     selectedDate && selectedTime
-                      ? `/booking/complete/${therapistId}/${encodeURIComponent(selectedDate)}/${encodeURIComponent(selectedTime)}`
+                      ? `/booking/complete/${String(therapistId)}/${encodeURIComponent(selectedDate)}/${encodeURIComponent(selectedTime)}`
                       : "#"
                   }
                 >
