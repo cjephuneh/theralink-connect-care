@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,45 +34,21 @@ const AdminFeedback = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch feedback messages first
+      // Fetch feedback messages with profile data
       const { data: feedback, error: feedbackError } = await supabase
         .from("feedback")
-        .select("*")
+        .select(`
+          *,
+          profiles (
+            full_name,
+            email,
+            role
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (feedbackError) throw feedbackError;
-
-      // Get unique user IDs from feedback
-      const userIds = feedback?.map(f => f.user_id).filter(Boolean) || [];
-      
-      // Fetch profiles for these users if any exist
-      let profilesData = [];
-      if (userIds.length > 0) {
-        const { data: profiles, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, full_name, email, role")
-          .in("id", userIds);
-
-        if (profilesError) {
-          console.error("Error fetching profiles:", profilesError);
-        } else {
-          profilesData = profiles || [];
-        }
-      }
-
-      // Create profiles map
-      const profilesMap = profilesData.reduce((acc, profile) => {
-        acc[profile.id] = profile;
-        return acc;
-      }, {});
-
-      // Combine feedback with profiles
-      const feedbackWithProfiles = feedback?.map(fb => ({
-        ...fb,
-        profiles: profilesMap[fb.user_id] || null
-      })) || [];
-
-      setFeedbackMessages(feedbackWithProfiles);
+      setFeedbackMessages(feedback || []);
 
       // Fetch contact messages
       const { data: contacts, error: contactsError } = await supabase
@@ -83,15 +60,15 @@ const AdminFeedback = () => {
       setContactMessages(contacts || []);
 
       // Calculate stats
-      const unreadFeedback = feedbackWithProfiles.filter(f => !f.is_read).length;
+      const unreadFeedback = feedback?.filter(f => !f.is_read).length || 0;
       const unreadContacts = contacts?.filter(c => !c.is_read).length || 0;
-      const ratingsData = feedbackWithProfiles.filter(f => f.rating !== null);
+      const ratingsData = feedback?.filter(f => f.rating !== null) || [];
       const averageRating = ratingsData.length > 0 
         ? ratingsData.reduce((sum, f) => sum + f.rating, 0) / ratingsData.length 
         : 0;
 
       setStats({
-        totalFeedback: feedbackWithProfiles.length,
+        totalFeedback: feedback?.length || 0,
         totalContacts: contacts?.length || 0,
         unreadFeedback,
         unreadContacts,
