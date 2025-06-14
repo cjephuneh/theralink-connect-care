@@ -1,24 +1,31 @@
 
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
-const mockSettings = [
+const notificationSettings = [
   {
     label: "Email Notifications",
+    description: "Receive notifications about your account via email.",
     key: "email_notifications",
   },
   {
     label: "SMS Notifications",
+    description: "Receive notifications via text message.",
     key: "sms_notifications",
   },
-  {
-    label: "Dark Mode",
-    key: "dark_mode",
-  },
+];
+
+const appearanceSettings = [
+    {
+        label: "Dark Mode",
+        description: "Enable dark mode for the application.",
+        key: "dark_mode",
+    }
 ];
 
 export default function FriendSettings() {
@@ -31,10 +38,12 @@ export default function FriendSettings() {
   });
 
   const handleToggle = (key: string) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+    setSettings((prev) => ({ ...prev, [key]: !prev[key as keyof typeof settings] }));
   };
 
   const handleSave = () => {
+    // Here you would typically save the settings to your backend
+    console.log("Saving settings:", settings);
     toast({
       title: "Settings Saved",
       description: "Your preferences have been updated.",
@@ -42,25 +51,73 @@ export default function FriendSettings() {
   };
 
   return (
-    <div className="flex justify-center py-12 px-2 bg-gradient-to-b from-accent/30 to-muted/50 min-h-[70vh]">
-      <Card className="w-full max-w-xl border-2 border-accent rounded-2xl shadow-lg">
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your account settings and set e-mail preferences.
+        </p>
+      </div>
+
+      <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Friend Settings</CardTitle>
+          <CardTitle>Notifications</CardTitle>
+          <CardDescription>
+            Configure how you receive notifications.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {mockSettings.map((s) => (
-              <div className="flex items-center justify-between" key={s.key}>
-                <div className="text-lg font-medium">{s.label}</div>
-                <Switch checked={settings[s.key as keyof typeof settings]} onCheckedChange={() => handleToggle(s.key)} />
+        <CardContent className="space-y-6">
+          {notificationSettings.map((setting) => (
+            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4" key={setting.key}>
+              <div className="space-y-0.5">
+                <Label htmlFor={setting.key} className="text-base font-medium">
+                  {setting.label}
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                    {setting.description}
+                </p>
               </div>
-            ))}
-          </div>
-          <Button className="mt-8 w-full" onClick={handleSave}>
-            Save Changes
-          </Button>
+              <Switch
+                id={setting.key}
+                checked={settings[setting.key as keyof typeof settings]}
+                onCheckedChange={() => handleToggle(setting.key)}
+              />
+            </div>
+          ))}
         </CardContent>
       </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+          <CardDescription>
+            Customize the look and feel of the application.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {appearanceSettings.map((setting) => (
+             <div className="flex items-center justify-between space-x-2 rounded-lg border p-4" key={setting.key}>
+                <div className="space-y-0.5">
+                    <Label htmlFor={setting.key} className="text-base font-medium">
+                        {setting.label}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                        {setting.description}
+                    </p>
+                </div>
+                <Switch
+                    id={setting.key}
+                    checked={settings[setting.key as keyof typeof settings]}
+                    onCheckedChange={() => handleToggle(setting.key)}
+                />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      
+      <div>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </div>
     </div>
   );
 }
