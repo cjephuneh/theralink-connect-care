@@ -47,6 +47,7 @@ export const TherapistAppointmentsModal = ({
     if (therapistId && isOpen) {
       fetchAppointments();
     }
+    // eslint-disable-next-line
   }, [therapistId, isOpen]);
 
   const fetchAppointments = async () => {
@@ -67,7 +68,14 @@ export const TherapistAppointmentsModal = ({
         .order('start_time', { ascending: false });
 
       if (error) throw error;
-      setAppointments(data || []);
+
+      // Fix: Convert profiles from array -> single object if array
+      const transformed = (data ?? []).map((a: any) => ({
+        ...a,
+        profiles: Array.isArray(a.profiles) ? a.profiles[0] : a.profiles
+      }));
+
+      setAppointments(transformed);
     } catch (error) {
       console.error('Error fetching appointments:', error);
       toast({
