@@ -37,13 +37,12 @@ const BookingPage = () => {
 
     const fetchTherapist = async () => {
       setLoading(true);
-      const currentTherapistId = String(therapistId);
       try {
         // Therapist profile
         const { data: profile, error: pErr } = await supabase
           .from("profiles")
           .select("id, full_name, email, profile_image_url, location, role")
-          .eq("id", currentTherapistId)
+          .eq("id", therapistId as string)
           .maybeSingle();
         if (pErr) throw pErr;
         if (!profile) {
@@ -56,7 +55,7 @@ const BookingPage = () => {
         const { data: therapistRow, error: tErr } = await supabase
           .from("therapists")
           .select("hourly_rate, availability, specialization, years_experience, bio")
-          .eq("id", currentTherapistId)
+          .eq("id", therapistId as string)
           .maybeSingle();
         if (tErr) throw tErr;
 
@@ -64,7 +63,7 @@ const BookingPage = () => {
         const { data: details, error: dErr } = await supabase
           .from("therapist_details")
           .select("session_formats")
-          .eq("therapist_id", currentTherapistId)
+          .eq("therapist_id", therapistId as string)
           .maybeSingle();
 
         // Parse session formats if present (comma separated)

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,8 @@ import {
   X,
   LogOut,
   User,
-  Bell
+  Bell,
+  Calendar
 } from "lucide-react";
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -107,6 +109,7 @@ const FriendLayout = () => {
   const navItems = [
     { path: '/friend/dashboard', label: 'Dashboard', icon: User },
     { path: '/friend/clients', label: 'Clients', icon: Users },
+    { path: '/friend/bookings', label: 'Bookings', icon: Calendar },
     { path: '/friend/messages', label: 'Messages', icon: MessageCircle },
     { path: '/friend/notes', label: 'Notes', icon: FileText },
     { path: '/friend/account', label: 'Account', icon: User },
