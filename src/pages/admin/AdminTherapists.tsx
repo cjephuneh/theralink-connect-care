@@ -33,6 +33,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { TherapistDetailsModal } from '@/components/admin/TherapistDetailsModal';
+import { TherapistAppointmentsModal } from '@/components/admin/TherapistAppointmentsModal';
+import { TherapistEarningsModal } from '@/components/admin/TherapistEarningsModal';
+import { SendEmailModal } from '@/components/admin/SendEmailModal';
 
 interface Therapist {
   id: string;
@@ -67,6 +70,9 @@ const AdminTherapists = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAppointmentsModalOpen, setIsAppointmentsModalOpen] = useState(false);
+  const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -199,8 +205,38 @@ const AdminTherapists = () => {
     setIsModalOpen(true);
   };
 
+  const openAppointments = (therapist: Therapist) => {
+    setSelectedTherapist(therapist);
+    setIsAppointmentsModalOpen(true);
+  };
+
+  const openEarnings = (therapist: Therapist) => {
+    setSelectedTherapist(therapist);
+    setIsEarningsModalOpen(true);
+  };
+
+  const openSendEmail = (therapist: Therapist) => {
+    setSelectedTherapist(therapist);
+    setIsEmailModalOpen(true);
+  };
+
   const closeModal = () => {
     setIsModalOpen(false);
+    setSelectedTherapist(null);
+  };
+
+  const closeAppointmentsModal = () => {
+    setIsAppointmentsModalOpen(false);
+    setSelectedTherapist(null);
+  };
+
+  const closeEarningsModal = () => {
+    setIsEarningsModalOpen(false);
+    setSelectedTherapist(null);
+  };
+
+  const closeEmailModal = () => {
+    setIsEmailModalOpen(false);
     setSelectedTherapist(null);
   };
 
@@ -420,9 +456,15 @@ const AdminTherapists = () => {
                       <DropdownMenuItem onClick={() => openTherapistDetails(therapist)}>
                         View Full Profile
                       </DropdownMenuItem>
-                      <DropdownMenuItem>Send Email</DropdownMenuItem>
-                      <DropdownMenuItem>View Appointments</DropdownMenuItem>
-                      <DropdownMenuItem>View Earnings</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openSendEmail(therapist)}>
+                        Send Email
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openAppointments(therapist)}>
+                        View Appointments
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEarnings(therapist)}>
+                        View Earnings
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {therapist.therapist_details?.is_verified ? (
                         <DropdownMenuItem 
@@ -454,12 +496,33 @@ const AdminTherapists = () => {
         </CardContent>
       </Card>
 
-      {/* Therapist Details Modal */}
+      {/* Modals */}
       <TherapistDetailsModal
         therapist={selectedTherapist}
         isOpen={isModalOpen}
         onClose={closeModal}
         onStatusUpdate={handleStatusUpdate}
+      />
+
+      <TherapistAppointmentsModal
+        therapistId={selectedTherapist?.id || null}
+        therapistName={selectedTherapist?.full_name || ''}
+        isOpen={isAppointmentsModalOpen}
+        onClose={closeAppointmentsModal}
+      />
+
+      <TherapistEarningsModal
+        therapistId={selectedTherapist?.id || null}
+        therapistName={selectedTherapist?.full_name || ''}
+        isOpen={isEarningsModalOpen}
+        onClose={closeEarningsModal}
+      />
+
+      <SendEmailModal
+        recipientEmail={selectedTherapist?.email || ''}
+        recipientName={selectedTherapist?.full_name || ''}
+        isOpen={isEmailModalOpen}
+        onClose={closeEmailModal}
       />
     </div>
   );
