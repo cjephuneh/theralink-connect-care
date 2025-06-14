@@ -89,7 +89,7 @@ const BookingPage = () => {
         const rawAvail = therapistRow?.availability || [];
         let availability: any[] = [];
         try {
-          availability = Array.isArray(rawAvail) ? rawAvail : JSON.parse(rawAvail ?? "[]");
+          availability = Array.isArray(rawAvail) ? rawAvail : JSON.parse(JSON.stringify(rawAvail) || "[]");
         } catch {
           availability = [];
         }

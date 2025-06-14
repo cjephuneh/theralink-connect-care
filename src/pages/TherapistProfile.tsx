@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ const TherapistProfile = () => {
         try {
           availability = Array.isArray(therapistRow?.availability)
             ? therapistRow.availability
-            : JSON.parse(therapistRow?.availability ?? "[]");
+            : JSON.parse(JSON.stringify(therapistRow?.availability) || "[]");
         } catch {
           availability = [];
         }
