@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -97,35 +96,41 @@ const AdminFriends = () => {
 
       console.log('All profiles fetched:', profilesData);
 
-      // Separate friends and clients
+      // Filter friends and clients based on role
       const friendsData = profilesData?.filter(profile => profile.role === 'friend') || [];
       const clientsData = profilesData?.filter(profile => profile.role === 'client') || [];
 
+      console.log('Friends found:', friendsData.length);
+      console.log('Clients found:', clientsData.length);
       console.log('Friends data:', friendsData);
       console.log('Clients data:', clientsData);
 
       // Fetch friend details for friends
-      const { data: friendDetailsData, error: detailsError } = await supabase
-        .from('friend_details')
-        .select('*');
+      if (friendsData.length > 0) {
+        const { data: friendDetailsData, error: detailsError } = await supabase
+          .from('friend_details')
+          .select('*');
 
-      if (detailsError) {
-        console.error('Error fetching friend details:', detailsError);
-        // Don't throw here, just log the error
+        if (detailsError) {
+          console.error('Error fetching friend details:', detailsError);
+        } else {
+          console.log('Friend details fetched:', friendDetailsData);
+        }
+
+        // Combine friends with friend details
+        const combinedFriendsData = friendsData.map(profile => ({
+          ...profile,
+          friend_details: friendDetailsData?.find(detail => detail.friend_id === profile.id)
+        }));
+
+        console.log('Combined friends data:', combinedFriendsData);
+        setFriends(combinedFriendsData);
+      } else {
+        setFriends([]);
       }
 
-      console.log('Friend details:', friendDetailsData);
-
-      // Combine friends with friend details
-      const combinedFriendsData = friendsData.map(profile => ({
-        ...profile,
-        friend_details: friendDetailsData?.find(detail => detail.friend_id === profile.id)
-      }));
-
-      console.log('Combined friends data:', combinedFriendsData);
-
-      setFriends(combinedFriendsData);
       setClients(clientsData);
+      console.log('Final state - Friends:', friendsData.length, 'Clients:', clientsData.length);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -139,8 +144,14 @@ const AdminFriends = () => {
   };
 
   const filterData = () => {
+    console.log('Filtering data...');
+    console.log('Search term:', searchTerm);
+    console.log('Status filter:', statusFilter);
+    console.log('Total friends before filter:', friends.length);
+    console.log('Total clients before filter:', clients.length);
+
     // Filter friends
-    let filteredF = friends;
+    let filteredF = [...friends];
     
     if (searchTerm) {
       filteredF = filteredF.filter(friend =>
@@ -156,10 +167,11 @@ const AdminFriends = () => {
       filteredF = filteredF.filter(f => !f.friend_details?.experience_description);
     }
 
+    console.log('Filtered friends:', filteredF.length);
     setFilteredFriends(filteredF);
 
     // Filter clients
-    let filteredC = clients;
+    let filteredC = [...clients];
     
     if (searchTerm) {
       filteredC = filteredC.filter(client =>
@@ -169,6 +181,7 @@ const AdminFriends = () => {
       );
     }
 
+    console.log('Filtered clients:', filteredC.length);
     setFilteredClients(filteredC);
   };
 
@@ -387,7 +400,14 @@ const AdminFriends = () => {
                 
                 {filteredFriends.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? 'No friends found matching your search.' : 'No friends registered yet.'}
+                    {friends.length === 0 ? (
+                      <div>
+                        <p className="mb-2">No friends registered yet.</p>
+                        <p className="text-sm">Users need to register with role 'friend' to appear here.</p>
+                      </div>
+                    ) : (
+                      'No friends found matching your search.'
+                    )}
                   </div>
                 )}
               </div>
@@ -477,7 +497,14 @@ const AdminFriends = () => {
                 
                 {filteredClients.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? 'No clients found matching your search.' : 'No clients registered yet.'}
+                    {clients.length === 0 ? (
+                      <div>
+                        <p className="mb-2">No clients registered yet.</p>
+                        <p className="text-sm">Users need to register with role 'client' to appear here.</p>
+                      </div>
+                    ) : (
+                      'No clients found matching your search.'
+                    )}
                   </div>
                 )}
               </div>
