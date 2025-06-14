@@ -1,240 +1,219 @@
-
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as SonnerToaster } from "sonner";
+import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-
-// Layouts
+import { HelmetProvider } from 'react-helmet-async';
 import Layout from "@/components/layout/Layout";
+import ClientLayout from "@/components/layout/ClientLayout";
 import TherapistLayout from "@/components/layout/TherapistLayout";
 import FriendLayout from "@/components/layout/FriendLayout";
-import ClientLayout from "@/components/layout/ClientLayout";
 
-// Client Pages
+// Import pages
 import Index from "./pages/Index";
+import AboutPage from "./pages/AboutPage";
+import HowItWorks from "./pages/HowItWorks";
+import ContactPage from "./pages/ContactPage";
 import TherapistsLandingPage from "./pages/TherapistsLandingPage";
 import FriendsLandingPage from "./pages/FriendsLandingPage";
 import TherapistListing from "./pages/TherapistListing";
 import FriendListing from "./pages/FriendListing";
 import TherapistProfile from "./pages/TherapistProfile";
-import ChatPage from "./pages/ChatPage";
-import VideoChat from "./pages/VideoChat";
-import NotFound from "./pages/NotFound";
+import BlogPage from "./pages/BlogPage";
 import BookingPage from "./pages/BookingPage";
 import BookingPaymentPage from "./pages/BookingPaymentPage";
 import BookingComplete from "./pages/BookingComplete";
-import HowItWorks from "./pages/HowItWorks";
-import ContactPage from "./pages/ContactPage";
+import VideoChat from "./pages/VideoChat";
+import ChatPage from "./pages/ChatPage";
 import AIMatchingPage from "./pages/AIMatchingPage";
 import AIMatchingResults from "./pages/AIMatchingResults";
-import BlogPage from "./pages/BlogPage";
-import AboutPage from "./pages/AboutPage";
-import TermsPage from "./pages/TermsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsPage from "./pages/TermsPage";
 import HIPAAPage from "./pages/HIPAAPage";
-import TherapistOnboardingPage from "./pages/TherapistOnboardingPage";
+import NotFound from "./pages/NotFound";
 
-// Client Dashboard Pages
-import ClientOverview from "./pages/client/ClientOverview";
-import ClientAppointments from "./pages/client/ClientAppointments";
-import ClientNotes from "./pages/client/ClientNotes";
-import ClientMessages from "./pages/client/ClientMessages";
-import ClientProfile from "./pages/client/ClientProfile";
-import ClientResources from "./pages/client/ClientResources";
-import ClientBilling from "./pages/client/ClientBilling";
-import ClientFeedback from "./pages/client/ClientFeedback";
-import ClientTherapists from "./pages/client/ClientTherapists";
-import ClientSettings from "./pages/client/ClientSettings";
-
-// Auth Pages
+// Auth pages
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
-import AdminLogin from "./pages/admin/AdminLogin";
 
-// Therapist Pages
+// Client pages
+import ClientDashboard from "./pages/ClientDashboard";
+import ClientOverview from "./pages/client/ClientOverview";
+import ClientProfile from "./pages/client/ClientProfile";
+import ClientAppointments from "./pages/client/ClientAppointments";
+import ClientMessages from "./pages/client/ClientMessages";
+import ClientBilling from "./pages/client/ClientBilling";
+import ClientSettings from "./pages/client/ClientSettings";
+import ClientTherapists from "./pages/client/ClientTherapists";
+import ClientResources from "./pages/client/ClientResources";
+import ClientNotes from "./pages/client/ClientNotes";
+import ClientFeedback from "./pages/client/ClientFeedback";
+
+// Therapist pages
 import TherapistDashboard from "./pages/therapist/TherapistDashboard";
+import TherapistOnboarding from "./pages/therapist/TherapistOnboarding";
+import TherapistOnboardingPage from "./pages/TherapistOnboardingPage";
 import TherapistAppointments from "./pages/therapist/TherapistAppointments";
 import TherapistClients from "./pages/therapist/TherapistClients";
 import TherapistMessages from "./pages/therapist/TherapistMessages";
-import TherapistDocuments from "./pages/therapist/TherapistDocuments";
-import TherapistAccount from "./pages/therapist/TherapistAccount";
-import TherapistSettings from "./pages/therapist/TherapistSettings";
+import TherapistEarnings from "./pages/therapist/TherapistEarnings";
 import TherapistReviews from "./pages/therapist/TherapistReviews";
 import TherapistAnalytics from "./pages/therapist/TherapistAnalytics";
-import SessionNotes from "./pages/therapist/SessionNotes";
-import TherapistEarnings from "./pages/therapist/TherapistEarnings";
-import TherapistOnboarding from "./pages/therapist/TherapistOnboarding";
+import TherapistAccount from "./pages/therapist/TherapistAccount";
+import TherapistSettings from "./pages/therapist/TherapistSettings";
+import TherapistDocuments from "./pages/therapist/TherapistDocuments";
 import TherapistNotifications from "./pages/therapist/TherapistNotifications";
+import SessionNotes from "./pages/therapist/SessionNotes";
 
-// Friend Pages
+// Friend pages
 import FriendDashboard from "./pages/friend/FriendDashboard";
+import FriendOnboarding from "./pages/friend/FriendOnboarding";
 import FriendClients from "./pages/friend/FriendClients";
 import FriendNotes from "./pages/friend/FriendNotes";
-import FriendOnboarding from "./pages/friend/FriendOnboarding";
+import FriendMessages from "./pages/friend/FriendMessages";
+import FriendAccount from "./pages/friend/FriendAccount";
+import FriendSettings from "./pages/friend/FriendSettings";
 
-// Admin Pages
+// Admin pages
+import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTherapists from "./pages/admin/AdminTherapists";
-import AdminTransactions from "./pages/admin/AdminTransactions";
-import AdminAppointments from "./pages/admin/AdminAppointments";
-import AdminContent from "./pages/admin/AdminContent";
-import AdminFeedback from "./pages/admin/AdminFeedback";
-import AdminSessionNotes from "./pages/admin/AdminSessionNotes";
-import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminFriends from "./pages/admin/AdminFriends";
+import AdminAppointments from "./pages/admin/AdminAppointments";
+import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminEmails from "./pages/admin/AdminEmails";
+import AdminFeedback from "./pages/admin/AdminFeedback";
+import AdminContent from "./pages/admin/AdminContent";
+import AdminSettings from "./pages/admin/AdminSettings";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminMessages from "./pages/admin/AdminMessages";
+import AdminSessionNotes from "./pages/admin/AdminSessionNotes";
+import AdminBlogs from "./pages/admin/AdminBlogs";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+  <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <BrowserRouter>
+        <AuthProvider>
           <Toaster />
-          <SonnerToaster />
-          <Routes>
-            {/* Client Routes */}
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Index />} />
-              <Route path="for-therapists" element={<TherapistsLandingPage />} />
-              <Route path="for-friends" element={<FriendsLandingPage />} />
-              <Route path="therapists" element={<TherapistListing />} />
-              <Route path="friends" element={<FriendListing />} />
-              <Route path="therapists/:id" element={<TherapistProfile />} />
-              <Route path="therapists/:therapistId/book" element={<BookingPage />} />
-              <Route path="payment/:appointmentId" element={<BookingPaymentPage />} />
-              <Route path="booking/complete/:therapistId/:date/:time" element={<BookingComplete />} />
-              <Route path="chat/:therapistId" element={<ChatPage />} />
-              <Route path="video/:therapistId" element={<VideoChat />} />
-              <Route path="how-it-works" element={<HowItWorks />} />
-              <Route path="contact" element={<ContactPage />} />
-              <Route path="ai-matching" element={<AIMatchingPage />} />
-              <Route path="ai-matching/results" element={<AIMatchingResults />} />
-              <Route path="blog" element={<BlogPage />} />
-              <Route path="about" element={<AboutPage />} />
-              <Route path="terms" element={<TermsPage />} />
-              <Route path="privacy" element={<PrivacyPolicyPage />} />
-              <Route path="hipaa" element={<HIPAAPage />} />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes with main layout */}
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Index />} />
+                <Route path="about" element={<AboutPage />} />
+                <Route path="how-it-works" element={<HowItWorks />} />
+                <Route path="contact" element={<ContactPage />} />
+                <Route path="for-therapists" element={<TherapistsLandingPage />} />
+                <Route path="for-friends" element={<FriendsLandingPage />} />
+                <Route path="therapists" element={<TherapistListing />} />
+                <Route path="friends" element={<FriendListing />} />
+                <Route path="therapists/:id" element={<TherapistProfile />} />
+                <Route path="blog" element={<BlogPage />} />
+                <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+                <Route path="terms" element={<TermsPage />} />
+                <Route path="hipaa" element={<HIPAAPage />} />
+                
+                {/* Booking routes */}
+                <Route path="booking/:therapistId" element={<BookingPage />} />
+                <Route path="booking/:therapistId/payment" element={<BookingPaymentPage />} />
+                <Route path="booking/complete" element={<BookingComplete />} />
+                
+                {/* Chat and video routes */}
+                <Route path="video/:appointmentId" element={<VideoChat />} />
+                <Route path="chat/:friendId" element={<ChatPage />} />
+                
+                {/* AI Matching routes */}
+                <Route path="ai-matching" element={<AIMatchingPage />} />
+                <Route path="ai-matching/results" element={<AIMatchingResults />} />
+                
+                {/* Onboarding routes */}
+                <Route path="therapist-onboarding" element={<TherapistOnboardingPage />} />
+              </Route>
+
+              {/* Auth routes (no layout) */}
+              <Route path="/auth/login" element={<Login />} />
+              <Route path="/auth/register" element={<Register />} />
+              <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+
+              {/* Client dashboard routes */}
+              <Route path="/client" element={<ClientLayout />}>
+                <Route index element={<ClientDashboard />} />
+                <Route path="overview" element={<ClientOverview />} />
+                <Route path="profile" element={<ClientProfile />} />
+                <Route path="appointments" element={<ClientAppointments />} />
+                <Route path="messages" element={<ClientMessages />} />
+                <Route path="billing" element={<ClientBilling />} />
+                <Route path="settings" element={<ClientSettings />} />
+                <Route path="therapists" element={<ClientTherapists />} />
+                <Route path="resources" element={<ClientResources />} />
+                <Route path="notes" element={<ClientNotes />} />
+                <Route path="feedback" element={<ClientFeedback />} />
+              </Route>
+
+              {/* Therapist dashboard routes */}
+              <Route path="/therapist" element={<TherapistLayout />}>
+                <Route path="dashboard" element={<TherapistDashboard />} />
+                <Route path="onboarding" element={<TherapistOnboarding />} />
+                <Route path="appointments" element={<TherapistAppointments />} />
+                <Route path="clients" element={<TherapistClients />} />
+                <Route path="messages" element={<TherapistMessages />} />
+                <Route path="earnings" element={<TherapistEarnings />} />
+                <Route path="reviews" element={<TherapistReviews />} />
+                <Route path="analytics" element={<TherapistAnalytics />} />
+                <Route path="account" element={<TherapistAccount />} />
+                <Route path="settings" element={<TherapistSettings />} />
+                <Route path="documents" element={<TherapistDocuments />} />
+                <Route path="notifications" element={<TherapistNotifications />} />
+                <Route path="session-notes" element={<SessionNotes />} />
+              </Route>
+
+              {/* Friend dashboard routes */}
+              <Route path="/friend" element={<FriendLayout />}>
+                <Route path="dashboard" element={<FriendDashboard />} />
+                <Route path="onboarding" element={<FriendOnboarding />} />
+                <Route path="clients" element={<FriendClients />} />
+                <Route path="notes" element={<FriendNotes />} />
+                <Route path="messages" element={<FriendMessages />} />
+                <Route path="account" element={<FriendAccount />} />
+                <Route path="settings" element={<FriendSettings />} />
+              </Route>
+
+              {/* Admin routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<TherapistLayout />}>
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="therapists" element={<AdminTherapists />} />
+                <Route path="friends" element={<AdminFriends />} />
+                <Route path="appointments" element={<AdminAppointments />} />
+                <Route path="transactions" element={<AdminTransactions />} />
+                <Route path="emails" element={<AdminEmails />} />
+                <Route path="feedback" element={<AdminFeedback />} />
+                <Route path="content" element={<AdminContent />} />
+                <Route path="settings" element={<AdminSettings />} />
+                <Route path="analytics" element={<AdminAnalytics />} />
+                <Route path="notifications" element={<AdminNotifications />} />
+                <Route path="messages" element={<AdminMessages />} />
+                <Route path="session-notes" element={<AdminSessionNotes />} />
+                <Route path="blogs" element={<AdminBlogs />} />
+              </Route>
+
+              {/* 404 route */}
               <Route path="*" element={<NotFound />} />
-            </Route>
-
-            {/* Client Dashboard Routes with New Layout */}
-            <Route path="/client/*" element={<ClientLayout />}>
-              <Route path="dashboard" element={<ClientOverview />} />
-              <Route path="appointments" element={<ClientAppointments />} />
-              <Route path="therapists" element={<ClientTherapists />} />
-              <Route path="messages" element={<ClientMessages />} />
-              <Route path="notes" element={<ClientNotes />} />
-              <Route path="resources" element={<ClientResources />} />
-              <Route path="billing" element={<ClientBilling />} />
-              <Route path="feedback" element={<ClientFeedback />} />
-              <Route path="profile" element={<ClientProfile />} />
-              <Route path="settings" element={<ClientSettings />} />
-              <Route index element={<Navigate to="/client/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/client/dashboard" replace />} />
-            </Route>
-
-            {/* Legacy dashboard route - redirects to /client/dashboard */}
-            <Route path="/dashboard" element={<Navigate to="/client/dashboard" replace />} />
-
-            {/* Auth Routes */}
-            <Route path="/auth">
-              <Route path="login" element={<Login />} />
-              <Route path="register" element={<Register />} />
-              <Route path="forgot-password" element={<ForgotPassword />} />
-            </Route>
-            
-            {/* Hidden Admin Login - not linked in UI */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-
-            {/* Therapist Routes */}
-            <Route path="/therapist/*" element={<TherapistLayout />}>
-              <Route path="dashboard" element={<TherapistDashboard />} />
-              <Route path="appointments" element={<TherapistAppointments />} />
-              <Route path="clients" element={<TherapistClients />} />
-              <Route path="messages" element={<TherapistMessages />} />
-              <Route path="documents" element={<TherapistDocuments />} />
-              <Route path="account" element={<TherapistAccount />} />
-              <Route path="settings" element={<TherapistSettings />} />
-              <Route path="reviews" element={<TherapistReviews />} />
-              <Route path="analytics" element={<TherapistAnalytics />} />
-              <Route path="session-notes" element={<SessionNotes />} />
-              <Route path="earnings" element={<TherapistEarnings />} />
-              <Route path="onboarding" element={<TherapistOnboarding />} />
-              <Route path="notifications" element={<TherapistNotifications />} />
-              <Route index element={<Navigate to="/therapist/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/therapist/dashboard" replace />} />
-            </Route>
-
-            {/* Friend Routes */}
-            <Route path="/friend/*" element={<FriendLayout />}>
-              <Route path="dashboard" element={<FriendDashboard />} />
-              <Route path="clients" element={<FriendClients />} />
-              <Route path="notes" element={<FriendNotes />} />
-              <Route path="messages" element={<TherapistMessages />} />
-              <Route path="notifications" element={<TherapistNotifications />} />
-              <Route path="account" element={<TherapistAccount />} />
-              <Route path="settings" element={<TherapistSettings />} />
-              <Route path="onboarding" element={<FriendOnboarding />} />
-              <Route index element={<Navigate to="/friend/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/friend/dashboard" replace />} />
-            </Route>
-
-            {/* Admin Routes */}
-            <Route path="/admin/*" element={<TherapistLayout />}>
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="therapists" element={<AdminTherapists />} />
-              <Route path="transactions" element={<AdminTransactions />} />
-              <Route path="appointments" element={<AdminAppointments />} />
-              <Route path="content" element={<AdminContent />} />
-              <Route path="feedback" element={<AdminFeedback />} />
-              <Route path="session-notes" element={<AdminSessionNotes />} />
-              <Route path="notifications" element={<AdminNotifications />} />
-              <Route path="friends" element={<AdminFriends />} />
-              <Route path="analytics" element={<AdminAnalytics />} />
-              <Route path="messages" element={<AdminMessages />} />
-              <Route index element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
       </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+    </QueryClientProvider>
+  </HelmetProvider>
 );
-
-// Add service worker registration at the end of the App component
-import { register } from './serviceWorker';
-
-// Register the service worker
-register({
-  onUpdate: (registration) => {
-    const waitingServiceWorker = registration.waiting;
-    
-    if (waitingServiceWorker) {
-      waitingServiceWorker.addEventListener("statechange", (event) => {
-        // @ts-ignore
-        if (event.target.state === "activated") {
-          window.location.reload();
-        }
-      });
-      waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
-    }
-  },
-});
 
 export default App;

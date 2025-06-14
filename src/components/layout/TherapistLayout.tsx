@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Calendar,
   Users,
@@ -21,13 +22,24 @@ import {
   FileDigit,
   DollarSign,
   ClipboardList,
-  Bell
+  Bell,
+  Mail,
+  Heart,
+  Edit3
 } from "lucide-react";
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { TherapistNotificationBell } from './TherapistNotificationBell';
+import { useTherapistNotifications } from '@/hooks/useTherapistNotifications';
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: any;
+  badge?: number;
+}
 
 const TherapistLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -35,10 +47,13 @@ const TherapistLayout = () => {
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState(true);
   
+  // Use the notification hook
+  const { unreadCount } = useTherapistNotifications();
+
   useEffect(() => {
     // Check if user is logged in and has the right role
     if (!user) {
@@ -83,15 +98,15 @@ const TherapistLayout = () => {
             console.error('Error checking onboarding status:', error);
           }
         }
-        setIsLoading(false);
+        setInitialLoading(false);
       };
       
       checkOnboardingStatus();
     }
   }, [user, profile, navigate, toast, location.pathname]);
 
-  // Return early if still loading
-  if (isLoading) {
+  // Return early if still on initial loading
+  if (initialLoading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
@@ -114,14 +129,19 @@ const TherapistLayout = () => {
   };
 
   // Define nav items based on user role
-  const therapistNavItems = [
+  const therapistNavItems: NavItem[] = [
     { path: '/therapist/dashboard', label: 'Dashboard', icon: BarChart3 },
     { path: '/therapist/appointments', label: 'Appointments', icon: Calendar },
     { path: '/therapist/clients', label: 'Clients', icon: Users },
     { path: '/therapist/messages', label: 'Messages', icon: MessageCircle },
     { path: '/therapist/session-notes', label: 'Session Notes', icon: FileText },
     { path: '/therapist/earnings', label: 'Earnings', icon: DollarSign },
-    { path: '/therapist/notifications', label: 'Notifications', icon: Bell },
+    { 
+      path: '/therapist/notifications', 
+      label: 'Notifications', 
+      icon: Bell,
+      badge: unreadCount > 0 ? unreadCount : undefined
+    },
     { path: '/therapist/onboarding', label: 'Complete Profile', icon: ClipboardList },
     { path: '/therapist/reviews', label: 'Reviews', icon: Star },
     { path: '/therapist/analytics', label: 'Analytics', icon: BarChart3 },
@@ -129,13 +149,17 @@ const TherapistLayout = () => {
     { path: '/therapist/settings', label: 'Settings', icon: Settings },
   ];
 
-  const adminNavItems = [
+  const adminNavItems: NavItem[] = [
     { path: '/admin/dashboard', label: 'Dashboard', icon: BarChart3 },
     { path: '/admin/users', label: 'Manage Users', icon: Users },
     { path: '/admin/therapists', label: 'Manage Therapists', icon: UserCog },
+    { path: '/admin/friends', label: 'Manage Friends', icon: Heart },
     { path: '/admin/appointments', label: 'Appointments', icon: Calendar },
     { path: '/admin/transactions', label: 'Transactions', icon: Wallet },
+    { path: '/admin/emails', label: 'Send Emails', icon: Mail },
+    { path: '/admin/feedback', label: 'Feedback', icon: MessageCircle },
     { path: '/admin/content', label: 'Content Management', icon: BookOpen },
+    { path: '/admin/blogs', label: 'Blog Management', icon: Edit3 },
     { path: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -178,18 +202,35 @@ const TherapistLayout = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center px-3 py-2 rounded-md transition-colors ${
+                className={`flex items-center px-3 py-2 rounded-md transition-colors relative ${
                   isActive(item.path)
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
                 } ${
-                  !onboardingComplete && item.path !== '/therapist/onboarding'
+                  !onboardingComplete && item.path !== '/therapist/onboarding' && !isAdmin
                     ? 'opacity-50 pointer-events-none'
                     : ''
                 }`}
               >
                 <item.icon className="h-5 w-5" />
-                {!isCollapsed && <span className="ml-3">{item.label}</span>}
+                {!isCollapsed && (
+                  <>
+                    <span className="ml-3">{item.label}</span>
+                    {item.badge && (
+                      <Badge variant="destructive" className="ml-auto text-xs">
+                        {item.badge}
+                      </Badge>
+                    )}
+                  </>
+                )}
+                {isCollapsed && item.badge && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center"
+                  >
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </Badge>
+                )}
               </Link>
             ))}
           </nav>
@@ -215,7 +256,7 @@ const TherapistLayout = () => {
           <TherapistNotificationBell />
         </div>
         
-        {!onboardingComplete && location.pathname !== '/therapist/onboarding' && (
+        {!onboardingComplete && location.pathname !== '/therapist/onboarding' && !isAdmin && (
           <div className="bg-yellow-100 p-4 text-yellow-800 text-center">
             Please complete your profile setup before accessing other features.
           </div>

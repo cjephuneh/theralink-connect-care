@@ -1,474 +1,335 @@
 
-import { useState, useEffect } from "react";
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
-} from '@/components/ui/table';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from '@/components/ui/card';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
-  Search, 
-  UserPlus, 
   Heart, 
-  Eye, 
-  ThumbsUp, 
-  ThumbsDown, 
-  RefreshCw,
-  Loader2
+  Users, 
+  Search, 
+  Filter, 
+  MoreVertical, 
+  Mail, 
+  Phone, 
+  MapPin,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  Clock,
+  MessageCircle
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from '@/integrations/supabase/client';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+interface Friend {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  profile_image_url?: string;
+  created_at: string;
+  friend_details?: {
+    experience_description?: string;
+    areas_of_experience?: string;
+    personal_story?: string;
+    communication_preferences?: string;
+  };
+}
 
 const AdminFriends = () => {
-  const [friends, setFriends] = useState<any[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [filteredFriends, setFilteredFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedFriend, setSelectedFriend] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState('all');
   const { toast } = useToast();
 
   useEffect(() => {
     fetchFriends();
   }, []);
 
+  useEffect(() => {
+    filterFriends();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [friends, searchTerm, statusFilter]);
+
   const fetchFriends = async () => {
-    setIsLoading(true);
     try {
-      // Get all users with role 'friend'
-      const { data: friendUsers, error: friendError } = await supabase
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'friend')
-        .order('created_at', { ascending: false });
-      
-      if (friendError) throw friendError;
-      
-      // Get friend details for these users
-      let friendsWithDetails = [];
-      
-      if (friendUsers && friendUsers.length > 0) {
-        const { data: friendDetails, error: detailsError } = await supabase
-          .from('friend_details')
-          .select('*')
-          .in('friend_id', friendUsers.map(user => user.id));
-        
-        if (detailsError) throw detailsError;
-        
-        // Combine user profile with friend details
-        friendsWithDetails = friendUsers.map(user => {
-          const details = friendDetails?.find(detail => detail.friend_id === user.id) || null;
-          return {
-            ...user,
-            details,
-            status: details ? 'Active' : 'Pending Profile'
-          };
-        });
-      }
-      
-      setFriends(friendsWithDetails);
-    } catch (error: any) {
+        .eq('role', 'friend');
+
+      if (profilesError) throw profilesError;
+
+      const { data: friendDetailsData, error: detailsError } = await supabase
+        .from('friend_details')
+        .select('*');
+
+      if (detailsError) throw detailsError;
+
+      // Combine profiles with friend details
+      const combinedData = profilesData.map(profile => ({
+        ...profile,
+        friend_details: friendDetailsData.find(detail => detail.friend_id === profile.id)
+      }));
+
+      setFriends(combinedData);
+    } catch (error) {
       console.error('Error fetching friends:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load friends',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to fetch friends data.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const viewFriendDetails = (friend: any) => {
-    setSelectedFriend(friend);
+  const filterFriends = () => {
+    let filtered = friends;
+
+    if (searchTerm) {
+      filtered = filtered.filter(friend =>
+        friend.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        friend.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        friend.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (statusFilter === 'active') {
+      filtered = filtered.filter(f => f.friend_details?.experience_description);
+    } else if (statusFilter === 'pending') {
+      filtered = filtered.filter(f => !f.friend_details?.experience_description);
+    }
+
+    setFilteredFriends(filtered);
   };
 
-  const approveFriend = async (id: string) => {
-    // This would typically update the status of a friend application
+  const getStatusBadge = (friend: Friend) => {
+    if (friend.friend_details?.experience_description) {
+      return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
+    }
+    return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending Setup</Badge>;
+  };
+
+  const sendMessage = async (friendId: string) => {
+    // Implement message sending logic
     toast({
-      title: 'Friend Approved',
-      description: 'Friend application has been approved',
+      title: "Message",
+      description: "Message functionality would be implemented here.",
     });
   };
 
-  const rejectFriend = async (id: string) => {
-    // This would typically update the status of a friend application
-    toast({
-      title: 'Friend Rejected',
-      description: 'Friend application has been rejected',
-    });
-  };
-
-  const filteredFriends = friends.filter(friend => 
-    friend.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    friend.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    friend.details?.areas_of_experience?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Friends Management</h1>
-      
-      <Tabs defaultValue="all">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <TabsList>
-            <TabsTrigger value="all">All Friends</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-          </TabsList>
-          
-          <div className="flex gap-4 items-center">
-            <div className="relative w-full max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search friends..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Button 
-              onClick={fetchFriends} 
-              variant="outline" 
-              size="icon" 
-              className="h-10 w-10"
-              disabled={isLoading}
-            >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            </Button>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="bg-thera-600 hover:bg-thera-700">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Add Friend
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Friend</DialogTitle>
-                  <DialogDescription>
-                    Friends need to be added through the user management section. Please use the User Management page to create a new user with the "friend" role.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button asChild variant="outline">
-                    <a href="/admin/users">Go to User Management</a>
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
+    <div className="container mx-auto py-8 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Friends Management</h1>
+          <p className="text-muted-foreground">Manage community friends and their profiles</p>
         </div>
-      
-        <TabsContent value="all">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>All Friends</CardTitle>
-              <CardDescription>
-                Manage peer support friends in the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Areas of Experience</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
-                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                          <p className="mt-2 text-gray-500">Loading friends...</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredFriends.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
-                          <p className="text-gray-500">No friends found</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredFriends.map((friend) => (
-                        <TableRow key={friend.id}>
-                          <TableCell className="font-medium">{friend.full_name || 'N/A'}</TableCell>
-                          <TableCell>{friend.email}</TableCell>
-                          <TableCell>{friend.details?.areas_of_experience?.split(',').slice(0, 2).join(', ') || 'Not specified'}</TableCell>
-                          <TableCell>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              friend.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {friend.status}
-                            </span>
-                          </TableCell>
-                          <TableCell>{new Date(friend.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => viewFriendDetails(friend)}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                              
-                              {friend.status === 'Pending Profile' && (
-                                <>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => approveFriend(friend.id)}
-                                    className="text-green-600"
-                                  >
-                                    <ThumbsUp className="h-4 w-4 mr-1" />
-                                    Approve
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => rejectFriend(friend.id)}
-                                    className="text-red-600"
-                                  >
-                                    <ThumbsDown className="h-4 w-4 mr-1" />
-                                    Reject
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="active">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Active Friends</CardTitle>
-              <CardDescription>
-                Friends who have completed their profiles
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Areas of Experience</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
-                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                          <p className="mt-2 text-gray-500">Loading friends...</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredFriends.filter(f => f.status === 'Active').length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
-                          <p className="text-gray-500">No active friends found</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredFriends
-                        .filter(f => f.status === 'Active')
-                        .map((friend) => (
-                          <TableRow key={friend.id}>
-                            <TableCell className="font-medium">{friend.full_name || 'N/A'}</TableCell>
-                            <TableCell>{friend.email}</TableCell>
-                            <TableCell>{friend.details?.areas_of_experience?.split(',').slice(0, 2).join(', ') || 'Not specified'}</TableCell>
-                            <TableCell>{new Date(friend.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => viewFriendDetails(friend)}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="pending">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle>Pending Friends</CardTitle>
-              <CardDescription>
-                Friends who have not completed their profiles
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                          <p className="mt-2 text-gray-500">Loading friends...</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredFriends.filter(f => f.status === 'Pending Profile').length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          <p className="text-gray-500">No pending friends found</p>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredFriends
-                        .filter(f => f.status === 'Pending Profile')
-                        .map((friend) => (
-                          <TableRow key={friend.id}>
-                            <TableCell className="font-medium">{friend.full_name || 'N/A'}</TableCell>
-                            <TableCell>{friend.email}</TableCell>
-                            <TableCell>{new Date(friend.created_at).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => approveFriend(friend.id)}
-                                  className="text-green-600"
-                                >
-                                  <ThumbsUp className="h-4 w-4 mr-1" />
-                                  Approve
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => rejectFriend(friend.id)}
-                                  className="text-red-600"
-                                >
-                                  <ThumbsDown className="h-4 w-4 mr-1" />
-                                  Reject
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Heart className="h-3 w-3" />
+            {friends.length} Total Friends
+          </Badge>
+        </div>
+      </div>
 
-      <Dialog open={!!selectedFriend} onOpenChange={() => setSelectedFriend(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Heart className="mr-2 h-5 w-5 text-thera-600" />
-              Friend Profile: {selectedFriend?.full_name || 'Unknown'}
-            </DialogTitle>
-            <DialogDescription>
-              <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                <div>
-                  <span className="font-medium">Email:</span> {selectedFriend?.email}
-                </div>
-                <div>
-                  <span className="font-medium">Joined:</span> {selectedFriend && new Date(selectedFriend.created_at).toLocaleDateString()}
-                </div>
-                <div>
-                  <span className="font-medium">Status:</span> {selectedFriend?.status}
-                </div>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedFriend?.details ? (
-            <div className="space-y-4 mt-4">
-              <div>
-                <h3 className="text-sm font-medium mb-1">Areas of Experience</h3>
-                <p className="text-sm bg-muted p-2 rounded">
-                  {selectedFriend.details.areas_of_experience || 'Not specified'}
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium mb-1">Personal Story</h3>
-                <p className="text-sm bg-muted p-2 rounded whitespace-pre-wrap">
-                  {selectedFriend.details.personal_story || 'Not provided'}
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium mb-1">Experience Description</h3>
-                <p className="text-sm bg-muted p-2 rounded whitespace-pre-wrap">
-                  {selectedFriend.details.experience_description || 'Not provided'}
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium mb-1">Communication Preferences</h3>
-                <p className="text-sm bg-muted p-2 rounded">
-                  {selectedFriend.details.communication_preferences || 'Not specified'}
-                </p>
-              </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Friends</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{friends.length}</div>
+            <p className="text-xs text-muted-foreground">Community volunteers</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Friends</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {friends.filter(f => f.friend_details?.experience_description).length}
             </div>
-          ) : (
-            <div className="text-center py-6">
-              <p className="text-muted-foreground">This friend has not completed their profile yet.</p>
+            <p className="text-xs text-muted-foreground">With complete profiles</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Setup</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {friends.filter(f => !f.friend_details?.experience_description).length}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            <p className="text-xs text-muted-foreground">Incomplete profiles</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">This Month</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {friends.filter(f => {
+                const createdDate = new Date(f.created_at);
+                const now = new Date();
+                return createdDate.getMonth() === now.getMonth() && 
+                       createdDate.getFullYear() === now.getFullYear();
+              }).length}
+            </div>
+            <p className="text-xs text-muted-foreground">New friends joined</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search friends by name, email, or location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Friends</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="pending">Pending Setup</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Friends Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Friends Directory</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {filteredFriends.map((friend) => (
+              <div key={friend.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
+                <div className="flex items-center space-x-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={friend.profile_image_url} />
+                    <AvatarFallback>
+                      {friend.full_name?.split(' ').map(n => n[0]).join('') || 'F'}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium">{friend.full_name || 'No name provided'}</h3>
+                      {getStatusBadge(friend)}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {friend.email}
+                      </div>
+                      {friend.phone && (
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {friend.phone}
+                        </div>
+                      )}
+                      {friend.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {friend.location}
+                        </div>
+                      )}
+                    </div>
+                    {friend.friend_details?.areas_of_experience && (
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Experience:</strong> {friend.friend_details.areas_of_experience}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => sendMessage(friend.id)}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-1" />
+                    Message
+                  </Button>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>View Profile</DropdownMenuItem>
+                      <DropdownMenuItem>Send Email</DropdownMenuItem>
+                      <DropdownMenuItem>View Activity</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-red-600">
+                        Deactivate Friend
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))}
+            
+            {filteredFriends.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchTerm ? 'No friends found matching your search.' : 'No friends registered yet.'}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,9 +1,9 @@
 
 import { Navigate } from "react-router-dom";
 
+// Redirect to the client overview page
 const ClientDashboard = () => {
-  // Redirect to the new client dashboard structure
-  return <Navigate to="/client/dashboard" replace />;
+  return <Navigate to="/client/overview" replace />;
 };
 
 export default ClientDashboard;

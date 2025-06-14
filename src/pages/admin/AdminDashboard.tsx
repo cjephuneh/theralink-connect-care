@@ -1,9 +1,29 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { AlertCircle, MessageSquare, Users, Calendar, DollarSign, FileText, BookOpen, UserCog, Heart, BarChart2, Star, CheckCircle, Clock, XCircle } from "lucide-react";
+import { 
+  AlertCircle, 
+  MessageSquare, 
+  Users, 
+  Calendar, 
+  DollarSign, 
+  FileText, 
+  BookOpen, 
+  UserCog, 
+  Heart, 
+  BarChart2, 
+  Star, 
+  CheckCircle, 
+  Clock, 
+  XCircle,
+  Mail,
+  TrendingUp,
+  Shield,
+  Zap,
+  Activity,
+  Edit3
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +46,11 @@ const AdminDashboard = () => {
     totalRevenue: 0,
     averageRating: 0,
     completedAppointments: 0,
-    cancelledAppointments: 0
+    cancelledAppointments: 0,
+    contactMessages: 0,
+    unreadContactMessages: 0,
+    blogs: 0,
+    publishedBlogs: 0
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -99,6 +123,11 @@ const AdminDashboard = () => {
           .select("*", { count: "exact", head: true })
           .eq("is_read", false);
 
+        // Count total contact messages
+        const { count: contactMessagesCount } = await supabase
+          .from("contact_messages")
+          .select("*", { count: "exact", head: true });
+
         // Count reviews and get average rating
         const { count: reviewsCount, data: reviewData } = await supabase
           .from("reviews")
@@ -127,6 +156,17 @@ const AdminDashboard = () => {
         const friendsWithDetailsIds = friendsWithDetails?.map(f => f.friend_id) || [];
         const pendingFriendsCount = allFriends?.filter(f => !friendsWithDetailsIds.includes(f.id)).length || 0;
 
+        // Count blogs
+        const { count: blogsCount } = await supabase
+          .from("blogs")
+          .select("*", { count: "exact", head: true });
+
+        // Count published blogs
+        const { count: publishedBlogsCount } = await supabase
+          .from("blogs")
+          .select("*", { count: "exact", head: true })
+          .eq("published", true);
+
         setStats({
           users: usersCount || 0,
           therapists: therapistsCount || 0,
@@ -143,7 +183,11 @@ const AdminDashboard = () => {
           totalRevenue: totalRevenue,
           averageRating: averageRating,
           completedAppointments: completedAppointmentsCount || 0,
-          cancelledAppointments: cancelledAppointmentsCount || 0
+          cancelledAppointments: cancelledAppointmentsCount || 0,
+          contactMessages: contactMessagesCount || 0,
+          unreadContactMessages: unreadMessagesCount || 0,
+          blogs: blogsCount || 0,
+          publishedBlogs: publishedBlogsCount || 0
         });
       } catch (error) {
         console.error("Error fetching admin stats:", error);
@@ -162,38 +206,50 @@ const AdminDashboard = () => {
   const pendingApprovals = stats.pendingTherapists + stats.pendingFriends;
 
   return (
-    <div className="container max-w-7xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-      <p className="text-muted-foreground mb-6">
-        Welcome back, {profile?.full_name || "Administrator"} - Complete system control panel
-      </p>
+    <div className="container max-w-7xl mx-auto p-6 space-y-8">
+      {/* Header Section */}
+      <div className="text-center space-y-4">
+        <div className="flex items-center justify-center gap-3">
+          <div className="h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <Shield className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Admin Control Center
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Welcome back, {profile?.full_name || "Administrator"} - Complete platform oversight
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Alert for pending approvals */}
-      {(pendingApprovals > 0 || stats.unreadFeedback > 0 || stats.unreadMessages > 0) && (
-        <Card className="mb-6 border-amber-500">
+      {(pendingApprovals > 0 || stats.unreadFeedback > 0 || stats.unreadContactMessages > 0) && (
+        <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
           <CardContent className="pt-6">
             <div className="flex items-start gap-4">
-              <div className="p-2 bg-amber-500/20 rounded-full">
-                <AlertCircle className="h-6 w-6 text-amber-500" />
+              <div className="p-3 bg-amber-500/20 rounded-full">
+                <AlertCircle className="h-6 w-6 text-amber-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-medium">Attention Required</h3>
-                <div className="space-y-1 text-sm text-muted-foreground">
+                <h3 className="font-semibold text-amber-800">Attention Required</h3>
+                <div className="space-y-1 text-sm text-amber-700">
                   {pendingApprovals > 0 && (
-                    <p>{pendingApprovals} pending approvals ({stats.pendingTherapists} therapists, {stats.pendingFriends} friends)</p>
+                    <p>📋 {pendingApprovals} pending approvals ({stats.pendingTherapists} therapists, {stats.pendingFriends} friends)</p>
                   )}
-                  {(stats.unreadFeedback > 0 || stats.unreadMessages > 0) && (
-                    <p>{stats.unreadFeedback + stats.unreadMessages} unread messages</p>
+                  {(stats.unreadFeedback > 0 || stats.unreadContactMessages > 0) && (
+                    <p>📧 {stats.unreadFeedback + stats.unreadContactMessages} unread messages</p>
                   )}
                 </div>
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-3 mt-3">
                   {pendingApprovals > 0 && (
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="outline" size="sm" className="border-amber-300 hover:bg-amber-100">
                       <Link to="/admin/therapists">Review Approvals</Link>
                     </Button>
                   )}
-                  {(stats.unreadFeedback > 0 || stats.unreadMessages > 0) && (
-                    <Button asChild variant="outline" size="sm">
+                  {(stats.unreadFeedback > 0 || stats.unreadContactMessages > 0) && (
+                    <Button asChild variant="outline" size="sm" className="border-amber-300 hover:bg-amber-100">
                       <Link to="/admin/feedback">View Messages</Link>
                     </Button>
                   )}
@@ -205,158 +261,158 @@ const AdminDashboard = () => {
       )}
 
       {/* Main Statistics Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-blue-700">Total Users</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Users className="h-4 w-4 text-muted-foreground mr-2" />
-                <p className="text-2xl font-bold">{stats.users}</p>
+                <Users className="h-5 w-5 text-blue-600 mr-3" />
+                <p className="text-3xl font-bold text-blue-800">{stats.users}</p>
               </div>
-              <div className="text-xs text-muted-foreground">
-                <div>{stats.clients} clients</div>
-                <div>{stats.therapists} therapists</div>
-                <div>{stats.friends} friends</div>
+              <div className="text-xs text-blue-600 space-y-1">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <span>{stats.clients} clients</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span>{stats.therapists} therapists</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <span>{stats.friends} friends</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Appointments</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-700">Appointments</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
-                <p className="text-2xl font-bold">{stats.appointments}</p>
+                <Calendar className="h-5 w-5 text-green-600 mr-3" />
+                <p className="text-3xl font-bold text-green-800">{stats.appointments}</p>
               </div>
               <div className="text-xs space-y-1">
                 <div className="flex items-center gap-1">
                   <CheckCircle className="h-3 w-3 text-green-500" />
-                  <span>{stats.completedAppointments} completed</span>
+                  <span className="text-green-600">{stats.completedAppointments} completed</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <XCircle className="h-3 w-3 text-red-500" />
-                  <span>{stats.cancelledAppointments} cancelled</span>
+                  <span className="text-red-600">{stats.cancelledAppointments} cancelled</span>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-purple-700">Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <DollarSign className="h-4 w-4 text-muted-foreground mr-2" />
-                <p className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</p>
+                <DollarSign className="h-5 w-5 text-purple-600 mr-3" />
+                <p className="text-3xl font-bold text-purple-800">₦{stats.totalRevenue.toLocaleString()}</p>
               </div>
-              <div className="text-xs text-muted-foreground">
-                <div>{stats.transactions} transactions</div>
+              <div className="text-xs text-purple-600">
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>{stats.transactions} transactions</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Reviews & Rating</CardTitle>
+            <CardTitle className="text-sm font-medium text-orange-700">Reviews & Rating</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Star className="h-4 w-4 text-muted-foreground mr-2" />
-                <p className="text-2xl font-bold">{stats.averageRating.toFixed(1)}</p>
+                <Star className="h-5 w-5 text-orange-600 mr-3" />
+                <p className="text-3xl font-bold text-orange-800">{stats.averageRating.toFixed(1)}</p>
               </div>
-              <div className="text-xs text-muted-foreground">
-                <div>{stats.reviews} reviews</div>
+              <div className="text-xs text-orange-600">
+                <div className="flex items-center gap-1">
+                  <Activity className="h-3 w-3" />
+                  <span>{stats.reviews} reviews</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Secondary Statistics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card>
+      {/* Additional Stats Row */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+            <CardTitle className="text-sm font-medium text-indigo-700">Contact Messages</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Clock className="h-4 w-4 text-muted-foreground mr-2" />
-                <p className="text-2xl font-bold">{pendingApprovals}</p>
+                <Mail className="h-5 w-5 text-indigo-600 mr-3" />
+                <p className="text-3xl font-bold text-indigo-800">{stats.contactMessages}</p>
               </div>
-              {pendingApprovals > 0 && (
-                <Badge variant="destructive">{pendingApprovals}</Badge>
-              )}
+              <div className="text-xs text-indigo-600">
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>{stats.unreadContactMessages} unread</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
-        
-        <Card>
+
+        <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Session Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <FileText className="h-4 w-4 text-muted-foreground mr-2" />
-              <p className="text-2xl font-bold">{stats.sessionNotes}</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
+            <CardTitle className="text-sm font-medium text-pink-700">Blog Posts</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <MessageSquare className="h-4 w-4 text-muted-foreground mr-2" />
-                <p className="text-2xl font-bold">{stats.unreadFeedback + stats.unreadMessages}</p>
+                <Edit3 className="h-5 w-5 text-pink-600 mr-3" />
+                <p className="text-3xl font-bold text-pink-800">{stats.blogs}</p>
               </div>
-              {(stats.unreadFeedback + stats.unreadMessages) > 0 && (
-                <Badge variant="outline">{stats.unreadFeedback + stats.unreadMessages}</Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">System Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <div className="h-2.5 w-2.5 rounded-full bg-green-500 mr-2"></div>
-              <p className="text-sm font-medium">All Systems Operational</p>
+              <div className="text-xs text-pink-600">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  <span>{stats.publishedBlogs} published</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
-      
-      {/* Management Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        <Card>
+
+      {/* Quick Action Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500">
           <CardHeader>
-            <CardTitle>User Management</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-500" />
+              User Management
+            </CardTitle>
             <CardDescription>Manage all platform users and approvals</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center relative">
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center relative hover:bg-blue-50">
               <Link to="/admin/therapists">
                 <UserCog className="h-5 w-5 mb-1" />
-                <span>Therapists</span>
+                <span className="text-xs">Therapists</span>
                 {stats.pendingTherapists > 0 && (
                   <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
                     {stats.pendingTherapists}
@@ -364,16 +420,16 @@ const AdminDashboard = () => {
                 )}
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-blue-50">
               <Link to="/admin/users">
                 <Users className="h-5 w-5 mb-1" />
-                <span>All Users</span>
+                <span className="text-xs">All Users</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center relative">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center relative hover:bg-red-50">
               <Link to="/admin/friends">
                 <Heart className="h-5 w-5 mb-1" />
-                <span>Friends</span>
+                <span className="text-xs">Friends</span>
                 {stats.pendingFriends > 0 && (
                   <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
                     {stats.pendingFriends}
@@ -381,106 +437,161 @@ const AdminDashboard = () => {
                 )}
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
-              <Link to="/admin/notifications">
-                <AlertCircle className="h-5 w-5 mb-1" />
-                <span>Notifications</span>
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-yellow-50">
+              <Link to="/admin/emails">
+                <Mail className="h-5 w-5 mb-1" />
+                <span className="text-xs">Send Emails</span>
               </Link>
             </Button>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500">
           <CardHeader>
-            <CardTitle>Appointment & Session Management</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-green-500" />
+              Session Management
+            </CardTitle>
             <CardDescription>Monitor appointments and session data</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-green-50">
               <Link to="/admin/appointments">
                 <Calendar className="h-5 w-5 mb-1" />
-                <span>Appointments</span>
+                <span className="text-xs">Appointments</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-green-50">
               <Link to="/admin/session-notes">
                 <FileText className="h-5 w-5 mb-1" />
-                <span>Session Notes</span>
+                <span className="text-xs">Session Notes</span>
               </Link>
             </Button>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-purple-500">
           <CardHeader>
-            <CardTitle>Financial & Analytics</CardTitle>
-            <CardDescription>Monitor revenue and platform analytics</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart2 className="h-5 w-5 text-purple-500" />
+              Analytics & Finance
+            </CardTitle>
+            <CardDescription>Revenue tracking and platform insights</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-purple-50">
               <Link to="/admin/transactions">
                 <DollarSign className="h-5 w-5 mb-1" />
-                <span>Transactions</span>
+                <span className="text-xs">Transactions</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-purple-50">
               <Link to="/admin/analytics">
                 <BarChart2 className="h-5 w-5 mb-1" />
-                <span>Analytics</span>
+                <span className="text-xs">Analytics</span>
               </Link>
             </Button>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-orange-500">
           <CardHeader>
-            <CardTitle>Communication & Feedback</CardTitle>
-            <CardDescription>User feedback and platform communication</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-orange-500" />
+              Communication Hub
+            </CardTitle>
+            <CardDescription>Messages, feedback and platform communication</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center relative hover:bg-orange-50">
               <Link to="/admin/feedback">
                 <MessageSquare className="h-5 w-5 mb-1" />
-                <span>
-                  Feedback
-                  {(stats.unreadFeedback + stats.unreadMessages > 0) && 
-                    <Badge variant="destructive" className="ml-1 h-4 w-4 rounded-full p-0 text-xs flex items-center justify-center">
-                      {stats.unreadFeedback + stats.unreadMessages}
-                    </Badge>
-                  }
-                </span>
+                <span className="text-xs">Feedback</span>
+                {(stats.unreadFeedback + stats.unreadContactMessages > 0) && 
+                  <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
+                    {stats.unreadFeedback + stats.unreadContactMessages}
+                  </Badge>
+                }
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-orange-50">
               <Link to="/admin/messages">
-                <MessageSquare className="h-5 w-5 mb-1" />
-                <span>Messages</span>
+                <Mail className="h-5 w-5 mb-1" />
+                <span className="text-xs">Messages</span>
               </Link>
             </Button>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-teal-500">
           <CardHeader>
-            <CardTitle>Content & System</CardTitle>
-            <CardDescription>Manage content and system settings</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-teal-500" />
+              Content & System
+            </CardTitle>
+            <CardDescription>Platform content and configuration</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-teal-50">
               <Link to="/admin/content">
                 <BookOpen className="h-5 w-5 mb-1" />
-                <span>Content</span>
+                <span className="text-xs">Content</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-20 flex flex-col items-center justify-center">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-teal-50">
               <Link to="/admin/settings">
                 <UserCog className="h-5 w-5 mb-1" />
-                <span>Settings</span>
+                <span className="text-xs">Settings</span>
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-pink-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Edit3 className="h-5 w-5 text-pink-500" />
+              Blog Management
+            </CardTitle>
+            <CardDescription>Create and manage blog posts</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-pink-50">
+              <Link to="/admin/blogs">
+                <Edit3 className="h-5 w-5 mb-1" />
+                <span className="text-xs">Manage Blogs</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-pink-50">
+              <Link to="/admin/blogs/new">
+                <FileText className="h-5 w-5 mb-1" />
+                <span className="text-xs">New Post</span>
               </Link>
             </Button>
           </CardContent>
         </Card>
       </div>
+
+      {/* System Status Footer */}
+      <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="font-medium text-green-800">System Status: Online</span>
+              </div>
+              <Badge variant="outline" className="text-green-700 border-green-300">
+                <Zap className="h-3 w-3 mr-1" />
+                All Services Operational
+              </Badge>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Last updated: {new Date().toLocaleTimeString()}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

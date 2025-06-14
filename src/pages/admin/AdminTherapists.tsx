@@ -1,1054 +1,529 @@
 import { useState, useEffect } from 'react';
-import { 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableHead, 
-  TableCell 
-} from '@/components/ui/table';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription,
-} from '@/components/ui/card';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
+  UserCog, 
+  Users, 
   Search, 
-  RefreshCw, 
-  FileEdit, 
-  Loader2,
+  MoreVertical, 
+  Mail, 
+  Phone, 
+  MapPin,
+  Calendar,
   CheckCircle,
   XCircle,
-  Shield,
-  FileText,
-  Eye,
-  AlertCircle,
-  User,
-  Mail,
-  Calendar,
-  GraduationCap,
-  Award,
-  Languages,
-  CreditCard
+  Clock,
+  MessageCircle,
+  DollarSign,
+  Star,
+  Eye
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { createNotification } from '@/utils/notifications';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from '@/integrations/supabase/client';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { TherapistDetailsModal } from '@/components/admin/TherapistDetailsModal';
+import { TherapistAppointmentsModal } from '@/components/admin/TherapistAppointmentsModal';
+import { TherapistEarningsModal } from '@/components/admin/TherapistEarningsModal';
+import { SendEmailModal } from '@/components/admin/SendEmailModal';
 
-const therapistFormSchema = z.object({
-  bio: z.string().min(10, { message: "Bio must be at least 10 characters" }),
-  specialization: z.string().min(3, { message: "Specialization is required" }),
-  years_experience: z.coerce.number().min(0),
-  hourly_rate: z.coerce.number().min(10, { message: "Hourly rate must be at least 10" }),
-});
+interface Therapist {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  profile_image_url?: string;
+  created_at: string;
+  bio?: string;
+  specialization?: string;
+  years_experience?: number;
+  hourly_rate?: number;
+  rating?: number;
+  preferred_currency?: string;
+  therapist_details?: {
+    license_number?: string;
+    license_type?: string;
+    therapy_approaches?: string;
+    languages?: string;
+    application_status?: string;
+    is_verified?: boolean;
+    preferred_currency?: string;
+  };
+}
 
 const AdminTherapists = () => {
-  const [therapists, setTherapists] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [friends, setFriends] = useState<any[]>([]);
+  const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [filteredTherapists, setFilteredTherapists] = useState<Therapist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
-  const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false);
-  const [userDetails, setUserDetails] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAppointmentsModalOpen, setIsAppointmentsModalOpen] = useState(false);
+  const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const { toast } = useToast();
-  const { user, profile } = useAuth();
-  const navigate = useNavigate();
-
-  const form = useForm<z.infer<typeof therapistFormSchema>>({
-    resolver: zodResolver(therapistFormSchema),
-    defaultValues: {
-      bio: "",
-      specialization: "",
-      years_experience: 0,
-      hourly_rate: 50,
-    },
-  });
 
   useEffect(() => {
-    if (profile && profile.role !== 'admin') {
-      toast({
-        title: "Access Denied",
-        description: "You do not have permission to access this page.",
-        variant: "destructive",
-      });
-      navigate('/');
-      return;
-    }
-    fetchAllData();
-  }, [profile, navigate, toast]);
+    fetchTherapists();
+  }, []);
 
   useEffect(() => {
-    if (selectedUser && selectedUser.role === 'therapist') {
-      form.reset({
-        bio: selectedUser.bio || "",
-        specialization: selectedUser.specialization || "",
-        years_experience: selectedUser.years_experience || 0,
-        hourly_rate: selectedUser.hourly_rate || 50,
-      });
-    }
-  }, [selectedUser, form]);
+    filterTherapists();
+  }, [therapists, searchTerm, statusFilter]);
 
-  const fetchAllData = async () => {
-    setIsLoading(true);
+  const fetchTherapists = async () => {
     try {
-      console.log('Fetching all data...');
-      
-      // Fetch therapists with their profiles - fix the query structure
-      const { data: therapistProfiles, error: therapistError } = await supabase
+      // Fetch therapist profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          full_name, 
-          email, 
-          profile_image_url, 
-          role, 
-          created_at
-        `)
+        .select('*')
         .eq('role', 'therapist');
-      
-      if (therapistError) {
-        console.error('Error fetching therapist profiles:', therapistError);
-        throw therapistError;
-      }
 
-      console.log('Therapist profiles fetched:', therapistProfiles);
+      if (profilesError) throw profilesError;
 
-      // Fetch therapist data separately
-      const { data: therapistData, error: therapistDataError } = await supabase
+      // Fetch therapist data
+      const { data: therapistData, error: therapistError } = await supabase
         .from('therapists')
         .select('*');
-      
-      if (therapistDataError) {
-        console.error('Error fetching therapist data:', therapistDataError);
-        throw therapistDataError;
-      }
 
-      console.log('Therapist data fetched:', therapistData);
+      if (therapistError) throw therapistError;
 
-      // Get therapist details for verification info
-      const therapistIds = therapistProfiles?.map(t => t.id) || [];
-      let therapistDetailsData = [];
-      
-      if (therapistIds.length > 0) {
-        const { data: detailsData, error: detailsError } = await supabase
-          .from('therapist_details')
-          .select('*')
-          .in('therapist_id', therapistIds);
-        
-        if (detailsError) {
-          console.error('Error fetching therapist details:', detailsError);
-          throw detailsError;
-        }
-        therapistDetailsData = detailsData || [];
-      }
+      // Fetch therapist details
+      const { data: therapistDetailsData, error: detailsError } = await supabase
+        .from('therapist_details')
+        .select('*');
 
-      console.log('Therapist details fetched:', therapistDetailsData);
+      if (detailsError) throw detailsError;
 
-      // Combine all therapist data
-      const therapistsWithDetails = therapistProfiles?.map(profile => {
-        const therapistInfo = therapistData?.find(t => t.id === profile.id);
-        const therapistDetail = therapistDetailsData.find(d => d.therapist_id === profile.id);
+      // Combine all data
+      const combinedData = profilesData.map(profile => {
+        const therapistInfo = therapistData.find(t => t.id === profile.id);
+        const detailsInfo = therapistDetailsData.find(d => d.therapist_id === profile.id);
         
         return {
           ...profile,
           ...therapistInfo,
-          role: 'therapist',
-          therapist_details: therapistDetail
+          therapist_details: detailsInfo
         };
-      }) || [];
+      });
 
-      console.log('Combined therapist data:', therapistsWithDetails);
-      setTherapists(therapistsWithDetails);
-
-      // Fetch clients
-      const { data: clientData, error: clientError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'client')
-        .order('created_at', { ascending: false });
-      
-      if (clientError) {
-        console.error('Error fetching clients:', clientError);
-        throw clientError;
-      }
-      setClients(clientData || []);
-
-      // Fetch friends with their details
-      const { data: friendUsers, error: friendError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'friend')
-        .order('created_at', { ascending: false });
-      
-      if (friendError) {
-        console.error('Error fetching friends:', friendError);
-        throw friendError;
-      }
-      
-      let friendsWithDetails = [];
-      if (friendUsers && friendUsers.length > 0) {
-        const { data: friendDetails, error: detailsError } = await supabase
-          .from('friend_details')
-          .select('*')
-          .in('friend_id', friendUsers.map(user => user.id));
-        
-        if (detailsError) {
-          console.error('Error fetching friend details:', detailsError);
-          throw detailsError;
-        }
-        
-        friendsWithDetails = friendUsers.map(user => {
-          const details = friendDetails?.find(detail => detail.friend_id === user.id) || null;
-          return {
-            ...user,
-            details,
-            status: details ? 'Active' : 'Pending Profile'
-          };
-        });
-      }
-      
-      console.log('Friends with details:', friendsWithDetails);
-      setFriends(friendsWithDetails);
-
+      setTherapists(combinedData);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching therapists:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load data',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to fetch therapists data.",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleViewDetails = async (user: any) => {
-    setSelectedUser(user);
-    
-    if (user.role === 'therapist') {
-      const details = user.therapist_details;
-      setUserDetails(details);
-    } else if (user.role === 'friend') {
-      setUserDetails(user.details);
-    } else {
-      setUserDetails(null);
+  const filterTherapists = () => {
+    let filtered = therapists;
+
+    if (searchTerm) {
+      filtered = filtered.filter(therapist =>
+        therapist.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        therapist.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        therapist.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        therapist.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
-    
-    setViewDetailsDialogOpen(true);
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(therapist => {
+        switch (statusFilter) {
+          case 'verified':
+            return therapist.therapist_details?.is_verified;
+          case 'pending':
+            return therapist.therapist_details?.application_status === 'pending';
+          case 'active':
+            return therapist.therapist_details?.is_verified && therapist.therapist_details?.license_number;
+          default:
+            return true;
+        }
+      });
+    }
+
+    setFilteredTherapists(filtered);
   };
 
-  const handleVerifyTherapist = async (therapist: any) => {
-    setSelectedUser(therapist);
-    setUserDetails(therapist.therapist_details);
-    setVerifyDialogOpen(true);
+  const getStatusBadge = (therapist: Therapist) => {
+    if (therapist.therapist_details?.is_verified) {
+      return <Badge variant="default" className="bg-green-100 text-green-800">Verified</Badge>;
+    } else if (therapist.therapist_details?.application_status === 'pending') {
+      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+    } else {
+      return <Badge variant="outline" className="bg-red-100 text-red-800">Unverified</Badge>;
+    }
   };
 
-  const handleVerificationAction = async (status: 'approved' | 'rejected') => {
+  const updateTherapistStatus = async (therapistId: string, isVerified: boolean) => {
     try {
       const { error } = await supabase
         .from('therapist_details')
-        .update({ application_status: status })
-        .eq('therapist_id', selectedUser.id);
-        
-      if (error) throw error;
-      
-      await createNotification({
-        user_id: selectedUser.id,
-        title: status === 'approved' ? 'Your account is verified!' : 'Account verification update',
-        message: status === 'approved' 
-          ? 'Congratulations! Your therapist account has been verified. You can now start accepting clients.'
-          : 'Your account verification was not approved. Please check your details and resubmit.',
-        type: status === 'approved' ? 'verification_approved' : 'verification_rejected',
-        action_url: '/therapist/account'
-      });
-      
-      toast({
-        title: status === 'approved' ? 'Therapist Verified' : 'Verification Rejected',
-        description: `The therapist has been successfully ${status === 'approved' ? 'verified' : 'rejected'}.`,
-      });
-      
-      setVerifyDialogOpen(false);
-      fetchAllData();
-    } catch (error: any) {
-      console.error('Error updating verification status:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update verification status',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleEditTherapist = (therapist: any) => {
-    setSelectedUser(therapist);
-    setEditDialogOpen(true);
-  };
-
-  const updateTherapist = async (values: z.infer<typeof therapistFormSchema>) => {
-    try {
-      const { error } = await supabase
-        .from('therapists')
-        .update({
-          bio: values.bio,
-          specialization: values.specialization,
-          years_experience: values.years_experience,
-          hourly_rate: values.hourly_rate,
+        .update({ 
+          is_verified: isVerified,
+          application_status: isVerified ? 'approved' : 'rejected'
         })
-        .eq('id', selectedUser.id);
-      
+        .eq('therapist_id', therapistId);
+
       if (error) throw error;
-      
+
       toast({
-        title: 'Therapist Updated',
-        description: 'Therapist profile has been successfully updated',
+        title: "Success",
+        description: `Therapist ${isVerified ? 'verified' : 'unverified'} successfully.`,
       });
-      
-      setEditDialogOpen(false);
-      fetchAllData();
-    } catch (error: any) {
-      console.error('Error updating therapist:', error);
+
+      fetchTherapists();
+    } catch (error) {
+      console.error('Error updating therapist status:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to update therapist profile',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to update therapist status.",
+        variant: "destructive",
       });
     }
   };
 
-  const getInitials = (name: string) => {
-    if (!name) return 'NA';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const openTherapistDetails = (therapist: Therapist) => {
+    setSelectedTherapist(therapist);
+    setIsModalOpen(true);
   };
 
-  const getStatusBadge = (status: string | null) => {
-    if (!status) return <Badge variant="outline">Pending</Badge>;
-    
-    switch (status) {
-      case 'approved':
-        return <Badge className="bg-green-500">Verified</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive">Rejected</Badge>;
-      case 'pending':
-      default:
-        return <Badge variant="outline">Pending</Badge>;
-    }
+  const openAppointments = (therapist: Therapist) => {
+    setSelectedTherapist(therapist);
+    setIsAppointmentsModalOpen(true);
   };
 
-  const filteredTherapists = therapists.filter(therapist => 
-    therapist.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    therapist.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    therapist.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const openEarnings = (therapist: Therapist) => {
+    setSelectedTherapist(therapist);
+    setIsEarningsModalOpen(true);
+  };
 
-  const filteredClients = clients.filter(client => 
-    client.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const openSendEmail = (therapist: Therapist) => {
+    setSelectedTherapist(therapist);
+    setIsEmailModalOpen(true);
+  };
 
-  const filteredFriends = friends.filter(friend => 
-    friend.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    friend.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    friend.details?.areas_of_experience?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedTherapist(null);
+  };
 
-  const pendingTherapists = therapists.filter(t => 
-    !t.therapist_details?.application_status || t.therapist_details?.application_status === 'pending'
-  );
+  const closeAppointmentsModal = () => {
+    setIsAppointmentsModalOpen(false);
+    setSelectedTherapist(null);
+  };
 
-  const pendingFriends = friends.filter(f => f.status === 'Pending Profile');
+  const closeEarningsModal = () => {
+    setIsEarningsModalOpen(false);
+    setSelectedTherapist(null);
+  };
 
-  const UserTable = ({ users, type }: { users: any[], type: string }) => (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>User</TableHead>
-            {type === 'therapists' && <TableHead>Specialization</TableHead>}
-            {type === 'therapists' && <TableHead>Experience</TableHead>}
-            {type === 'therapists' && <TableHead>Rate</TableHead>}
-            {type === 'therapists' && <TableHead>Status</TableHead>}
-            {type === 'friends' && <TableHead>Areas of Experience</TableHead>}
-            {type === 'friends' && <TableHead>Status</TableHead>}
-            <TableHead>Joined</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={type === 'clients' ? 4 : 8} className="h-24 text-center">
-                <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400" />
-                <p className="mt-2 text-gray-500">Loading {type}...</p>
-              </TableCell>
-            </TableRow>
-          ) : users.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={type === 'clients' ? 4 : 8} className="h-24 text-center">
-                <p className="text-gray-500">No {type} found</p>
-              </TableCell>
-            </TableRow>
-          ) : (
-            users.map((user) => (
-              <TableRow key={user.id} className="hover:bg-muted/50">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.profile_image_url} />
-                      <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">{user.full_name}</div>
-                      <div className="text-sm text-muted-foreground">{user.email}</div>
-                    </div>
-                  </div>
-                </TableCell>
-                {type === 'therapists' && (
-                  <>
-                    <TableCell>{user.specialization || 'Not specified'}</TableCell>
-                    <TableCell>{user.years_experience ? `${user.years_experience} years` : 'N/A'}</TableCell>
-                    <TableCell>{user.hourly_rate ? `Ksh${user.hourly_rate}` : 'N/A'}</TableCell>
-                    <TableCell>{getStatusBadge(user.therapist_details?.application_status)}</TableCell>
-                  </>
-                )}
-                {type === 'friends' && (
-                  <>
-                    <TableCell>{user.details?.areas_of_experience?.split(',').slice(0, 2).join(', ') || 'Not specified'}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.status === 'Active' ? 'default' : 'outline'}>
-                        {user.status}
-                      </Badge>
-                    </TableCell>
-                  </>
-                )}
-                <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewDetails(user)}
-                      className="flex items-center gap-1"
-                    >
-                      <Eye className="h-4 w-4" />
-                      View
-                    </Button>
-                    {type === 'therapists' && (
-                      <>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleVerifyTherapist(user)}
-                          className="flex items-center gap-1"
-                        >
-                          <Shield className="h-4 w-4" />
-                          Verify
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleEditTherapist(user)}
-                        >
-                          <FileEdit className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  );
+  const closeEmailModal = () => {
+    setIsEmailModalOpen(false);
+    setSelectedTherapist(null);
+  };
+
+  const handleStatusUpdate = () => {
+    fetchTherapists();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Manage therapists, clients, and friends</p>
+          <h1 className="text-3xl font-bold">Therapist Management</h1>
+          <p className="text-muted-foreground">Manage therapists, verify credentials, and monitor activity</p>
         </div>
-        <Button 
-          onClick={fetchAllData} 
-          variant="outline" 
-          className="flex gap-2"
-          disabled={isLoading}
-        >
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          Refresh All
-        </Button>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <UserCog className="h-3 w-3" />
+            {therapists.length} Total Therapists
+          </Badge>
+        </div>
       </div>
 
-      {/* Pending Approvals Alert */}
-      {(pendingTherapists.length > 0 || pendingFriends.length > 0) && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-amber-800">
-              <AlertCircle className="h-5 w-5" />
-              <span className="font-medium">
-                Pending Approvals: {pendingTherapists.length} therapist(s) and {pendingFriends.length} friend(s) awaiting verification
-              </span>
-            </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Therapists</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{therapists.length}</div>
+            <p className="text-xs text-muted-foreground">Registered therapists</p>
           </CardContent>
         </Card>
-      )}
 
-      <div className="relative w-full max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Search users..."
-          className="pl-10"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Verified</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {therapists.filter(t => t.therapist_details?.is_verified).length}
+            </div>
+            <p className="text-xs text-muted-foreground">Active & verified</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {therapists.filter(t => t.therapist_details?.application_status === 'pending').length}
+            </div>
+            <p className="text-xs text-muted-foreground">Awaiting verification</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">This Month</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {therapists.filter(t => {
+                const createdDate = new Date(t.created_at);
+                const now = new Date();
+                return createdDate.getMonth() === now.getMonth() && 
+                       createdDate.getFullYear() === now.getFullYear();
+              }).length}
+            </div>
+            <p className="text-xs text-muted-foreground">New applications</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Tabs defaultValue="therapists" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="therapists" className="relative">
-            Therapists ({therapists.length})
-            {pendingTherapists.length > 0 && (
-              <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
-                {pendingTherapists.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="clients">Clients ({clients.length})</TabsTrigger>
-          <TabsTrigger value="friends" className="relative">
-            Friends ({friends.length})
-            {pendingFriends.length > 0 && (
-              <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
-                {pendingFriends.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* Filters and Search */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search therapists by name, email, specialization..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Therapists</SelectItem>
+            <SelectItem value="verified">Verified</SelectItem>
+            <SelectItem value="pending">Pending Review</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        <TabsContent value="therapists">
-          <Card>
-            <CardHeader>
-              <CardTitle>Therapists</CardTitle>
-              <CardDescription>Manage therapist profiles and verification status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <UserTable users={filteredTherapists} type="therapists" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="clients">
-          <Card>
-            <CardHeader>
-              <CardTitle>Clients</CardTitle>
-              <CardDescription>Manage client accounts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <UserTable users={filteredClients} type="clients" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="friends">
-          <Card>
-            <CardHeader>
-              <CardTitle>Friends</CardTitle>
-              <CardDescription>Manage peer support friends</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <UserTable users={filteredFriends} type="friends" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* View User Details Dialog */}
-      <Dialog open={viewDetailsDialogOpen} onOpenChange={setViewDetailsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              User Details
-            </DialogTitle>
-            <DialogDescription>
-              View complete user information and profile details.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedUser && (
-            <div className="space-y-6">
-              {/* User Basic Info */}
-              <div className="flex items-center gap-4 border-b pb-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={selectedUser.profile_image_url} />
-                  <AvatarFallback className="text-lg">{getInitials(selectedUser.full_name)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold">{selectedUser.full_name}</h3>
-                  <div className="flex items-center gap-2 text-muted-foreground mt-1">
-                    <Mail className="h-4 w-4" />
-                    <span>{selectedUser.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground mt-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>Joined {new Date(selectedUser.created_at).toLocaleDateString()}</span>
-                  </div>
-                  <Badge className="mt-2" variant="secondary">
-                    {selectedUser.role}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Role-specific Details */}
-              {selectedUser.role === 'therapist' && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium">Professional Information</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Specialization</label>
-                      <p>{selectedUser.specialization || 'Not specified'}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Experience</label>
-                      <p>{selectedUser.years_experience ? `${selectedUser.years_experience} years` : 'Not specified'}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Hourly Rate</label>
-                      <p>{selectedUser.hourly_rate ? `Ksh${selectedUser.hourly_rate}` : 'Not set'}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Rating</label>
-                      <p>{selectedUser.rating || 'No ratings yet'}</p>
-                    </div>
-                  </div>
-                  {selectedUser.bio && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Bio</label>
-                      <p className="text-sm">{selectedUser.bio}</p>
-                    </div>
-                  )}
-
-                  {userDetails && (
-                    <div className="space-y-4 border-t pt-4">
-                      <h4 className="text-lg font-medium flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Verification Details
-                      </h4>
-                      <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="credentials">
-                          <AccordionTrigger className="flex items-center gap-2">
-                            <GraduationCap className="h-4 w-4" />
-                            Professional Credentials
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Education</label>
-                                <p>{userDetails.education || 'Not provided'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">License Type</label>
-                                <p>{userDetails.license_type || 'Not provided'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">License Number</label>
-                                <p>{userDetails.license_number || 'Not provided'}</p>
-                              </div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                        
-                        <AccordionItem value="services">
-                          <AccordionTrigger className="flex items-center gap-2">
-                            <Award className="h-4 w-4" />
-                            Services & Approaches
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-4">
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Therapy Approaches</label>
-                                <p>{userDetails.therapy_approaches || 'Not provided'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Session Formats</label>
-                                <p>{userDetails.session_formats || 'Not provided'}</p>
-                              </div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-
-                        <AccordionItem value="additional">
-                          <AccordionTrigger className="flex items-center gap-2">
-                            <Languages className="h-4 w-4" />
-                            Additional Information
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-4">
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Languages</label>
-                                <p>{userDetails.languages || 'Not provided'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Insurance</label>
-                                <div className="flex items-center gap-2">
-                                  <span>{userDetails.has_insurance ? 'Accepts Insurance' : 'No Insurance'}</span>
-                                  {userDetails.has_insurance && userDetails.insurance_info && (
-                                    <span className="text-sm text-muted-foreground">- {userDetails.insurance_info}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-
-                      <div className="bg-muted p-4 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h5 className="font-medium">Verification Status</h5>
-                            <p className="text-sm text-muted-foreground">Current application status</p>
-                          </div>
-                          {getStatusBadge(userDetails.application_status)}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {selectedUser.role === 'friend' && userDetails && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium">Friend Details</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Areas of Experience</label>
-                      <p>{userDetails.areas_of_experience || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Experience Description</label>
-                      <p>{userDetails.experience_description || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Personal Story</label>
-                      <p>{userDetails.personal_story || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Communication Preferences</label>
-                      <p>{userDetails.communication_preferences || 'Not provided'}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Therapist Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Edit Therapist Profile</DialogTitle>
-            <DialogDescription>
-              Update the therapist's professional information.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedUser && (
-            <div className="flex items-center gap-4 mb-6">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={selectedUser.profile_image_url} />
-                <AvatarFallback>{getInitials(selectedUser.full_name)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="text-lg font-semibold">{selectedUser.full_name}</h3>
-                <p className="text-muted-foreground">{selectedUser.email}</p>
-              </div>
-            </div>
-          )}
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(updateTherapist)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bio</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Professional bio and background..." 
-                        className="min-h-[120px]"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Describe the therapist's background, approach, and expertise.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="specialization"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Specialization</FormLabel>
-                      <FormControl>
-                        <Input placeholder="E.g. Anxiety, Depression, CBT" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Main areas of clinical focus and expertise
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="years_experience"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Years of Experience</FormLabel>
-                      <FormControl>
-                        <Input type="number" min="0" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Total years of professional practice
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="hourly_rate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hourly Rate (Ksh)</FormLabel>
-                    <FormControl>
-                      <Input type="number" min="10" step="0.01" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Standard rate charged per consultation hour
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Save Changes</Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Verify Therapist Dialog */}
-      <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Verify Therapist Credentials
-            </DialogTitle>
-            <DialogDescription>
-              Review the therapist's professional credentials before approving their account.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedUser && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 border-b pb-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedUser.profile_image_url} />
-                  <AvatarFallback>{getInitials(selectedUser.full_name)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-lg font-semibold">{selectedUser.full_name}</h3>
-                  <p className="text-muted-foreground">{selectedUser.email}</p>
-                  {selectedUser.specialization && (
-                    <Badge variant="secondary" className="mt-1">{selectedUser.specialization}</Badge>
-                  )}
-                </div>
-              </div>
-
-              {!userDetails ? (
-                <div className="p-6 bg-muted rounded-md text-center">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <h3 className="text-lg font-medium">No Verification Details</h3>
-                  <p className="text-muted-foreground mt-1">This therapist hasn't completed their verification details yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <Accordion type="single" collapsible className="w-full">
-                    <AccordionItem value="credentials">
-                      <AccordionTrigger>Professional Credentials</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-4 p-2">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500">Education</h4>
-                              <p className="text-md">{userDetails.education || 'Not provided'}</p>
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500">License Type</h4>
-                              <p className="text-md">{userDetails.license_type || 'Not provided'}</p>
-                            </div>
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500">License Number</h4>
-                            <p className="text-md">{userDetails.license_number || 'Not provided'}</p>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                    
-                    <AccordionItem value="approaches">
-                      <AccordionTrigger>Therapy Approaches</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="p-2">
-                          <p>{userDetails.therapy_approaches || 'Not provided'}</p>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                    
-                    <AccordionItem value="services">
-                      <AccordionTrigger>Services Offered</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-4 p-2">
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500">Session Formats</h4>
-                            <p>{userDetails.session_formats || 'Not provided'}</p>
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500">Languages</h4>
-                            <p>{userDetails.languages || 'Not provided'}</p>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                    
-                    <AccordionItem value="insurance">
-                      <AccordionTrigger>Insurance & Payment</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-2 p-2">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-medium text-gray-500">Accepts Insurance:</h4>
-                            <span>{userDetails.has_insurance ? 'Yes' : 'No'}</span>
-                          </div>
-                          {userDetails.has_insurance && (
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-500">Insurance Information</h4>
-                              <p>{userDetails.insurance_info || 'Not provided'}</p>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-medium text-gray-500">Hourly Rate:</h4>
-                            <span>Ksh{selectedUser.hourly_rate || 'Not set'}</span>
-                          </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
+      {/* Therapists Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Therapist Directory</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {filteredTherapists.map((therapist) => (
+              <div key={therapist.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
+                <div className="flex items-center space-x-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={therapist.profile_image_url} />
+                    <AvatarFallback>
+                      {therapist.full_name?.split(' ').map(n => n[0]).join('') || 'T'}
+                    </AvatarFallback>
+                  </Avatar>
                   
-                  <div className="pt-4 border-t">
-                    <h3 className="font-medium mb-2">Current Status:</h3>
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      {getStatusBadge(userDetails.application_status)}
-                      <span className="text-sm text-muted-foreground">
-                        {userDetails.application_status === 'approved' 
-                          ? 'This therapist is verified and active on the platform' 
-                          : userDetails.application_status === 'rejected'
-                          ? 'This therapist was previously rejected'
-                          : 'This therapist is awaiting verification'}
-                      </span>
+                      <h3 className="font-medium">{therapist.full_name || 'No name provided'}</h3>
+                      {getStatusBadge(therapist)}
+                      {therapist.rating && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-sm text-muted-foreground">{therapist.rating.toFixed(1)}</span>
+                        </div>
+                      )}
                     </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {therapist.email}
+                      </div>
+                      {therapist.phone && (
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {therapist.phone}
+                        </div>
+                      )}
+                      {therapist.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {therapist.location}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      {therapist.specialization && (
+                        <span><strong>Specialization:</strong> {therapist.specialization}</span>
+                      )}
+                      {therapist.years_experience && (
+                        <span><strong>Experience:</strong> {therapist.years_experience} years</span>
+                      )}
+                      {(therapist.hourly_rate || therapist.hourly_rate === 0) && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
+                          <span>
+                            {therapist.hourly_rate === 0 ? 'Free' : `${therapist.hourly_rate} ${therapist.preferred_currency || therapist.therapist_details?.preferred_currency || 'NGN'}`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {therapist.therapist_details?.license_type && (
+                      <p className="text-sm text-muted-foreground">
+                        <strong>License:</strong> {therapist.therapist_details.license_type} - {therapist.therapist_details.license_number}
+                      </p>
+                    )}
                   </div>
                 </div>
-              )}
 
-              <DialogFooter>
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:justify-between">
-                  <Button type="button" variant="outline" onClick={() => setVerifyDialogOpen(false)}>
-                    Close
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openTherapistDetails(therapist)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    View Details
                   </Button>
                   
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="destructive" 
-                      onClick={() => handleVerificationAction('rejected')}
-                      className="flex items-center gap-1"
-                      disabled={!userDetails}
+                  {!therapist.therapist_details?.is_verified && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateTherapistStatus(therapist.id, true)}
+                      className="text-green-600 border-green-600 hover:bg-green-50"
                     >
-                      <XCircle className="h-4 w-4" />
-                      Reject
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Verify
                     </Button>
-                    <Button 
-                      variant="default" 
-                      onClick={() => handleVerificationAction('approved')}
-                      className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
-                      disabled={!userDetails}
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Approve
-                    </Button>
-                  </div>
+                  )}
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => openTherapistDetails(therapist)}>
+                        View Full Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openSendEmail(therapist)}>
+                        Send Email
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openAppointments(therapist)}>
+                        View Appointments
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEarnings(therapist)}>
+                        View Earnings
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {therapist.therapist_details?.is_verified ? (
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={() => updateTherapistStatus(therapist.id, false)}
+                        >
+                          Revoke Verification
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem 
+                          className="text-green-600"
+                          onClick={() => updateTherapistStatus(therapist.id, true)}
+                        >
+                          Verify Therapist
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              </div>
+            ))}
+            
+            {filteredTherapists.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchTerm ? 'No therapists found matching your search.' : 'No therapists registered yet.'}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modals */}
+      <TherapistDetailsModal
+        therapist={selectedTherapist}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onStatusUpdate={handleStatusUpdate}
+      />
+
+      <TherapistAppointmentsModal
+        therapistId={selectedTherapist?.id || null}
+        therapistName={selectedTherapist?.full_name || ''}
+        isOpen={isAppointmentsModalOpen}
+        onClose={closeAppointmentsModal}
+      />
+
+      <TherapistEarningsModal
+        therapistId={selectedTherapist?.id || null}
+        therapistName={selectedTherapist?.full_name || ''}
+        isOpen={isEarningsModalOpen}
+        onClose={closeEarningsModal}
+      />
+
+      <SendEmailModal
+        recipientEmail={selectedTherapist?.email || ''}
+        recipientName={selectedTherapist?.full_name || ''}
+        isOpen={isEmailModalOpen}
+        onClose={closeEmailModal}
+      />
     </div>
   );
 };

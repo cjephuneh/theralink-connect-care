@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_emails: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          message: string
+          recipient_ids: string[] | null
+          recipient_type: string
+          sent_at: string
+          subject: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          message: string
+          recipient_ids?: string[] | null
+          recipient_type: string
+          sent_at?: string
+          subject: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          recipient_ids?: string[] | null
+          recipient_type?: string
+          sent_at?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           client_id: string
@@ -59,6 +92,48 @@ export type Database = {
           },
         ]
       }
+      blogs: {
+        Row: {
+          author: string
+          category: string
+          content: string
+          created_at: string
+          created_by: string
+          excerpt: string
+          id: string
+          image_url: string | null
+          published: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author: string
+          category: string
+          content: string
+          created_at?: string
+          created_by: string
+          excerpt: string
+          id?: string
+          image_url?: string | null
+          published?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author?: string
+          category?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          excerpt?: string
+          id?: string
+          image_url?: string | null
+          published?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contact_messages: {
         Row: {
           created_at: string
@@ -92,6 +167,39 @@ export type Database = {
           name?: string
           subject?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      content_management: {
+        Row: {
+          content: string
+          content_type: string
+          created_at: string
+          created_by: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          content_type: string
+          created_at?: string
+          created_by: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -218,12 +326,44 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_type: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_type: string
+          setting_value: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_type?: string
+          setting_value?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
           email: string
           full_name: string | null
           id: string
+          location: string | null
+          phone: string | null
           profile_image_url: string | null
           role: string
           updated_at: string
@@ -233,6 +373,8 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          location?: string | null
+          phone?: string | null
           profile_image_url?: string | null
           role?: string
           updated_at?: string
@@ -242,6 +384,8 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          location?: string | null
+          phone?: string | null
           profile_image_url?: string | null
           role?: string
           updated_at?: string
@@ -353,9 +497,11 @@ export type Database = {
           has_insurance: boolean | null
           id: string
           insurance_info: string | null
+          is_verified: boolean | null
           languages: string | null
           license_number: string | null
           license_type: string | null
+          preferred_currency: string | null
           session_formats: string | null
           therapist_id: string
           therapy_approaches: string | null
@@ -368,9 +514,11 @@ export type Database = {
           has_insurance?: boolean | null
           id?: string
           insurance_info?: string | null
+          is_verified?: boolean | null
           languages?: string | null
           license_number?: string | null
           license_type?: string | null
+          preferred_currency?: string | null
           session_formats?: string | null
           therapist_id: string
           therapy_approaches?: string | null
@@ -383,9 +531,11 @@ export type Database = {
           has_insurance?: boolean | null
           id?: string
           insurance_info?: string | null
+          is_verified?: boolean | null
           languages?: string | null
           license_number?: string | null
           license_type?: string | null
+          preferred_currency?: string | null
           session_formats?: string | null
           therapist_id?: string
           therapy_approaches?: string | null
@@ -408,6 +558,7 @@ export type Database = {
           created_at: string
           hourly_rate: number | null
           id: string
+          preferred_currency: string | null
           rating: number | null
           specialization: string | null
           updated_at: string
@@ -419,6 +570,7 @@ export type Database = {
           created_at?: string
           hourly_rate?: number | null
           id: string
+          preferred_currency?: string | null
           rating?: number | null
           specialization?: string | null
           updated_at?: string
@@ -430,6 +582,7 @@ export type Database = {
           created_at?: string
           hourly_rate?: number | null
           id?: string
+          preferred_currency?: string | null
           rating?: number | null
           specialization?: string | null
           updated_at?: string

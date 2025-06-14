@@ -38,7 +38,7 @@ const Register = () => {
       } else if (accountType === "friend") {
         navigate("/friend/onboarding");
       } else {
-        navigate("/dashboard");
+        navigate("/client/overview"); // Changed from "/dashboard"
       }
     }
   }, [user, navigate, accountType]);
