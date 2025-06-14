@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +38,8 @@ const Login = () => {
           navigate("/admin/dashboard");
           break;
         default:
-          navigate("/client/dashboard");
+          // Redirect "client" to overview
+          navigate("/client/overview");
           break;
       }
     }
