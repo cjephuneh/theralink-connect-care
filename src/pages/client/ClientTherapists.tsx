@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 
 interface Therapist {
   id: string;
@@ -397,8 +398,14 @@ const ClientTherapists = () => {
                     </div>
 
                     <div className="flex gap-3 pt-2">
-                      <Button variant="outline" className="flex-1">
-                        View Profile
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <Link to={`/therapists/${therapist.id}`}>
+                          View Profile
+                        </Link>
                       </Button>
                       <Dialog>
                         <DialogTrigger asChild>
