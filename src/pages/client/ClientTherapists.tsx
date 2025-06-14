@@ -70,9 +70,9 @@ const ClientTherapists = () => {
   const fetchTherapists = async () => {
     try {
       setLoading(true);
-      
-      // First get therapists with profile data
-      const { data: therapistData, error: therapistError } = await supabase
+
+      // 1. Get all therapists
+      const { data: therapistsData, error: therapistsError } = await supabase
         .from('therapists')
         .select(`
           id,
@@ -81,22 +81,36 @@ const ClientTherapists = () => {
           years_experience,
           hourly_rate,
           rating,
-          availability,
-          profiles!inner (
-            id,
-            full_name,
-            email,
-            profile_image_url,
-            location,
-            role
-          )
+          availability
+        `);
+
+      if (therapistsError) throw therapistsError;
+
+      // 2. Get therapist IDs
+      const therapistIds = therapistsData?.map((t: any) => t.id) || [];
+
+      if (!therapistIds.length) {
+        setTherapists([]);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Get profiles for those therapists with role 'therapist'
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name,
+          email,
+          profile_image_url,
+          location,
+          role
         `)
-        .eq('profiles.role', 'therapist');
+        .in('id', therapistIds)
+        .eq('role', 'therapist');
+      if (profilesError) throw profilesError;
 
-      if (therapistError) throw therapistError;
-
-      // Get therapist details separately
-      const therapistIds = therapistData?.map(t => t.id) || [];
+      // 4. Get therapist_details for those therapists
       const { data: detailsData, error: detailsError } = await supabase
         .from('therapist_details')
         .select(`
@@ -111,34 +125,39 @@ const ClientTherapists = () => {
 
       if (detailsError) throw detailsError;
 
-      // Combine the data
-      const transformedData = therapistData?.map(therapist => {
-        const profile = therapist.profiles;
-        const details = detailsData?.find(d => d.therapist_id === therapist.id);
-        
-        return {
-          id: therapist.id,
-          full_name: profile.full_name,
-          email: profile.email,
-          profile_image_url: profile.profile_image_url,
-          location: profile.location,
-          bio: therapist.bio,
-          specialization: therapist.specialization,
-          years_experience: therapist.years_experience,
-          hourly_rate: therapist.hourly_rate,
-          rating: therapist.rating || 4.5,
-          availability: therapist.availability,
-          therapist_details: details ? {
-            license_type: details.license_type,
-            therapy_approaches: details.therapy_approaches,
-            languages: details.languages,
-            session_formats: details.session_formats,
-            is_verified: details.is_verified || false
-          } : undefined
-        };
-      }).filter(t => t.therapist_details?.is_verified) || [];
+      // Merge data together by id
+      const mergedTherapists: Therapist[] =
+        therapistsData
+          ?.map((therapist: any) => {
+            const profile = profilesData?.find((p: any) => p.id === therapist.id);
+            const details = detailsData?.find((d: any) => d.therapist_id === therapist.id);
+            // We must only include those with verified therapist_details
+            if (!profile || !details?.is_verified) return null;
+            return {
+              id: therapist.id,
+              full_name: profile.full_name,
+              email: profile.email,
+              profile_image_url: profile.profile_image_url,
+              location: profile.location,
+              bio: therapist.bio,
+              specialization: therapist.specialization,
+              years_experience: therapist.years_experience,
+              hourly_rate: therapist.hourly_rate,
+              rating: therapist.rating || 4.5,
+              availability: therapist.availability,
+              therapist_details: {
+                license_type: details.license_type,
+                therapy_approaches: details.therapy_approaches,
+                languages: details.languages,
+                session_formats: details.session_formats,
+                is_verified: details.is_verified || false,
+              }
+            } as Therapist;
+          })
+          .filter(Boolean) || [];
 
-      setTherapists(transformedData);
+      setTherapists(mergedTherapists);
+
     } catch (error) {
       console.error('Error fetching therapists:', error);
       toast({
@@ -428,6 +447,4 @@ const ClientTherapists = () => {
     </div>
   );
 };
-
 export default ClientTherapists;
-
