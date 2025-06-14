@@ -46,7 +46,7 @@ const TherapistLayout = () => {
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState(true);
   
@@ -97,15 +97,15 @@ const TherapistLayout = () => {
             console.error('Error checking onboarding status:', error);
           }
         }
-        setIsLoading(false);
+        setInitialLoading(false);
       };
       
       checkOnboardingStatus();
     }
   }, [user, profile, navigate, toast, location.pathname]);
 
-  // Return early if still loading
-  if (isLoading) {
+  // Return early if still on initial loading
+  if (initialLoading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 

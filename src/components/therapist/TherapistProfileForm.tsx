@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, Loader2 } from "lucide-react";
 
 interface TherapistData {
@@ -18,6 +19,7 @@ interface TherapistData {
   specialization: string;
   years_experience: number;
   hourly_rate: number;
+  preferred_currency: string;
 }
 
 const TherapistProfileForm = () => {
@@ -33,7 +35,18 @@ const TherapistProfileForm = () => {
     specialization: "",
     years_experience: 0,
     hourly_rate: 0,
+    preferred_currency: "NGN",
   });
+
+  const currencies = [
+    { value: "NGN", label: "NGN - Nigerian Naira" },
+    { value: "USD", label: "USD - US Dollar" },
+    { value: "EUR", label: "EUR - Euro" },
+    { value: "GBP", label: "GBP - British Pound" },
+    { value: "KES", label: "KES - Kenyan Shilling" },
+    { value: "GHS", label: "GHS - Ghanaian Cedi" },
+    { value: "ZAR", label: "ZAR - South African Rand" },
+  ];
 
   useEffect(() => {
     const fetchTherapistData = async () => {
@@ -59,6 +72,7 @@ const TherapistProfileForm = () => {
           specialization: therapistData?.specialization || "",
           years_experience: therapistData?.years_experience || 0,
           hourly_rate: therapistData?.hourly_rate || 0,
+          preferred_currency: therapistData?.preferred_currency || "NGN",
         });
       } catch (error) {
         console.error('Error fetching therapist data:', error);
@@ -95,6 +109,7 @@ const TherapistProfileForm = () => {
           specialization: formData.specialization,
           years_experience: formData.years_experience,
           hourly_rate: formData.hourly_rate,
+          preferred_currency: formData.preferred_currency,
         });
 
       if (therapistError) throw therapistError;
@@ -188,17 +203,42 @@ const TherapistProfileForm = () => {
               />
             </div>
             <div>
-              <Label htmlFor="hourly_rate">Hourly Rate (Ksh)</Label>
-              <Input
-                id="hourly_rate"
-                type="number"
-                value={formData.hourly_rate}
-                onChange={(e) => handleInputChange('hourly_rate', parseFloat(e.target.value) || 0)}
-                disabled={!isEditing}
-                min="0"
-                step="0.01"
-              />
+              <Label htmlFor="preferred_currency">Preferred Currency</Label>
+              {isEditing ? (
+                <Select
+                  value={formData.preferred_currency}
+                  onValueChange={(value) => handleInputChange('preferred_currency', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies.map((currency) => (
+                      <SelectItem key={currency.value} value={currency.value}>
+                        {currency.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={formData.preferred_currency}
+                  disabled
+                />
+              )}
             </div>
+          </div>
+          <div>
+            <Label htmlFor="hourly_rate">Hourly Rate ({formData.preferred_currency})</Label>
+            <Input
+              id="hourly_rate"
+              type="number"
+              value={formData.hourly_rate}
+              onChange={(e) => handleInputChange('hourly_rate', parseFloat(e.target.value) || 0)}
+              disabled={!isEditing}
+              min="0"
+              step="0.01"
+            />
           </div>
           <div>
             <Label htmlFor="bio">Professional Bio</Label>

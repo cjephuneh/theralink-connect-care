@@ -459,6 +459,7 @@ export type Database = {
           languages: string | null
           license_number: string | null
           license_type: string | null
+          preferred_currency: string | null
           session_formats: string | null
           therapist_id: string
           therapy_approaches: string | null
@@ -475,6 +476,7 @@ export type Database = {
           languages?: string | null
           license_number?: string | null
           license_type?: string | null
+          preferred_currency?: string | null
           session_formats?: string | null
           therapist_id: string
           therapy_approaches?: string | null
@@ -491,6 +493,7 @@ export type Database = {
           languages?: string | null
           license_number?: string | null
           license_type?: string | null
+          preferred_currency?: string | null
           session_formats?: string | null
           therapist_id?: string
           therapy_approaches?: string | null
@@ -513,6 +516,7 @@ export type Database = {
           created_at: string
           hourly_rate: number | null
           id: string
+          preferred_currency: string | null
           rating: number | null
           specialization: string | null
           updated_at: string
@@ -524,6 +528,7 @@ export type Database = {
           created_at?: string
           hourly_rate?: number | null
           id: string
+          preferred_currency?: string | null
           rating?: number | null
           specialization?: string | null
           updated_at?: string
@@ -535,6 +540,7 @@ export type Database = {
           created_at?: string
           hourly_rate?: number | null
           id?: string
+          preferred_currency?: string | null
           rating?: number | null
           specialization?: string | null
           updated_at?: string

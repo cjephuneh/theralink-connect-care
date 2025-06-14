@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Heart, DollarSign, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +40,9 @@ const formSchema = z.object({
   therapist_type: z.enum(["paid", "community"], {
     required_error: "Please select therapist type.",
   }),
+  preferred_currency: z.string().min(3, {
+    message: "Please select your preferred currency.",
+  }),
   insurance_info: z.string().optional(),
   has_insurance: z.boolean().default(false),
   termsAccepted: z.boolean().refine((val) => val === true, {
@@ -62,6 +66,7 @@ const TherapistOnboarding = () => {
       languages: "",
       session_formats: "",
       therapist_type: "paid",
+      preferred_currency: "NGN",
       insurance_info: "",
       has_insurance: false,
       termsAccepted: false,
@@ -69,6 +74,16 @@ const TherapistOnboarding = () => {
   });
 
   const watchTherapistType = form.watch("therapist_type");
+
+  const currencies = [
+    { value: "NGN", label: "NGN - Nigerian Naira" },
+    { value: "USD", label: "USD - US Dollar" },
+    { value: "EUR", label: "EUR - Euro" },
+    { value: "GBP", label: "GBP - British Pound" },
+    { value: "KES", label: "KES - Kenyan Shilling" },
+    { value: "GHS", label: "GHS - Ghanaian Cedi" },
+    { value: "ZAR", label: "ZAR - South African Rand" },
+  ];
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
@@ -97,12 +112,19 @@ const TherapistOnboarding = () => {
 
       if (error) throw error;
 
-      // Update the therapist profile to indicate type
+      // Update therapist details with currency
+      await supabase
+        .from('therapist_details')
+        .update({ preferred_currency: values.preferred_currency })
+        .eq('therapist_id', user.id);
+
+      // Update the therapist profile to indicate type and currency
       await supabase
         .from('therapists')
         .upsert({
           id: user.id,
           hourly_rate: values.therapist_type === 'community' ? 0 : null,
+          preferred_currency: values.preferred_currency,
         });
 
       toast({
@@ -195,6 +217,35 @@ const TherapistOnboarding = () => {
                   </AlertDescription>
                 </Alert>
               )}
+
+              {/* Currency Selection */}
+              <FormField
+                control={form.control}
+                name="preferred_currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preferred Currency</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your preferred currency" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {currencies.map((currency) => (
+                          <SelectItem key={currency.value} value={currency.value}>
+                            {currency.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      This will be used for setting your session rates and payments.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
