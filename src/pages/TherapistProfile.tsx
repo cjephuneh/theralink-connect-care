@@ -32,25 +32,26 @@ const TherapistProfile = () => {
   useEffect(() => {
     const fetchTherapistData = async () => {
       if (!id) return;
+      const currentId = String(id);
       setLoading(true);
       try {
         // Fetch therapist profile
         const { data: profile } = await supabase
           .from("profiles")
           .select("id, full_name, profile_image_url, role, location, email")
-          .eq("id", String(id))
+          .eq("id", currentId)
           .maybeSingle();
 
         const { data: therapistRow } = await supabase
           .from("therapists")
           .select("hourly_rate, availability, specialization, years_experience, rating, bio")
-          .eq("id", String(id))
+          .eq("id", currentId)
           .maybeSingle();
 
         const { data: detailsRow } = await supabase
           .from("therapist_details")
           .select("license_type, therapy_approaches, languages, session_formats, is_verified, education")
-          .eq("therapist_id", String(id))
+          .eq("therapist_id", currentId)
           .maybeSingle();
 
         // Format availability into same structure as used everywhere else
@@ -90,7 +91,7 @@ const TherapistProfile = () => {
         const { data: reviewsRow } = await supabase
           .from("reviews")
           .select("rating, comment, created_at")
-          .eq("therapist_id", String(id))
+          .eq("therapist_id", currentId)
           .order("created_at", { ascending: false });
         setReviews(reviewsRow || []);
       } catch (err) {

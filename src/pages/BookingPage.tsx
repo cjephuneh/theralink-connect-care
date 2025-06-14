@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -38,12 +37,13 @@ const BookingPage = () => {
 
     const fetchTherapist = async () => {
       setLoading(true);
+      const currentTherapistId = String(therapistId);
       try {
         // Therapist profile
         const { data: profile, error: pErr } = await supabase
           .from("profiles")
           .select("id, full_name, email, profile_image_url, location, role")
-          .eq("id", String(therapistId))
+          .eq("id", currentTherapistId)
           .maybeSingle();
         if (pErr) throw pErr;
         if (!profile) {
@@ -56,7 +56,7 @@ const BookingPage = () => {
         const { data: therapistRow, error: tErr } = await supabase
           .from("therapists")
           .select("hourly_rate, availability, specialization, years_experience, bio")
-          .eq("id", String(therapistId))
+          .eq("id", currentTherapistId)
           .maybeSingle();
         if (tErr) throw tErr;
 
@@ -64,7 +64,7 @@ const BookingPage = () => {
         const { data: details, error: dErr } = await supabase
           .from("therapist_details")
           .select("session_formats")
-          .eq("therapist_id", String(therapistId))
+          .eq("therapist_id", currentTherapistId)
           .maybeSingle();
 
         // Parse session formats if present (comma separated)
