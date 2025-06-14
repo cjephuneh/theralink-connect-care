@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -40,8 +39,8 @@ interface TimeSlot {
 
 const ClientTherapists = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [specialization, setSpecialization] = useState("");
-  const [sortBy, setSortBy] = useState("");
+  const [specialization, setSpecialization] = useState("all");
+  const [sortBy, setSortBy] = useState("all");
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
@@ -193,7 +192,7 @@ const ClientTherapists = () => {
       therapist.bio?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       therapist.specialization?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesSpecialization = !specialization || 
+    const matchesSpecialization = specialization === "all" || 
       therapist.specialization?.toLowerCase().includes(specialization.toLowerCase());
     
     return matchesSearch && matchesSpecialization;
@@ -247,7 +246,7 @@ const ClientTherapists = () => {
                 <SelectValue placeholder="Specialization" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Specializations</SelectItem>
+                <SelectItem value="all">All Specializations</SelectItem>
                 <SelectItem value="anxiety">Anxiety & Depression</SelectItem>
                 <SelectItem value="relationships">Relationship Counseling</SelectItem>
                 <SelectItem value="trauma">Trauma Therapy</SelectItem>
@@ -260,6 +259,7 @@ const ClientTherapists = () => {
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Default</SelectItem>
                 <SelectItem value="rating">Highest Rated</SelectItem>
                 <SelectItem value="price-low">Price: Low to High</SelectItem>
                 <SelectItem value="price-high">Price: High to Low</SelectItem>
