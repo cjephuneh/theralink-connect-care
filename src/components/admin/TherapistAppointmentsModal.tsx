@@ -12,7 +12,7 @@ import { Calendar, Clock, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-interface Appointment {
+interface AppointmentWithProfile {
   id: string;
   start_time: string;
   end_time: string;
@@ -20,10 +20,10 @@ interface Appointment {
   session_type: string;
   notes?: string;
   client_id: string;
-  profiles?: {
+  profiles: {
     full_name: string;
     email: string;
-  };
+  } | null;
 }
 
 interface TherapistAppointmentsModalProps {
@@ -39,7 +39,7 @@ export const TherapistAppointmentsModal = ({
   isOpen, 
   onClose 
 }: TherapistAppointmentsModalProps) => {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<AppointmentWithProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
