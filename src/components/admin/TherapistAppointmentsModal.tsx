@@ -20,7 +20,7 @@ interface AppointmentWithProfile {
   session_type: string;
   notes?: string;
   client_id: string;
-  profiles: {
+  client_profile: {
     full_name: string;
     email: string;
   } | null;
@@ -64,7 +64,7 @@ export const TherapistAppointmentsModal = ({
           session_type,
           notes,
           client_id,
-          profiles!appointments_client_id_fkey (
+          client_profile:profiles!appointments_client_id_fkey (
             full_name,
             email
           )
@@ -128,10 +128,10 @@ export const TherapistAppointmentsModal = ({
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium">
-                        {appointment.profiles?.full_name || 'Unknown Client'}
+                        {appointment.client_profile?.full_name || 'Unknown Client'}
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        ({appointment.profiles?.email})
+                        ({appointment.client_profile?.email})
                       </span>
                     </div>
                     {getStatusBadge(appointment.status)}
