@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Star, Send, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const ClientFeedback = () => {
   const [rating, setRating] = useState(0);
@@ -30,8 +31,18 @@ const ClientFeedback = () => {
     setIsSubmitting(true);
     
     try {
-      // Here you would typically send the feedback to your API
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('feedback')
+        .insert({
+          user_id: user?.id || null,
+          rating: rating > 0 ? rating : null,
+          message: feedback,
+          dashboard_type: 'client'
+        });
+
+      if (error) throw error;
       
       toast({
         title: "Thank you!",
@@ -42,6 +53,7 @@ const ClientFeedback = () => {
       setRating(0);
       setFeedback("");
     } catch (error) {
+      console.error('Error submitting feedback:', error);
       toast({
         title: "Error",
         description: "Failed to submit feedback. Please try again.",

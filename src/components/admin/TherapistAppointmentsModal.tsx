@@ -57,8 +57,14 @@ export const TherapistAppointmentsModal = ({
       const { data, error } = await supabase
         .from('appointments')
         .select(`
-          *,
-          profiles!appointments_client_id_fkey (
+          id,
+          start_time,
+          end_time,
+          status,
+          session_type,
+          notes,
+          client_id,
+          profiles:client_id (
             full_name,
             email
           )

@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, MessageSquare, Star, Clock, User, Mail, Calendar, Filter, Search, BarChart3, TrendingUp, Users } from "lucide-react";
+import { Check, MessageSquare, Star, Clock, User, Mail, Calendar, Filter, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,7 +46,10 @@ const AdminFeedback = () => {
         `)
         .order("created_at", { ascending: false });
 
-      if (feedbackError) throw feedbackError;
+      if (feedbackError) {
+        console.error("Feedback error:", feedbackError);
+        // Still continue to fetch contact messages even if feedback fails
+      }
       setFeedbackMessages(feedback || []);
 
       // Fetch contact messages
@@ -56,7 +58,9 @@ const AdminFeedback = () => {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (contactsError) throw contactsError;
+      if (contactsError) {
+        console.error("Contacts error:", contactsError);
+      }
       setContactMessages(contacts || []);
 
       // Calculate stats
