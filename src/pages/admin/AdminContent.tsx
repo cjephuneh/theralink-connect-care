@@ -584,61 +584,63 @@ const AdminContent = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                <FormField
-                  control={platformForm.control}
-                  name="email_notifications"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Email Notifications</FormLabel>
-                        <FormDescription>
-                          Send notifications via email to users
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+              <Form {...platformForm}>
+                <div className="space-y-6">
+                  <FormField
+                    control={platformForm.control}
+                    name="email_notifications"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Email Notifications</FormLabel>
+                          <FormDescription>
+                            Send notifications via email to users
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-                <FormField
-                  control={platformForm.control}
-                  name="sms_notifications"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">SMS Notifications</FormLabel>
-                        <FormDescription>
-                          Send notifications via SMS to users
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                  <FormField
+                    control={platformForm.control}
+                    name="sms_notifications"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">SMS Notifications</FormLabel>
+                          <FormDescription>
+                            Send notifications via SMS to users
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-                <div className="rounded-lg border p-4">
-                  <h4 className="font-medium mb-2">Notification Templates</h4>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Customize email and SMS templates for different events
-                  </p>
-                  <div className="space-y-2">
-                    <Button variant="outline" size="sm">Edit Welcome Email</Button>
-                    <Button variant="outline" size="sm">Edit Appointment Reminder</Button>
-                    <Button variant="outline" size="sm">Edit Payment Confirmation</Button>
+                  <div className="rounded-lg border p-4">
+                    <h4 className="font-medium mb-2">Notification Templates</h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Customize email and SMS templates for different events
+                    </p>
+                    <div className="space-y-2">
+                      <Button variant="outline" size="sm">Edit Welcome Email</Button>
+                      <Button variant="outline" size="sm">Edit Appointment Reminder</Button>
+                      <Button variant="outline" size="sm">Edit Payment Confirmation</Button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Form>
             </CardContent>
           </Card>
         </TabsContent>
