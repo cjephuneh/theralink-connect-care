@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,9 @@ import {
   FileDigit,
   DollarSign,
   ClipboardList,
-  Bell
+  Bell,
+  Mail,
+  Heart
 } from "lucide-react";
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -149,8 +152,11 @@ const TherapistLayout = () => {
     { path: '/admin/dashboard', label: 'Dashboard', icon: BarChart3 },
     { path: '/admin/users', label: 'Manage Users', icon: Users },
     { path: '/admin/therapists', label: 'Manage Therapists', icon: UserCog },
+    { path: '/admin/friends', label: 'Manage Friends', icon: Heart },
     { path: '/admin/appointments', label: 'Appointments', icon: Calendar },
     { path: '/admin/transactions', label: 'Transactions', icon: Wallet },
+    { path: '/admin/emails', label: 'Send Emails', icon: Mail },
+    { path: '/admin/feedback', label: 'Feedback', icon: MessageCircle },
     { path: '/admin/content', label: 'Content Management', icon: BookOpen },
     { path: '/admin/settings', label: 'Settings', icon: Settings },
   ];
@@ -199,7 +205,7 @@ const TherapistLayout = () => {
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
                 } ${
-                  !onboardingComplete && item.path !== '/therapist/onboarding'
+                  !onboardingComplete && item.path !== '/therapist/onboarding' && !isAdmin
                     ? 'opacity-50 pointer-events-none'
                     : ''
                 }`}
@@ -248,7 +254,7 @@ const TherapistLayout = () => {
           <TherapistNotificationBell />
         </div>
         
-        {!onboardingComplete && location.pathname !== '/therapist/onboarding' && (
+        {!onboardingComplete && location.pathname !== '/therapist/onboarding' && !isAdmin && (
           <div className="bg-yellow-100 p-4 text-yellow-800 text-center">
             Please complete your profile setup before accessing other features.
           </div>

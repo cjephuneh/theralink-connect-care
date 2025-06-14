@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_emails: {
+        Row: {
+          admin_id: string
+          created_at: string
+          id: string
+          message: string
+          recipient_ids: string[] | null
+          recipient_type: string
+          sent_at: string
+          subject: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          id?: string
+          message: string
+          recipient_ids?: string[] | null
+          recipient_type: string
+          sent_at?: string
+          subject: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          recipient_ids?: string[] | null
+          recipient_type?: string
+          sent_at?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           client_id: string
@@ -92,6 +125,39 @@ export type Database = {
           name?: string
           subject?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      content_management: {
+        Row: {
+          content: string
+          content_type: string
+          created_at: string
+          created_by: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          content_type: string
+          created_at?: string
+          created_by: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -215,6 +281,36 @@ export type Database = {
           title?: string
           type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_type: string
+          setting_value: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_type: string
+          setting_value: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_type?: string
+          setting_value?: Json
+          updated_at?: string
         }
         Relationships: []
       }
