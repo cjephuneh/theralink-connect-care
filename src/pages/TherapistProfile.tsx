@@ -19,390 +19,95 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// Mock therapist data (in real app, this would come from a backend API)
-const mockTherapists = [
-  {
-    id: "1",
-    name: "Dr. Sarah Johnson",
-    title: "Licensed Clinical Psychologist",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-    rating: 4.9,
-    reviewCount: 127,
-    specialties: ["Anxiety", "Depression", "Trauma", "PTSD"],
-    languages: ["English", "Spanish"],
-    yearsExperience: 8,
-    location: "New York, NY (Remote Available)",
-    education: [
-      { degree: "Ph.D. in Clinical Psychology", institution: "Columbia University", year: "2015" },
-      { degree: "M.A. in Psychology", institution: "New York University", year: "2012" },
-    ],
-    certifications: [
-      "Licensed Psychologist - State of New York",
-      "Certified Trauma Professional",
-      "Cognitive Behavioral Therapy Certification"
-    ],
-    approach: [
-      "Cognitive Behavioral Therapy (CBT)",
-      "Mindfulness-Based Therapy",
-      "Trauma-Informed Care",
-      "Solution-Focused Brief Therapy"
-    ],
-    price: 85,
-    insurance: ["Blue Cross Blue Shield", "Aetna", "Cigna", "United Healthcare"],
-    nextAvailable: [
-      { date: "Monday, May 13", slots: ["10:00 AM", "2:00 PM", "4:00 PM"] },
-      { date: "Tuesday, May 14", slots: ["9:00 AM", "11:00 AM", "3:00 PM"] },
-      { date: "Wednesday, May 15", slots: ["1:00 PM", "5:00 PM"] },
-    ],
-    about: "I am a licensed clinical psychologist with over 8 years of experience helping clients navigate life's challenges. I specialize in evidence-based approaches including Cognitive Behavioral Therapy (CBT) and mindfulness techniques.\n\nMy practice focuses on creating a warm, non-judgmental environment where you can explore your thoughts and feelings safely. I believe therapy is a collaborative process, and I work with each client to develop personalized strategies for growth and healing.\n\nWhether you're dealing with anxiety, depression, trauma, or just feeling stuck, I'm here to support your journey toward better mental health. I particularly enjoy working with adults and young professionals navigating life transitions, identity issues, and relationship challenges."
-  },
-  {
-    id: "2",
-    name: "Dr. Michael Chen",
-    title: "Licensed Marriage & Family Therapist",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-    rating: 4.8,
-    reviewCount: 93,
-    specialties: ["Relationships", "Couples Therapy", "Family Conflict"],
-    languages: ["English", "Mandarin"],
-    yearsExperience: 12,
-    location: "San Francisco, CA (Remote Available)",
-    education: [
-      { degree: "Ph.D. in Marriage and Family Therapy", institution: "Stanford University", year: "2010" },
-      { degree: "M.A. in Psychology", institution: "UC Berkeley", year: "2007" },
-    ],
-    certifications: [
-      "Licensed Marriage and Family Therapist - California",
-      "Gottman Method Couples Therapy (Level 3)",
-      "Emotionally Focused Therapy Certification"
-    ],
-    approach: [
-      "Gottman Method",
-      "Emotionally Focused Therapy",
-      "Narrative Therapy",
-      "Family Systems Theory"
-    ],
-    price: 95,
-    insurance: ["Aetna", "Cigna", "Kaiser Permanente"],
-    nextAvailable: [
-      { date: "Today", slots: ["6:00 PM", "7:00 PM"] },
-      { date: "Tomorrow", slots: ["10:00 AM", "2:00 PM", "5:00 PM"] },
-      { date: "Friday, May 16", slots: ["9:00 AM", "11:00 AM", "4:00 PM"] },
-    ],
-    about: "I am a licensed marriage and family therapist with over 12 years of experience helping couples and families improve their relationships. I specialize in communication issues, conflict resolution, and rebuilding trust.\n\nMy therapeutic approach integrates the Gottman Method and Emotionally Focused Therapy to help couples break negative cycles and develop more secure connections. For families, I use Family Systems Theory to address dynamics that may be contributing to conflict or distress.\n\nI believe that healthy relationships are foundational to our well-being. Whether you're navigating a specific crisis or looking to deepen your connection, I provide a supportive space where all parties feel heard and validated. My goal is to help you develop practical tools for more satisfying relationships."
-  },
-  {
-    id: "3",
-    name: "Dr. Amara Okafor",
-    title: "Clinical Social Worker",
-    image: "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-    rating: 5.0,
-    reviewCount: 78,
-    specialties: ["Depression", "Grief", "Life Transitions", "Identity"],
-    languages: ["English"],
-    yearsExperience: 5,
-    location: "Boston, MA (Remote Available)",
-    education: [
-      { degree: "Master of Social Work (MSW)", institution: "Boston University", year: "2018" },
-      { degree: "B.A. in Psychology", institution: "Tufts University", year: "2015" },
-    ],
-    certifications: [
-      "Licensed Clinical Social Worker - Massachusetts",
-      "Certified Grief Counselor",
-      "Dialectical Behavior Therapy Trained"
-    ],
-    approach: [
-      "Psychodynamic Therapy",
-      "Dialectical Behavior Therapy (DBT)",
-      "Grief Counseling",
-      "Culturally-Responsive Therapy"
-    ],
-    price: 75,
-    insurance: ["Blue Cross Blue Shield", "Harvard Pilgrim", "Tufts Health Plan"],
-    nextAvailable: [
-      { date: "Thursday, May 15", slots: ["11:00 AM", "1:00 PM", "3:00 PM"] },
-      { date: "Friday, May 16", slots: ["9:00 AM", "4:00 PM"] },
-      { date: "Monday, May 19", slots: ["10:00 AM", "12:00 PM", "2:00 PM"] },
-    ],
-    about: "I am a licensed clinical social worker passionate about helping individuals navigate through depression, grief, major life transitions, and identity exploration. With 5 years of clinical experience, I create a warm and inclusive therapeutic environment for all my clients.\n\nMy approach combines psychodynamic techniques with practical DBT skills to address both the root causes of distress and develop effective coping strategies. I believe in honoring each person's unique story while building resilience and self-compassion.\n\nWhether you're coping with loss, struggling with depression, navigating a significant change, or exploring aspects of your identity, I'm committed to walking alongside you on your journey. I particularly enjoy working with young adults, BIPOC individuals, and those navigating cultural or identity-related challenges."
-  },
-];
-
 const TherapistProfile = () => {
   const { id } = useParams<{ id: string }>();
   const [therapist, setTherapist] = useState<any | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Generate date options for the next 7 days
-  const generateDateOptions = () => {
-    const dates = [];
-    const today = new Date();
-    
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
-      
-      const dateStr = date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric'
-      });
-      
-      // Generate random time slots for each day
-      const slots = [];
-      const numSlots = Math.floor(Math.random() * 5) + 1; // 1-5 slots
-      
-      for (let j = 0; j < numSlots; j++) {
-        const hour = Math.floor(Math.random() * 8) + 9; // 9 AM - 5 PM
-        const minute = Math.random() < 0.5 ? 0 : 30;
-        const amPm = hour < 12 ? 'AM' : 'PM';
-        const hourFormatted = hour <= 12 ? hour : hour - 12;
-        const timeStr = `${hourFormatted}:${minute === 0 ? '00' : '30'} ${amPm}`;
-        slots.push(timeStr);
-      }
-      
-      // Sort time slots
-      slots.sort((a, b) => {
-        const hourA = parseInt(a.split(':')[0]);
-        const minA = parseInt(a.split(':')[1].split(' ')[0]);
-        const ampmA = a.split(' ')[1];
-        
-        const hourB = parseInt(b.split(':')[0]);
-        const minB = parseInt(b.split(':')[1].split(' ')[0]);
-        const ampmB = b.split(' ')[1];
-        
-        // Convert to 24 hour for comparison
-        const hour24A = ampmA === 'PM' && hourA !== 12 ? hourA + 12 : (ampmA === 'AM' && hourA === 12 ? 0 : hourA);
-        const hour24B = ampmB === 'PM' && hourB !== 12 ? hourB + 12 : (ampmB === 'AM' && hourB === 12 ? 0 : hourB);
-        
-        if (hour24A !== hour24B) return hour24A - hour24B;
-        return minA - minB;
-      });
-      
-      dates.push({
-        date: dateStr,
-        slots
-      });
-    }
-    
-    return dates;
-  };
-  
   useEffect(() => {
     const fetchTherapistData = async () => {
       if (!id) return;
-
+      setLoading(true);
       try {
-        setLoading(true);
-        
-        // Check if id is one of our mock UUIDs (1, 2, 3)
-        if (id === "1" || id === "2" || id === "3") {
-          // Use mock data for demo purposes
-          const mockTherapists = [
-            {
-              id: "1",
-              name: "Dr. Sarah Johnson",
-              title: "Licensed Clinical Psychologist",
-              image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-              rating: 4.9,
-              reviewCount: 127,
-              specialties: ["Anxiety", "Depression", "Trauma", "PTSD"],
-              languages: ["English", "Spanish"],
-              yearsExperience: 8,
-              location: "New York, NY (Remote Available)",
-              education: [
-                { degree: "Ph.D. in Clinical Psychology", institution: "Columbia University", year: "2015" },
-                { degree: "M.A. in Psychology", institution: "New York University", year: "2012" },
-              ],
-              certifications: [
-                "Licensed Psychologist - State of New York",
-                "Certified Trauma Professional",
-                "Cognitive Behavioral Therapy Certification"
-              ],
-              approach: [
-                "Cognitive Behavioral Therapy (CBT)",
-                "Mindfulness-Based Therapy",
-                "Trauma-Informed Care",
-                "Solution-Focused Brief Therapy"
-              ],
-              price: 85,
-              insurance: ["Blue Cross Blue Shield", "Aetna", "Cigna", "United Healthcare"],
-              nextAvailable: generateDateOptions(),
-              about: "I am a licensed clinical psychologist with over 8 years of experience helping clients navigate life's challenges. I specialize in evidence-based approaches including Cognitive Behavioral Therapy (CBT) and mindfulness techniques.\n\nMy practice focuses on creating a warm, non-judgmental environment where you can explore your thoughts and feelings safely. I believe therapy is a collaborative process, and I work with each client to develop personalized strategies for growth and healing.\n\nWhether you're dealing with anxiety, depression, trauma, or just feeling stuck, I'm here to support your journey toward better mental health. I particularly enjoy working with adults and young professionals navigating life transitions, identity issues, and relationship challenges."
-            },
-            {
-              id: "2",
-              name: "Dr. Michael Chen",
-              title: "Licensed Marriage & Family Therapist",
-              image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-              rating: 4.8,
-              reviewCount: 93,
-              specialties: ["Relationships", "Couples Therapy", "Family Conflict"],
-              languages: ["English", "Mandarin"],
-              yearsExperience: 12,
-              location: "San Francisco, CA (Remote Available)",
-              education: [
-                { degree: "Ph.D. in Marriage and Family Therapy", institution: "Stanford University", year: "2010" },
-                { degree: "M.A. in Psychology", institution: "UC Berkeley", year: "2007" },
-              ],
-              certifications: [
-                "Licensed Marriage and Family Therapist - California",
-                "Gottman Method Couples Therapy (Level 3)",
-                "Emotionally Focused Therapy Certification"
-              ],
-              approach: [
-                "Gottman Method",
-                "Emotionally Focused Therapy",
-                "Narrative Therapy",
-                "Family Systems Theory"
-              ],
-              price: 95,
-              insurance: ["Aetna", "Cigna", "Kaiser Permanente"],
-              nextAvailable: generateDateOptions(),
-              about: "I am a licensed marriage and family therapist with over 12 years of experience helping couples and families improve their relationships. I specialize in communication issues, conflict resolution, and rebuilding trust.\n\nMy therapeutic approach integrates the Gottman Method and Emotionally Focused Therapy to help couples break negative cycles and develop more secure connections. For families, I use Family Systems Theory to address dynamics that may be contributing to conflict or distress.\n\nI believe that healthy relationships are foundational to our well-being. Whether you're navigating a specific crisis or looking to deepen your connection, I provide a supportive space where all parties feel heard and validated. My goal is to help you develop practical tools for more satisfying relationships."
-            },
-            {
-              id: "3",
-              name: "Dr. Amara Okafor",
-              title: "Clinical Social Worker",
-              image: "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-              rating: 5.0,
-              reviewCount: 78,
-              specialties: ["Depression", "Grief", "Life Transitions", "Identity"],
-              languages: ["English"],
-              yearsExperience: 5,
-              location: "Boston, MA (Remote Available)",
-              education: [
-                { degree: "Master of Social Work (MSW)", institution: "Boston University", year: "2018" },
-                { degree: "B.A. in Psychology", institution: "Tufts University", year: "2015" },
-              ],
-              certifications: [
-                "Licensed Clinical Social Worker - Massachusetts",
-                "Certified Grief Counselor",
-                "Dialectical Behavior Therapy Trained"
-              ],
-              approach: [
-                "Psychodynamic Therapy",
-                "Dialectical Behavior Therapy (DBT)",
-                "Grief Counseling",
-                "Culturally-Responsive Therapy"
-              ],
-              price: 75,
-              insurance: ["Blue Cross Blue Shield", "Harvard Pilgrim", "Tufts Health Plan"],
-              nextAvailable: generateDateOptions(),
-              about: "I am a licensed clinical social worker passionate about helping individuals navigate through depression, grief, major life transitions, and identity exploration. With 5 years of clinical experience, I create a warm and inclusive therapeutic environment for all my clients.\n\nMy approach combines psychodynamic techniques with practical DBT skills to address both the root causes of distress and develop effective coping strategies. I believe in honoring each person's unique story while building resilience and self-compassion.\n\nWhether you're coping with loss, struggling with depression, navigating a significant change, or exploring aspects of your identity, I'm committed to walking alongside you on your journey. I particularly enjoy working with young adults, BIPOC individuals, and those navigating cultural or identity-related challenges."
-            }
-          ];
+        // Fetch therapist profile
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, full_name, profile_image_url, role, location, email")
+          .eq("id", id)
+          .maybeSingle();
 
-          const foundTherapist = mockTherapists.find(t => t.id === id);
-          setTherapist(foundTherapist || null);
-          
-          if (foundTherapist?.nextAvailable && foundTherapist.nextAvailable.length > 0) {
-            setSelectedDate(foundTherapist.nextAvailable[0].date);
-          }
-          
-          setLoading(false);
-          return;
-        }
-        
-        // Try to fetch from database if not a mock ID
+        const { data: therapistRow } = await supabase
+          .from("therapists")
+          .select("hourly_rate, availability, specialization, years_experience, rating, bio")
+          .eq("id", id)
+          .maybeSingle();
+
+        const { data: detailsRow } = await supabase
+          .from("therapist_details")
+          .select("license_type, therapy_approaches, languages, session_formats, is_verified, education")
+          .eq("therapist_id", id)
+          .maybeSingle();
+
+        // Format availability into same structure as used everywhere else
+        let availability: any[] = [];
         try {
-          // Get therapist profile
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, full_name, profile_image_url, role')
-            .eq('id', id)
-            .eq('role', 'therapist')
-            .single();
-            
-          if (profileError) throw profileError;
-          
-          // Get therapist details
-          const { data: therapistData, error: therapistError } = await supabase
-            .from('therapists')
-            .select('bio, specialization, years_experience, hourly_rate, rating')
-            .eq('id', id)
-            .single();
-            
-          if (therapistError) throw therapistError;
-          
-          // Convert to a format similar to our mock data
-          const therapistSpecialties = therapistData.specialization ? therapistData.specialization.split(',').map(s => s.trim()) : ["Therapy"];
-          
-          const dbTherapist = {
-            id,
-            name: profileData.full_name,
-            title: `Licensed ${therapistSpecialties[0]} Therapist`,
-            image: profileData.profile_image_url || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-            rating: therapistData.rating || 4.5,
-            reviewCount: Math.floor(Math.random() * 50) + 10,
-            specialties: therapistSpecialties,
-            languages: ["English"],
-            yearsExperience: therapistData.years_experience || 3,
-            location: "Remote Available",
-            education: [
-              { degree: "Ph.D. in Psychology", institution: "University", year: "2015" }
-            ],
-            certifications: [
-              "Licensed Therapist"
-            ],
-            approach: therapistSpecialties.map(s => `${s} Therapy`),
-            price: therapistData.hourly_rate || 75,
-            insurance: ["Blue Cross Blue Shield", "Aetna"],
-            nextAvailable: generateDateOptions(),
-            about: therapistData.bio || "Professional therapist with experience in providing supportive counseling and therapy services."
-          };
-          
-          setTherapist(dbTherapist);
-          
-          if (dbTherapist?.nextAvailable && dbTherapist.nextAvailable.length > 0) {
-            setSelectedDate(dbTherapist.nextAvailable[0].date);
-          }
-        } catch (error) {
-          console.error("Error fetching therapist data:", error);
-          throw error;
+          availability = Array.isArray(therapistRow?.availability)
+            ? therapistRow.availability
+            : JSON.parse(therapistRow?.availability ?? "[]");
+        } catch {
+          availability = [];
         }
-      } catch (error) {
-        console.error("Error in therapist profile:", error);
+
+        // Sessions from session_formats (comma-separated)
+        let sessions: any[] = [];
+        if (detailsRow?.session_formats) {
+          sessions = detailsRow.session_formats.split(",").map((s: string) => ({
+            id: s.toLowerCase().replace(/\s/g, "_"),
+            name: s.trim(),
+            description: "",
+            duration: 50,
+            price: therapistRow?.hourly_rate || 80,
+          }));
+        }
+
+        setTherapist({
+          ...profile,
+          ...therapistRow,
+          ...detailsRow,
+          availability,
+          sessions,
+        });
+
+        // Set selected date default
+        if (availability.length > 0) setSelectedDate(availability[0].date);
+
+        // Fetch reviews for this therapist
+        const { data: reviewsRow } = await supabase
+          .from("reviews")
+          .select("rating, comment, created_at")
+          .eq("therapist_id", id)
+          .order("created_at", { ascending: false });
+        setReviews(reviewsRow || []);
+      } catch (err) {
         toast({
-          title: "Could not load therapist profile",
+          title: "Error loading therapist",
           description: "Please try again later",
           variant: "destructive",
         });
-        
-        // Fallback to mock data
-        setTherapist({
-          id: id,
-          name: "Therapist Profile",
-          title: "Licensed Therapist",
-          image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-          rating: 4.7,
-          reviewCount: 50,
-          specialties: ["Therapy", "Counseling"],
-          languages: ["English"],
-          yearsExperience: 5,
-          location: "Remote Available",
-          education: [
-            { degree: "Ph.D. in Psychology", institution: "University", year: "2018" }
-          ],
-          certifications: ["Licensed Therapist"],
-          approach: ["Therapy", "Counseling"],
-          price: 80,
-          insurance: ["Insurance Plans"],
-          nextAvailable: generateDateOptions(),
-          about: "Professional therapist with experience in providing supportive counseling and therapy services."
-        });
+        setTherapist(null);
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchTherapistData();
-  }, [id, toast]);
+    // eslint-disable-next-line
+  }, [id]);
 
   if (loading) {
     return (
@@ -433,96 +138,69 @@ const TherapistProfile = () => {
 
   const handleBookSession = () => {
     if (selectedDate && selectedTime) {
-      const encodedDate = encodeURIComponent(selectedDate);
-      const encodedTime = encodeURIComponent(selectedTime);
-      navigate(`/booking/complete/${therapist.id}/${encodedDate}/${encodedTime}`);
+      navigate(`/booking/complete/${therapist.id}/${encodeURIComponent(selectedDate)}/${encodeURIComponent(selectedTime)}`);
     }
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left Column - Therapist Info */}
+        {/* Left Column */}
         <div className="lg:w-2/3 space-y-6">
           {/* Profile Header */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="p-6 flex flex-col md:flex-row gap-6">
               <div className="md:w-1/3 flex-shrink-0">
-                <img 
-                  src={therapist.image} 
-                  alt={therapist.name}
-                  className="w-full h-auto aspect-square object-cover rounded-lg"
-                />
+                {therapist.profile_image_url ? (
+                  <img
+                    src={therapist.profile_image_url}
+                    alt={therapist.full_name}
+                    className="w-full h-auto aspect-square object-cover rounded-lg"
+                  />
+                ) : (
+                  <div className="w-full h-auto aspect-square rounded-lg flex items-center justify-center bg-muted text-3xl font-bold">
+                    {therapist.full_name
+                      ? therapist.full_name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                      : ""}
+                  </div>
+                )}
               </div>
-              
               <div className="md:w-2/3">
-                <h1 className="text-2xl md:text-3xl font-bold mb-1">{therapist.name}</h1>
-                <p className="text-lg text-gray-600 mb-3">{therapist.title}</p>
-                
+                <h1 className="text-2xl md:text-3xl font-bold mb-1">{therapist.full_name}</h1>
+                <p className="text-lg text-gray-600 mb-3">{therapist.specialization || "Therapist"}</p>
                 <div className="flex items-center mb-4">
                   <div className="flex">
-                    {Array.from({ length: Math.floor(therapist.rating) }).map((_, i) => (
+                    {Array.from({ length: Math.floor(therapist.rating || 5) }).map((_, i) => (
                       <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
                     ))}
-                    {therapist.rating % 1 > 0 && (
-                      <Star className="h-5 w-5 text-yellow-400" />
-                    )}
                   </div>
-                  <span className="ml-1 font-medium">{therapist.rating}</span>
-                  <span className="ml-1 text-gray-500">({therapist.reviewCount} reviews)</span>
+                  <span className="ml-1 font-medium">{therapist.rating || 5}</span>
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                   <div className="flex items-center gap-2">
                     <Award className="h-5 w-5 text-thera-600" />
-                    <span>{therapist.yearsExperience} years experience</span>
+                    <span>{therapist.years_experience || "N/A"} years experience</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-thera-600" />
-                    <span>{therapist.location}</span>
+                    <span>{therapist.location || "Remote Available"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Languages className="h-5 w-5 text-thera-600" />
-                    <span>{therapist.languages.join(", ")}</span>
+                    <span>{therapist.languages || "English"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-5 w-5 text-thera-600" />
-                    <span>${therapist.price} per session</span>
+                    <span>${therapist.hourly_rate || 80} per session</span>
                   </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {therapist.specialties.map((specialty: string) => (
-                    <span 
-                      key={specialty} 
-                      className="bg-thera-50 text-thera-700 text-xs px-2 py-1 rounded-full"
-                    >
-                      {specialty}
-                    </span>
-                  ))}
-                </div>
-                
-                <div className="md:hidden mt-6 flex gap-2">
-                  <Button 
-                    className="flex-1 bg-thera-600 hover:bg-thera-700"
-                    onClick={() => window.scrollTo({top: document.getElementById('booking-section')?.offsetTop || 0, behavior: 'smooth'})}
-                  >
-                    Book Session
-                  </Button>
-                  <Button 
-                    asChild
-                    variant="outline" 
-                    className="flex-1"
-                  >
-                    <Link to={`/chat/${therapist.id}`}>
-                      Message
-                    </Link>
-                  </Button>
                 </div>
               </div>
             </div>
           </div>
-          
           {/* Therapist Details Tabs */}
           <div className="bg-white rounded-xl shadow-sm">
             <Tabs defaultValue="about">
@@ -533,142 +211,81 @@ const TherapistProfile = () => {
                   <TabsTrigger value="reviews">Reviews</TabsTrigger>
                 </TabsList>
               </div>
-              
               <TabsContent value="about" className="p-6">
-                <h2 className="text-xl font-bold mb-4">About {therapist.name}</h2>
-                {therapist.about.split('\n\n').map((paragraph: string, index: number) => (
-                  <p key={index} className="text-gray-700 mb-4">{paragraph}</p>
-                ))}
-                
+                <h2 className="text-xl font-bold mb-4">About {therapist.full_name}</h2>
+                <p className="text-gray-700 mb-4">{therapist.bio || "No bio provided."}</p>
                 <h3 className="text-lg font-bold mt-6 mb-3">Therapeutic Approach</h3>
                 <ul className="space-y-2">
-                  {therapist.approach.map((approach: string) => (
-                    <li key={approach} className="flex items-center gap-2">
-                      <Check className="h-5 w-5 text-mint-500" />
-                      <span>{approach}</span>
-                    </li>
-                  ))}
+                  {therapist.therapy_approaches
+                    ? therapist.therapy_approaches.split(',').map((approach: string, idx: number) => (
+                        <li key={idx} className="flex items-center gap-2">
+                          <Check className="h-5 w-5 text-mint-500" />
+                          <span>{approach.trim()}</span>
+                        </li>
+                      ))
+                    : <span>No approach information available.</span>
+                  }
                 </ul>
-                
-                <h3 className="text-lg font-bold mt-6 mb-3">Insurance Accepted</h3>
-                <div className="flex flex-wrap gap-2">
-                  {therapist.insurance.map((insurance: string) => (
-                    <span 
-                      key={insurance} 
-                      className="bg-gray-100 text-gray-700 text-sm px-3 py-1 rounded-full"
-                    >
-                      {insurance}
-                    </span>
-                  ))}
-                </div>
+                {/* ... insurance, etc could be added ... */}
               </TabsContent>
-              
               <TabsContent value="credentials" className="p-6">
                 <h2 className="text-xl font-bold mb-4">Education & Credentials</h2>
-                
-                <h3 className="text-lg font-bold mb-3">Education</h3>
                 <div className="space-y-4 mb-6">
-                  {therapist.education.map((edu: any, index: number) => (
-                    <div key={index} className="border-l-2 border-thera-200 pl-4">
-                      <p className="font-medium">{edu.degree}</p>
-                      <p className="text-gray-600">{edu.institution}, {edu.year}</p>
-                    </div>
-                  ))}
+                  <div className="border-l-2 border-thera-200 pl-4">
+                    <p className="font-medium">{therapist.education || "No education info."}</p>
+                  </div>
                 </div>
-                
                 <h3 className="text-lg font-bold mb-3">Certifications & Licenses</h3>
                 <ul className="space-y-2">
-                  {therapist.certifications.map((cert: string, index: number) => (
-                    <li key={index} className="flex items-center gap-2">
-                      <Award className="h-5 w-5 text-mint-500" />
-                      <span>{cert}</span>
-                    </li>
-                  ))}
+                  <li className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-mint-500" />
+                    <span>{therapist.license_type || "No license type provided."}</span>
+                  </li>
                 </ul>
               </TabsContent>
-              
               <TabsContent value="reviews" className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold">Client Reviews</h2>
-                  <div className="flex items-center">
-                    <div className="flex">
-                      {Array.from({ length: Math.floor(therapist.rating) }).map((_, i) => (
-                        <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                      ))}
-                    </div>
-                    <span className="ml-1 font-medium">{therapist.rating}</span>
-                    <span className="ml-1 text-gray-500">({therapist.reviewCount})</span>
-                  </div>
                 </div>
-                
-                {/* Mock reviews */}
-                <div className="space-y-6">
-                  <div className="border-b border-gray-100 pb-6">
-                    <div className="flex items-center mb-3">
-                      <div className="flex">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star key={star} className="h-4 w-4 text-yellow-400 fill-current" />
-                        ))}
+                {reviews.length === 0 ? (
+                  <p className="text-muted-foreground">No reviews at the moment.</p>
+                ) : (
+                  <div className="space-y-6">
+                    {reviews.map((review, idx) => (
+                      <div key={idx} className="border-b border-gray-100 pb-6">
+                        <div className="flex items-center mb-3">
+                          <div className="flex">
+                            {[...Array(review.rating)].map((_, i) => (
+                              <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                            ))}
+                          </div>
+                          <span className="ml-2 text-sm text-gray-500">{new Date(review.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-gray-700 mb-3">
+                          {review.comment}
+                        </p>
                       </div>
-                      <span className="ml-2 text-sm text-gray-500">1 month ago</span>
-                    </div>
-                    <p className="text-gray-700 mb-3">
-                      "Dr. {therapist.name.split(' ')[1]} is an exceptional therapist. She really listens and offers practical advice that has helped me overcome my anxiety. I feel like I'm making real progress."
-                    </p>
-                    <p className="text-sm font-medium">Maria K.</p>
+                    ))}
                   </div>
-                  
-                  <div className="border-b border-gray-100 pb-6">
-                    <div className="flex items-center mb-3">
-                      <div className="flex">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star key={star} className="h-4 w-4 text-yellow-400 fill-current" />
-                        ))}
-                      </div>
-                      <span className="ml-2 text-sm text-gray-500">3 months ago</span>
-                    </div>
-                    <p className="text-gray-700 mb-3">
-                      "I appreciate how Dr. {therapist.name.split(' ')[1]} creates a safe space for me to explore difficult emotions. The video sessions are convenient, and I never feel rushed."
-                    </p>
-                    <p className="text-sm font-medium">James T.</p>
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center mb-3">
-                      <div className="flex">
-                        {[1, 2, 3, 4, 5].map((star, idx) => (
-                          <Star key={star} className={`h-4 w-4 ${idx < 4 ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                        ))}
-                      </div>
-                      <span className="ml-2 text-sm text-gray-500">5 months ago</span>
-                    </div>
-                    <p className="text-gray-700 mb-3">
-                      "Dr. {therapist.name.split(' ')[1]} has been very helpful in my journey. The only reason for 4 stars instead of 5 is occasionally the video connection has issues, but that's more on the platform than the therapist."
-                    </p>
-                    <p className="text-sm font-medium">Alex W.</p>
-                  </div>
-                </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>
         </div>
-        
         {/* Right Column - Booking */}
         <div className="lg:w-1/3" id="booking-section">
           <div className="bg-white rounded-xl shadow-sm sticky top-24">
             <div className="p-6">
               <h2 className="text-xl font-bold mb-4">Book a Session</h2>
-              
               <div className="mb-6">
                 <h3 className="font-medium mb-2 flex items-center gap-1">
                   <Calendar className="h-4 w-4" /> Select a Date
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-2">
-                  {therapist.nextAvailable.map((day: any) => (
+                  {therapist.availability?.map((day: any) => (
                     <Button
                       key={day.date}
                       variant={selectedDate === day.date ? "default" : "outline"}
-                      className={selectedDate === day.date ? "bg-thera-600 hover:bg-thera-700" : ""}
                       onClick={() => {
                         setSelectedDate(day.date);
                         setSelectedTime(null);
@@ -679,20 +296,18 @@ const TherapistProfile = () => {
                   ))}
                 </div>
               </div>
-              
               {selectedDate && (
                 <div className="mb-6">
                   <h3 className="font-medium mb-2 flex items-center gap-1">
                     <Clock className="h-4 w-4" /> Select a Time
                   </h3>
                   <div className="grid grid-cols-3 gap-2">
-                    {therapist.nextAvailable
+                    {therapist.availability
                       .find((day: any) => day.date === selectedDate)
                       ?.slots.map((time: string) => (
                         <Button
                           key={time}
                           variant={selectedTime === time ? "default" : "outline"}
-                          className={selectedTime === time ? "bg-thera-600 hover:bg-thera-700" : ""}
                           onClick={() => setSelectedTime(time)}
                         >
                           {time}
@@ -701,40 +316,29 @@ const TherapistProfile = () => {
                   </div>
                 </div>
               )}
-              
               <div className="space-y-4">
-                <Button 
+                <Button
                   className="w-full bg-thera-600 hover:bg-thera-700"
                   disabled={!selectedDate || !selectedTime}
                   onClick={handleBookSession}
                 >
                   Book Session
                 </Button>
-                
                 <div className="flex gap-2">
-                  <Button 
-                    asChild
-                    variant="outline" 
-                    className="w-1/2"
-                  >
+                  <Button asChild variant="outline" className="w-1/2">
                     <Link to={`/chat/${therapist.id}`}>
                       <MessageCircle className="h-4 w-4 mr-1" /> Message
                     </Link>
                   </Button>
-                  <Button 
-                    asChild
-                    variant="outline" 
-                    className="w-1/2"
-                  >
+                  <Button asChild variant="outline" className="w-1/2">
                     <Link to={`/video/${therapist.id}`}>
                       <Video className="h-4 w-4 mr-1" /> Quick Consult
                     </Link>
                   </Button>
                 </div>
-                
                 <div className="text-sm text-gray-500">
                   <p className="flex items-center gap-1 mb-1">
-                    <DollarSign className="h-4 w-4" /> ${therapist.price} per session
+                    <DollarSign className="h-4 w-4" /> ${therapist.hourly_rate || 80} per session
                   </p>
                   <p className="flex items-center gap-1">
                     <Clock className="h-4 w-4" /> 50-minute session
@@ -742,7 +346,6 @@ const TherapistProfile = () => {
                 </div>
               </div>
             </div>
-            
             <div className="bg-gray-50 p-4 rounded-b-xl border-t border-gray-100 text-sm text-gray-500">
               <p className="flex items-center gap-1">
                 <Check className="h-4 w-4 text-mint-500" /> Secure & confidential

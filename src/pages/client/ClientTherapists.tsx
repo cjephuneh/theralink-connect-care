@@ -337,12 +337,21 @@ const ClientTherapists = () => {
               <CardContent className="p-6">
                 <div className="flex gap-6">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={therapist.profile_image_url} />
-                    <AvatarFallback className="text-lg">
-                      {therapist.full_name?.split(' ').map(n => n[0]).join('') || 'T'}
-                    </AvatarFallback>
+                    {therapist.profile_image_url ? (
+                      <AvatarImage src={therapist.profile_image_url} />
+                    ) : (
+                      <AvatarFallback className="text-lg">
+                        {therapist.full_name
+                          ? therapist.full_name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                          : "T"}
+                      </AvatarFallback>
+                    )}
                   </Avatar>
-                  
+
                   <div className="flex-1 space-y-3">
                     <div className="flex justify-between items-start">
                       <div>
@@ -398,68 +407,19 @@ const ClientTherapists = () => {
                     </div>
 
                     <div className="flex gap-3 pt-2">
-                      <Button
-                        asChild
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        <Link to={`/therapists/${therapist.id}`}>
-                          View Profile
+                      <Button asChild variant="outline" className="flex-1">
+                        <Link to={`/therapists/${therapist.id}`}>View Profile</Link>
+                      </Button>
+                      <Button asChild className="flex-1">
+                        <Link 
+                          to={`/booking/${therapist.id}`}
+                          state={{
+                            therapist,
+                          }}
+                        >
+                          Book Session
                         </Link>
                       </Button>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            className="flex-1"
-                            onClick={() => setSelectedTherapist(therapist)}
-                          >
-                            Book Session
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Book Session with {therapist.full_name}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <label className="text-sm font-medium">Select Date</label>
-                              <Input
-                                type="date"
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                min={new Date().toISOString().split('T')[0]}
-                              />
-                            </div>
-                            
-                            <div>
-                              <label className="text-sm font-medium">Available Times</label>
-                              <div className="grid grid-cols-3 gap-2 mt-2">
-                                {availableSlots.map((slot) => (
-                                  <Button
-                                    key={slot.time}
-                                    variant={selectedTime === slot.time ? "default" : "outline"}
-                                    disabled={!slot.available}
-                                    onClick={() => setSelectedTime(slot.time)}
-                                    className="text-sm"
-                                  >
-                                    {slot.time}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                            
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={handleBookSession}
-                                disabled={!selectedDate || !selectedTime || bookingLoading}
-                                className="flex-1"
-                              >
-                                {bookingLoading ? "Booking..." : "Confirm Booking"}
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
                     </div>
                   </div>
                 </div>
