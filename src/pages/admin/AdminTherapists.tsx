@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,8 @@ import {
   Clock,
   MessageCircle,
   DollarSign,
-  Star
+  Star,
+  Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { TherapistDetailsModal } from '@/components/admin/TherapistDetailsModal';
 
 interface Therapist {
   id: string;
@@ -64,6 +65,8 @@ const AdminTherapists = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -189,6 +192,20 @@ const AdminTherapists = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const openTherapistDetails = (therapist: Therapist) => {
+    setSelectedTherapist(therapist);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedTherapist(null);
+  };
+
+  const handleStatusUpdate = () => {
+    fetchTherapists();
   };
 
   if (isLoading) {
@@ -370,6 +387,15 @@ const AdminTherapists = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openTherapistDetails(therapist)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    View Details
+                  </Button>
+                  
                   {!therapist.therapist_details?.is_verified && (
                     <Button
                       variant="outline"
@@ -382,15 +408,6 @@ const AdminTherapists = () => {
                     </Button>
                   )}
                   
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {/* Navigate to therapist details */}}
-                  >
-                    <MessageCircle className="h-4 w-4 mr-1" />
-                    View Details
-                  </Button>
-                  
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm">
@@ -400,7 +417,9 @@ const AdminTherapists = () => {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem>View Full Profile</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openTherapistDetails(therapist)}>
+                        View Full Profile
+                      </DropdownMenuItem>
                       <DropdownMenuItem>Send Email</DropdownMenuItem>
                       <DropdownMenuItem>View Appointments</DropdownMenuItem>
                       <DropdownMenuItem>View Earnings</DropdownMenuItem>
@@ -434,6 +453,14 @@ const AdminTherapists = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Therapist Details Modal */}
+      <TherapistDetailsModal
+        therapist={selectedTherapist}
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        onStatusUpdate={handleStatusUpdate}
+      />
     </div>
   );
 };
