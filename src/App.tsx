@@ -1,178 +1,189 @@
 
-import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { HelmetProvider } from 'react-helmet-async';
 import Layout from "@/components/layout/Layout";
 import ClientLayout from "@/components/layout/ClientLayout";
-import FriendLayout from "@/components/layout/FriendLayout";
 import TherapistLayout from "@/components/layout/TherapistLayout";
+import FriendLayout from "@/components/layout/FriendLayout";
 
-// Lazy load components
-const Index = lazy(() => import("@/pages/Index"));
-const Login = lazy(() => import("@/pages/auth/Login"));
-const Register = lazy(() => import("@/pages/auth/Register"));
-const ForgotPassword = lazy(() => import("@/pages/auth/ForgotPassword"));
-const TherapistListing = lazy(() => import("@/pages/TherapistListing"));
-const TherapistProfile = lazy(() => import("@/pages/TherapistProfile"));
-const BookingPage = lazy(() => import("@/pages/BookingPage"));
-const BookingPaymentPage = lazy(() => import("@/pages/BookingPaymentPage"));
-const BookingComplete = lazy(() => import("@/pages/BookingComplete"));
-const ChatPage = lazy(() => import("@/pages/ChatPage"));
-const VideoChat = lazy(() => import("@/pages/VideoChat"));
-const ContactPage = lazy(() => import("@/pages/ContactPage"));
-const AboutPage = lazy(() => import("@/pages/AboutPage"));
-const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
-const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage"));
-const TermsPage = lazy(() => import("@/pages/TermsPage"));
-const HIPAAPage = lazy(() => import("@/pages/HIPAAPage"));
-const BlogPage = lazy(() => import("@/pages/BlogPage"));
-const TherapistsLandingPage = lazy(() => import("@/pages/TherapistsLandingPage"));
-const FriendsLandingPage = lazy(() => import("@/pages/FriendsLandingPage"));
-const FriendListing = lazy(() => import("@/pages/FriendListing"));
-const AIMatchingPage = lazy(() => import("@/pages/AIMatchingPage"));
-const AIMatchingResults = lazy(() => import("@/pages/AIMatchingResults"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
+// Import pages
+import Index from "./pages/Index";
+import AboutPage from "./pages/AboutPage";
+import HowItWorks from "./pages/HowItWorks";
+import ContactPage from "./pages/ContactPage";
+import TherapistsLandingPage from "./pages/TherapistsLandingPage";
+import FriendsLandingPage from "./pages/FriendsLandingPage";
+import TherapistListing from "./pages/TherapistListing";
+import FriendListing from "./pages/FriendListing";
+import TherapistProfile from "./pages/TherapistProfile";
+import BlogPage from "./pages/BlogPage";
+import BookingPage from "./pages/BookingPage";
+import BookingPaymentPage from "./pages/BookingPaymentPage";
+import BookingComplete from "./pages/BookingComplete";
+import VideoChat from "./pages/VideoChat";
+import ChatPage from "./pages/ChatPage";
+import AIMatchingPage from "./pages/AIMatchingPage";
+import AIMatchingResults from "./pages/AIMatchingResults";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsPage from "./pages/TermsPage";
+import HIPAAPage from "./pages/HIPAAPage";
+import NotFound from "./pages/NotFound";
 
-// Client Dashboard Pages
-const ClientDashboard = lazy(() => import("@/pages/ClientDashboard"));
-const ClientOverview = lazy(() => import("@/pages/client/ClientOverview"));
-const ClientTherapists = lazy(() => import("@/pages/client/ClientTherapists"));
-const ClientAppointments = lazy(() => import("@/pages/client/ClientAppointments"));
-const ClientMessages = lazy(() => import("@/pages/client/ClientMessages"));
-const ClientNotes = lazy(() => import("@/pages/client/ClientNotes"));
-const ClientBilling = lazy(() => import("@/pages/client/ClientBilling"));
-const ClientProfile = lazy(() => import("@/pages/client/ClientProfile"));
-const ClientSettings = lazy(() => import("@/pages/client/ClientSettings"));
-const ClientResources = lazy(() => import("@/pages/client/ClientResources"));
-const ClientFeedback = lazy(() => import("@/pages/client/ClientFeedback"));
+// Auth pages
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 
-// Friend Dashboard Pages
-const FriendDashboard = lazy(() => import("@/pages/friend/FriendDashboard"));
-const FriendOnboarding = lazy(() => import("@/pages/friend/FriendOnboarding"));
-const FriendClients = lazy(() => import("@/pages/friend/FriendClients"));
-const FriendNotes = lazy(() => import("@/pages/friend/FriendNotes"));
+// Client pages
+import ClientDashboard from "./pages/ClientDashboard";
+import ClientOverview from "./pages/client/ClientOverview";
+import ClientProfile from "./pages/client/ClientProfile";
+import ClientAppointments from "./pages/client/ClientAppointments";
+import ClientMessages from "./pages/client/ClientMessages";
+import ClientBilling from "./pages/client/ClientBilling";
+import ClientSettings from "./pages/client/ClientSettings";
+import ClientTherapists from "./pages/client/ClientTherapists";
+import ClientResources from "./pages/client/ClientResources";
+import ClientNotes from "./pages/client/ClientNotes";
+import ClientFeedback from "./pages/client/ClientFeedback";
 
-// Therapist Dashboard Pages
-const TherapistDashboard = lazy(() => import("@/pages/therapist/TherapistDashboard"));
-const TherapistOnboarding = lazy(() => import("@/pages/therapist/TherapistOnboarding"));
-const TherapistAppointments = lazy(() => import("@/pages/therapist/TherapistAppointments"));
-const TherapistClients = lazy(() => import("@/pages/therapist/TherapistClients"));
-const TherapistMessages = lazy(() => import("@/pages/therapist/TherapistMessages"));
-const SessionNotes = lazy(() => import("@/pages/therapist/SessionNotes"));
-const TherapistEarnings = lazy(() => import("@/pages/therapist/TherapistEarnings"));
-const TherapistReviews = lazy(() => import("@/pages/therapist/TherapistReviews"));
-const TherapistAnalytics = lazy(() => import("@/pages/therapist/TherapistAnalytics"));
-const TherapistNotifications = lazy(() => import("@/pages/therapist/TherapistNotifications"));
-const TherapistAccount = lazy(() => import("@/pages/therapist/TherapistAccount"));
-const TherapistSettings = lazy(() => import("@/pages/therapist/TherapistSettings"));
+// Therapist pages
+import TherapistDashboard from "./pages/therapist/TherapistDashboard";
+import TherapistOnboarding from "./pages/therapist/TherapistOnboarding";
+import TherapistOnboardingPage from "./pages/TherapistOnboardingPage";
+import TherapistAppointments from "./pages/therapist/TherapistAppointments";
+import TherapistClients from "./pages/therapist/TherapistClients";
+import TherapistMessages from "./pages/therapist/TherapistMessages";
+import TherapistEarnings from "./pages/therapist/TherapistEarnings";
+import TherapistReviews from "./pages/therapist/TherapistReviews";
+import TherapistAnalytics from "./pages/therapist/TherapistAnalytics";
+import TherapistAccount from "./pages/therapist/TherapistAccount";
+import TherapistSettings from "./pages/therapist/TherapistSettings";
+import TherapistDocuments from "./pages/therapist/TherapistDocuments";
+import TherapistNotifications from "./pages/therapist/TherapistNotifications";
+import SessionNotes from "./pages/therapist/SessionNotes";
 
-// Admin Dashboard Pages
-const AdminLogin = lazy(() => import("@/pages/admin/AdminLogin"));
-const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
-const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
-const AdminTherapists = lazy(() => import("@/pages/admin/AdminTherapists"));
-const AdminFriends = lazy(() => import("@/pages/admin/AdminFriends"));
-const AdminAppointments = lazy(() => import("@/pages/admin/AdminAppointments"));
-const AdminTransactions = lazy(() => import("@/pages/admin/AdminTransactions"));
-const AdminContent = lazy(() => import("@/pages/admin/AdminContent"));
-const AdminSettings = lazy(() => import("@/pages/admin/AdminSettings"));
-const AdminAnalytics = lazy(() => import("@/pages/admin/AdminAnalytics"));
-const AdminFeedback = lazy(() => import("@/pages/admin/AdminFeedback"));
-const AdminMessages = lazy(() => import("@/pages/admin/AdminMessages"));
-const AdminNotifications = lazy(() => import("@/pages/admin/AdminNotifications"));
-const AdminSessionNotes = lazy(() => import("@/pages/admin/AdminSessionNotes"));
-const AdminEmails = lazy(() => import("@/pages/admin/AdminEmails"));
+// Friend pages
+import FriendDashboard from "./pages/friend/FriendDashboard";
+import FriendOnboarding from "./pages/friend/FriendOnboarding";
+import FriendClients from "./pages/friend/FriendClients";
+import FriendNotes from "./pages/friend/FriendNotes";
+
+// Admin pages
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminTherapists from "./pages/admin/AdminTherapists";
+import AdminFriends from "./pages/admin/AdminFriends";
+import AdminAppointments from "./pages/admin/AdminAppointments";
+import AdminTransactions from "./pages/admin/AdminTransactions";
+import AdminEmails from "./pages/admin/AdminEmails";
+import AdminFeedback from "./pages/admin/AdminFeedback";
+import AdminContent from "./pages/admin/AdminContent";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminNotifications from "./pages/admin/AdminNotifications";
+import AdminMessages from "./pages/admin/AdminMessages";
+import AdminSessionNotes from "./pages/admin/AdminSessionNotes";
+import AdminBlogs from "./pages/admin/AdminBlogs";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+  <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
         <AuthProvider>
-          <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
             <Routes>
-              {/* Public routes */}
+              {/* Public routes with main layout */}
               <Route path="/" element={<Layout />}>
                 <Route index element={<Index />} />
-                <Route path="therapists" element={<TherapistListing />} />
-                <Route path="therapist/:id" element={<TherapistProfile />} />
-                <Route path="friends" element={<FriendListing />} />
-                <Route path="book/:therapistId" element={<BookingPage />} />
-                <Route path="book/:therapistId/payment" element={<BookingPaymentPage />} />
-                <Route path="booking-complete" element={<BookingComplete />} />
-                <Route path="chat/:appointmentId" element={<ChatPage />} />
-                <Route path="video/:appointmentId" element={<VideoChat />} />
-                <Route path="contact" element={<ContactPage />} />
                 <Route path="about" element={<AboutPage />} />
                 <Route path="how-it-works" element={<HowItWorks />} />
-                <Route path="privacy" element={<PrivacyPolicyPage />} />
-                <Route path="terms" element={<TermsPage />} />
-                <Route path="hipaa" element={<HIPAAPage />} />
-                <Route path="blog" element={<BlogPage />} />
+                <Route path="contact" element={<ContactPage />} />
                 <Route path="for-therapists" element={<TherapistsLandingPage />} />
                 <Route path="for-friends" element={<FriendsLandingPage />} />
+                <Route path="therapists" element={<TherapistListing />} />
+                <Route path="friends" element={<FriendListing />} />
+                <Route path="therapists/:id" element={<TherapistProfile />} />
+                <Route path="blog" element={<BlogPage />} />
+                <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+                <Route path="terms" element={<TermsPage />} />
+                <Route path="hipaa" element={<HIPAAPage />} />
+                
+                {/* Booking routes */}
+                <Route path="booking/:therapistId" element={<BookingPage />} />
+                <Route path="booking/:therapistId/payment" element={<BookingPaymentPage />} />
+                <Route path="booking/complete" element={<BookingComplete />} />
+                
+                {/* Chat and video routes */}
+                <Route path="video/:appointmentId" element={<VideoChat />} />
+                <Route path="chat/:friendId" element={<ChatPage />} />
+                
+                {/* AI Matching routes */}
                 <Route path="ai-matching" element={<AIMatchingPage />} />
-                <Route path="ai-matching-results" element={<AIMatchingResults />} />
+                <Route path="ai-matching/results" element={<AIMatchingResults />} />
+                
+                {/* Onboarding routes */}
+                <Route path="therapist-onboarding" element={<TherapistOnboardingPage />} />
               </Route>
 
-              {/* Auth routes */}
+              {/* Auth routes (no layout) */}
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
 
-              {/* Client Dashboard */}
+              {/* Client dashboard routes */}
               <Route path="/client" element={<ClientLayout />}>
                 <Route index element={<ClientDashboard />} />
-                <Route path="dashboard" element={<ClientDashboard />} />
                 <Route path="overview" element={<ClientOverview />} />
-                <Route path="therapists" element={<ClientTherapists />} />
+                <Route path="profile" element={<ClientProfile />} />
                 <Route path="appointments" element={<ClientAppointments />} />
                 <Route path="messages" element={<ClientMessages />} />
-                <Route path="notes" element={<ClientNotes />} />
                 <Route path="billing" element={<ClientBilling />} />
-                <Route path="profile" element={<ClientProfile />} />
                 <Route path="settings" element={<ClientSettings />} />
+                <Route path="therapists" element={<ClientTherapists />} />
                 <Route path="resources" element={<ClientResources />} />
+                <Route path="notes" element={<ClientNotes />} />
                 <Route path="feedback" element={<ClientFeedback />} />
               </Route>
 
-              {/* Friend Dashboard */}
+              {/* Therapist dashboard routes */}
+              <Route path="/therapist" element={<TherapistLayout />}>
+                <Route path="dashboard" element={<TherapistDashboard />} />
+                <Route path="onboarding" element={<TherapistOnboarding />} />
+                <Route path="appointments" element={<TherapistAppointments />} />
+                <Route path="clients" element={<TherapistClients />} />
+                <Route path="messages" element={<TherapistMessages />} />
+                <Route path="earnings" element={<TherapistEarnings />} />
+                <Route path="reviews" element={<TherapistReviews />} />
+                <Route path="analytics" element={<TherapistAnalytics />} />
+                <Route path="account" element={<TherapistAccount />} />
+                <Route path="settings" element={<TherapistSettings />} />
+                <Route path="documents" element={<TherapistDocuments />} />
+                <Route path="notifications" element={<TherapistNotifications />} />
+                <Route path="session-notes" element={<SessionNotes />} />
+              </Route>
+
+              {/* Friend dashboard routes */}
               <Route path="/friend" element={<FriendLayout />}>
-                <Route index element={<FriendDashboard />} />
                 <Route path="dashboard" element={<FriendDashboard />} />
                 <Route path="onboarding" element={<FriendOnboarding />} />
                 <Route path="clients" element={<FriendClients />} />
                 <Route path="notes" element={<FriendNotes />} />
               </Route>
 
-              {/* Therapist Dashboard */}
-              <Route path="/therapist" element={<TherapistLayout />}>
-                <Route index element={<TherapistDashboard />} />
-                <Route path="dashboard" element={<TherapistDashboard />} />
-                <Route path="onboarding" element={<TherapistOnboarding />} />
-                <Route path="appointments" element={<TherapistAppointments />} />
-                <Route path="clients" element={<TherapistClients />} />
-                <Route path="messages" element={<TherapistMessages />} />
-                <Route path="session-notes" element={<SessionNotes />} />
-                <Route path="earnings" element={<TherapistEarnings />} />
-                <Route path="reviews" element={<TherapistReviews />} />
-                <Route path="analytics" element={<TherapistAnalytics />} />
-                <Route path="notifications" element={<TherapistNotifications />} />
-                <Route path="account" element={<TherapistAccount />} />
-                <Route path="settings" element={<TherapistSettings />} />
-              </Route>
-
               {/* Admin routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<TherapistLayout />}>
-                <Route index element={<AdminDashboard />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="therapists" element={<AdminTherapists />} />
@@ -181,22 +192,23 @@ const App = () => (
                 <Route path="transactions" element={<AdminTransactions />} />
                 <Route path="emails" element={<AdminEmails />} />
                 <Route path="feedback" element={<AdminFeedback />} />
-                <Route path="messages" element={<AdminMessages />} />
-                <Route path="notifications" element={<AdminNotifications />} />
-                <Route path="session-notes" element={<AdminSessionNotes />} />
                 <Route path="content" element={<AdminContent />} />
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="analytics" element={<AdminAnalytics />} />
+                <Route path="notifications" element={<AdminNotifications />} />
+                <Route path="messages" element={<AdminMessages />} />
+                <Route path="session-notes" element={<AdminSessionNotes />} />
+                <Route path="blogs" element={<AdminBlogs />} />
               </Route>
 
-              {/* 404 */}
+              {/* 404 route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </Suspense>
+          </BrowserRouter>
         </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;

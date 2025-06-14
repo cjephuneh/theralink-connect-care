@@ -24,7 +24,8 @@ import {
   ClipboardList,
   Bell,
   Mail,
-  Heart
+  Heart,
+  Edit3
 } from "lucide-react";
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -158,6 +159,7 @@ const TherapistLayout = () => {
     { path: '/admin/emails', label: 'Send Emails', icon: Mail },
     { path: '/admin/feedback', label: 'Feedback', icon: MessageCircle },
     { path: '/admin/content', label: 'Content Management', icon: BookOpen },
+    { path: '/admin/blogs', label: 'Blog Management', icon: Edit3 },
     { path: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 

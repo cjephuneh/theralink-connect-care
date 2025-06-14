@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Shield,
   Zap,
-  Activity
+  Activity,
+  Edit3
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,7 +46,11 @@ const AdminDashboard = () => {
     totalRevenue: 0,
     averageRating: 0,
     completedAppointments: 0,
-    cancelledAppointments: 0
+    cancelledAppointments: 0,
+    contactMessages: 0,
+    unreadContactMessages: 0,
+    blogs: 0,
+    publishedBlogs: 0
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -118,6 +123,11 @@ const AdminDashboard = () => {
           .select("*", { count: "exact", head: true })
           .eq("is_read", false);
 
+        // Count total contact messages
+        const { count: contactMessagesCount } = await supabase
+          .from("contact_messages")
+          .select("*", { count: "exact", head: true });
+
         // Count reviews and get average rating
         const { count: reviewsCount, data: reviewData } = await supabase
           .from("reviews")
@@ -146,6 +156,17 @@ const AdminDashboard = () => {
         const friendsWithDetailsIds = friendsWithDetails?.map(f => f.friend_id) || [];
         const pendingFriendsCount = allFriends?.filter(f => !friendsWithDetailsIds.includes(f.id)).length || 0;
 
+        // Count blogs
+        const { count: blogsCount } = await supabase
+          .from("blogs")
+          .select("*", { count: "exact", head: true });
+
+        // Count published blogs
+        const { count: publishedBlogsCount } = await supabase
+          .from("blogs")
+          .select("*", { count: "exact", head: true })
+          .eq("published", true);
+
         setStats({
           users: usersCount || 0,
           therapists: therapistsCount || 0,
@@ -162,7 +183,11 @@ const AdminDashboard = () => {
           totalRevenue: totalRevenue,
           averageRating: averageRating,
           completedAppointments: completedAppointmentsCount || 0,
-          cancelledAppointments: cancelledAppointmentsCount || 0
+          cancelledAppointments: cancelledAppointmentsCount || 0,
+          contactMessages: contactMessagesCount || 0,
+          unreadContactMessages: unreadMessagesCount || 0,
+          blogs: blogsCount || 0,
+          publishedBlogs: publishedBlogsCount || 0
         });
       } catch (error) {
         console.error("Error fetching admin stats:", error);
@@ -200,7 +225,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Alert for pending approvals */}
-      {(pendingApprovals > 0 || stats.unreadFeedback > 0 || stats.unreadMessages > 0) && (
+      {(pendingApprovals > 0 || stats.unreadFeedback > 0 || stats.unreadContactMessages > 0) && (
         <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
           <CardContent className="pt-6">
             <div className="flex items-start gap-4">
@@ -213,8 +238,8 @@ const AdminDashboard = () => {
                   {pendingApprovals > 0 && (
                     <p>📋 {pendingApprovals} pending approvals ({stats.pendingTherapists} therapists, {stats.pendingFriends} friends)</p>
                   )}
-                  {(stats.unreadFeedback > 0 || stats.unreadMessages > 0) && (
-                    <p>📧 {stats.unreadFeedback + stats.unreadMessages} unread messages</p>
+                  {(stats.unreadFeedback > 0 || stats.unreadContactMessages > 0) && (
+                    <p>📧 {stats.unreadFeedback + stats.unreadContactMessages} unread messages</p>
                   )}
                 </div>
                 <div className="flex gap-3 mt-3">
@@ -223,7 +248,7 @@ const AdminDashboard = () => {
                       <Link to="/admin/therapists">Review Approvals</Link>
                     </Button>
                   )}
-                  {(stats.unreadFeedback > 0 || stats.unreadMessages > 0) && (
+                  {(stats.unreadFeedback > 0 || stats.unreadContactMessages > 0) && (
                     <Button asChild variant="outline" size="sm" className="border-amber-300 hover:bg-amber-100">
                       <Link to="/admin/feedback">View Messages</Link>
                     </Button>
@@ -323,6 +348,49 @@ const AdminDashboard = () => {
                 <div className="flex items-center gap-1">
                   <Activity className="h-3 w-3" />
                   <span>{stats.reviews} reviews</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Additional Stats Row */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-indigo-700">Contact Messages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Mail className="h-5 w-5 text-indigo-600 mr-3" />
+                <p className="text-3xl font-bold text-indigo-800">{stats.contactMessages}</p>
+              </div>
+              <div className="text-xs text-indigo-600">
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>{stats.unreadContactMessages} unread</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200 hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-pink-700">Blog Posts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Edit3 className="h-5 w-5 text-pink-600 mr-3" />
+                <p className="text-3xl font-bold text-pink-800">{stats.blogs}</p>
+              </div>
+              <div className="text-xs text-pink-600">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  <span>{stats.publishedBlogs} published</span>
                 </div>
               </div>
             </div>
@@ -439,9 +507,9 @@ const AdminDashboard = () => {
               <Link to="/admin/feedback">
                 <MessageSquare className="h-5 w-5 mb-1" />
                 <span className="text-xs">Feedback</span>
-                {(stats.unreadFeedback + stats.unreadMessages > 0) && 
+                {(stats.unreadFeedback + stats.unreadContactMessages > 0) && 
                   <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
-                    {stats.unreadFeedback + stats.unreadMessages}
+                    {stats.unreadFeedback + stats.unreadContactMessages}
                   </Badge>
                 }
               </Link>
@@ -474,6 +542,30 @@ const AdminDashboard = () => {
               <Link to="/admin/settings">
                 <UserCog className="h-5 w-5 mb-1" />
                 <span className="text-xs">Settings</span>
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-pink-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Edit3 className="h-5 w-5 text-pink-500" />
+              Blog Management
+            </CardTitle>
+            <CardDescription>Create and manage blog posts</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-pink-50">
+              <Link to="/admin/blogs">
+                <Edit3 className="h-5 w-5 mb-1" />
+                <span className="text-xs">Manage Blogs</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-pink-50">
+              <Link to="/admin/blogs/new">
+                <FileText className="h-5 w-5 mb-1" />
+                <span className="text-xs">New Post</span>
               </Link>
             </Button>
           </CardContent>
