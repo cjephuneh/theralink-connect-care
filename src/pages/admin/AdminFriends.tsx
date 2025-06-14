@@ -63,6 +63,7 @@ const AdminFriends = () => {
 
   useEffect(() => {
     filterFriends();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [friends, searchTerm, statusFilter]);
 
   const fetchFriends = async () => {
@@ -108,6 +109,12 @@ const AdminFriends = () => {
         friend.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         friend.location?.toLowerCase().includes(searchTerm.toLowerCase())
       );
+    }
+
+    if (statusFilter === 'active') {
+      filtered = filtered.filter(f => f.friend_details?.experience_description);
+    } else if (statusFilter === 'pending') {
+      filtered = filtered.filter(f => !f.friend_details?.experience_description);
     }
 
     setFilteredFriends(filtered);
