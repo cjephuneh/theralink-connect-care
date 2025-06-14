@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const AdminFeedback = () => {
   const [feedbackMessages, setFeedbackMessages] = useState<any[]>([]);
   const [contactMessages, setContactMessages] = useState<any[]>([]);
+  const [userProfiles, setUserProfiles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -34,21 +34,13 @@ const AdminFeedback = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch feedback messages with profile data
+      // Fetch feedback messages
       const { data: feedback, error: feedbackError } = await supabase
         .from("feedback")
-        .select(`
-          *,
-          profiles (
-            full_name,
-            email,
-            role
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (feedbackError) throw feedbackError;
-      setFeedbackMessages(feedback || []);
 
       // Fetch contact messages
       const { data: contacts, error: contactsError } = await supabase
@@ -57,18 +49,37 @@ const AdminFeedback = () => {
         .order("created_at", { ascending: false });
 
       if (contactsError) throw contactsError;
+
+      // Fetch user profiles separately
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*");
+
+      if (profilesError) throw profilesError;
+
+      // Combine feedback with user profiles manually
+      const feedbackWithProfiles = feedback?.map(feedbackItem => {
+        const userProfile = profiles?.find(profile => profile.id === feedbackItem.user_id);
+        return {
+          ...feedbackItem,
+          profiles: userProfile
+        };
+      }) || [];
+
+      setFeedbackMessages(feedbackWithProfiles);
       setContactMessages(contacts || []);
+      setUserProfiles(profiles || []);
 
       // Calculate stats
-      const unreadFeedback = feedback?.filter(f => !f.is_read).length || 0;
+      const unreadFeedback = feedbackWithProfiles?.filter(f => !f.is_read).length || 0;
       const unreadContacts = contacts?.filter(c => !c.is_read).length || 0;
-      const ratingsData = feedback?.filter(f => f.rating !== null) || [];
+      const ratingsData = feedbackWithProfiles?.filter(f => f.rating !== null) || [];
       const averageRating = ratingsData.length > 0 
         ? ratingsData.reduce((sum, f) => sum + f.rating, 0) / ratingsData.length 
         : 0;
 
       setStats({
-        totalFeedback: feedback?.length || 0,
+        totalFeedback: feedbackWithProfiles?.length || 0,
         totalContacts: contacts?.length || 0,
         unreadFeedback,
         unreadContacts,
