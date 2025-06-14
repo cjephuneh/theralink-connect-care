@@ -90,7 +90,7 @@ const TherapistProfile = () => {
         const { data: reviewsRow } = await supabase
           .from("reviews")
           .select("rating, comment, created_at")
-          .eq("therapist_id", id)
+          .eq("therapist_id", String(id))
           .order("created_at", { ascending: false });
         setReviews(reviewsRow || []);
       } catch (err) {
