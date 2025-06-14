@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -98,19 +97,30 @@ const FriendLayout = () => {
     }
   };
 
-  // Define nav items for friends
-  const friendNavItems = [
+  // Only allow navigation for role=friend
+  const navItems = [
     { path: '/friend/dashboard', label: 'Dashboard', icon: User },
     { path: '/friend/clients', label: 'Clients', icon: Users },
     { path: '/friend/messages', label: 'Messages', icon: MessageCircle },
     { path: '/friend/notes', label: 'Notes', icon: FileText },
-    { path: '/friend/notifications', label: 'Notifications', icon: Bell },
-    { path: '/friend/onboarding', label: 'Complete Profile', icon: User },
     { path: '/friend/account', label: 'Account', icon: User },
     { path: '/friend/settings', label: 'Settings', icon: Settings },
   ];
 
-  const navItems = friendNavItems;
+  // Only show nav and routes for friends
+  if (profile?.role !== "friend") {
+    return (
+      <div className="flex items-center justify-center h-screen text-center">
+        <div className="p-8 bg-card rounded-lg border shadow-md">
+          <div className="text-2xl font-bold mb-2">Access Restricted</div>
+          <p className="mb-4 text-muted-foreground">
+            You are not authorized to view Friend pages.<br />
+            Please log in as a Friend or contact support.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);

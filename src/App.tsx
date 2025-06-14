@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -73,6 +72,9 @@ import FriendDashboard from "./pages/friend/FriendDashboard";
 import FriendOnboarding from "./pages/friend/FriendOnboarding";
 import FriendClients from "./pages/friend/FriendClients";
 import FriendNotes from "./pages/friend/FriendNotes";
+import FriendMessages from "./pages/friend/FriendMessages";
+import FriendAccount from "./pages/friend/FriendAccount";
+import FriendSettings from "./pages/friend/FriendSettings";
 
 // Admin pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -179,6 +181,9 @@ const App = () => (
                 <Route path="onboarding" element={<FriendOnboarding />} />
                 <Route path="clients" element={<FriendClients />} />
                 <Route path="notes" element={<FriendNotes />} />
+                <Route path="messages" element={<FriendMessages />} />
+                <Route path="account" element={<FriendAccount />} />
+                <Route path="settings" element={<FriendSettings />} />
               </Route>
 
               {/* Admin routes */}
