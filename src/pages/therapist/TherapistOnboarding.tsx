@@ -14,17 +14,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Heart, DollarSign, Info, Menu, LogOut } from "lucide-react";
+import { Heart, DollarSign, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import ProfileImageUpload from "@/components/profile/ProfileImageUpload";
 import AvailabilityPicker from "@/components/profile/AvailabilityPicker";
-import { useIsMobile } from "@/hooks/use-mobile";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 
 interface Slot {
   day: string;
@@ -64,13 +58,11 @@ const formSchema = z.object({
 });
 
 const TherapistOnboarding = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availability, setAvailability] = useState<Slot[]>([]);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -100,24 +92,6 @@ const TherapistOnboarding = () => {
     { value: "GHS", label: "GHS - Ghanaian Cedi" },
     { value: "ZAR", label: "ZAR - South African Rand" },
   ];
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/');
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast({
-        title: "Logout Failed",
-        description: "There was a problem logging out. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
@@ -164,7 +138,7 @@ const TherapistOnboarding = () => {
           id: user.id,
           hourly_rate: values.therapist_type === 'community' ? 0 : null,
           preferred_currency: values.preferred_currency,
-          availability: availability as any, // Cast to any to satisfy Json type
+          availability: availability as any,
         });
 
       toast({
@@ -187,72 +161,8 @@ const TherapistOnboarding = () => {
     }
   };
 
-  const MobileNavContent = () => (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b">
-        <Link to="/therapist/dashboard" className="flex items-center space-x-2">
-          <div className="bg-blue-600 text-white p-1.5 rounded-md">
-            <span className="font-bold text-lg">T</span>
-          </div>
-          <span className="font-bold text-lg">TheraLink</span>
-        </Link>
-      </div>
-      <div className="flex-1 p-4">
-        <nav className="space-y-2">
-          <Link 
-            to="/therapist/dashboard" 
-            className="block px-3 py-2 rounded-md hover:bg-gray-100"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Dashboard
-          </Link>
-          <Link 
-            to="/therapist/onboarding" 
-            className="block px-3 py-2 rounded-md bg-blue-100 text-blue-700"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Complete Profile
-          </Link>
-        </nav>
-      </div>
-      <div className="p-4 border-t">
-        <Button
-          variant="ghost"
-          className="w-full flex items-center justify-start"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Log Out
-        </Button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-white border-b px-4 py-3 flex items-center justify-between">
-        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-64">
-            <MobileNavContent />
-          </SheetContent>
-        </Sheet>
-        
-        <Link to="/therapist/dashboard" className="flex items-center space-x-2">
-          <div className="bg-blue-600 text-white p-1.5 rounded-md">
-            <span className="font-bold text-lg">T</span>
-          </div>
-          <span className="font-bold text-lg">TheraLink</span>
-        </Link>
-        
-        <div className="w-10" /> {/* Spacer for centering */}
-      </div>
-
       {/* Main Content */}
       <div className="px-4 py-6 lg:py-8 lg:px-8">
         <div className="max-w-4xl mx-auto space-y-6 lg:space-y-8">
