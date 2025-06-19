@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +18,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import ProfileImageUpload from "@/components/profile/ProfileImageUpload";
 import AvailabilityPicker from "@/components/profile/AvailabilityPicker";
+
+interface Slot {
+  day: string;
+  slots: string[];
+}
 
 const formSchema = z.object({
   education: z.string().min(10, {
@@ -57,7 +61,7 @@ const TherapistOnboarding = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availability, setAvailability] = useState<{ date: string; slots: string[] }[]>([]);
+  const [availability, setAvailability] = useState<Slot[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
