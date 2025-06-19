@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -137,7 +138,7 @@ const TherapistOnboarding = () => {
           id: user.id,
           hourly_rate: values.therapist_type === 'community' ? 0 : null,
           preferred_currency: values.preferred_currency,
-          availability: availability, // save as JSON
+          availability: availability as any, // Cast to any to satisfy Json type
         });
 
       toast({
