@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Calendar,
   Users,
@@ -33,6 +34,11 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { TherapistNotificationBell } from './TherapistNotificationBell';
 import { useTherapistNotifications } from '@/hooks/useTherapistNotifications';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 
 interface NavItem {
   path: string;
@@ -43,6 +49,7 @@ interface NavItem {
 
 const TherapistLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
@@ -50,6 +57,7 @@ const TherapistLayout = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [onboardingComplete, setOnboardingComplete] = useState(true);
+  const isMobile = useIsMobile();
   
   // Use the notification hook
   const { unreadCount } = useTherapistNotifications();
@@ -169,95 +177,133 @@ const TherapistLayout = () => {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
+  const SidebarContent = () => (
+    <>
+      {/* Navigation Links */}
+      <div className="flex-1 overflow-auto py-4">
+        <nav className="px-2 space-y-1">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center px-3 py-2 rounded-md transition-colors relative ${
+                isActive(item.path)
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+              } ${
+                !onboardingComplete && item.path !== '/therapist/onboarding' && !isAdmin
+                  ? 'opacity-50 pointer-events-none'
+                  : ''
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <item.icon className="h-5 w-5" />
+              {(!isCollapsed || isMobile) && (
+                <>
+                  <span className="ml-3">{item.label}</span>
+                  {item.badge && (
+                    <Badge variant="destructive" className="ml-auto text-xs">
+                      {item.badge}
+                    </Badge>
+                  )}
+                </>
+              )}
+              {isCollapsed && !isMobile && item.badge && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center"
+                >
+                  {item.badge > 9 ? '9+' : item.badge}
+                </Badge>
+              )}
+            </Link>
+          ))}
+        </nav>
+      </div>
+
+      {/* Sidebar Footer */}
+      <div className="p-4 border-t border-sidebar-border">
+        <Button
+          variant="ghost"
+          className="w-full flex items-center justify-start text-sidebar-foreground hover:bg-sidebar-accent/50"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-5 w-5" />
+          {(!isCollapsed || isMobile) && <span className="ml-2">Log Out</span>}
+        </Button>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <aside
-        className={`bg-sidebar-background border-r border-sidebar-border transition-all duration-300 ease-in-out fixed md:static inset-y-0 left-0 z-50 ${
-          isCollapsed ? 'w-20' : 'w-64'
-        } md:flex flex-col ${isCollapsed ? '' : 'bg-white md:bg-sidebar-background'}`}
-      >
-        {/* Sidebar Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border bg-white md:bg-transparent">
-          <Link to={isAdmin ? "/admin/dashboard" : "/therapist/dashboard"} className="flex items-center space-x-2">
-            <div className="bg-thera-600 text-white p-1.5 rounded-md">
-              <span className="font-bold text-lg">T</span>
+      {/* Mobile Sidebar */}
+      {isMobile ? (
+        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+          <SheetContent side="left" className="p-0 w-64">
+            <div className="flex flex-col h-full bg-sidebar-background">
+              {/* Mobile Sidebar Header */}
+              <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+                <Link to={isAdmin ? "/admin/dashboard" : "/therapist/dashboard"} className="flex items-center space-x-2">
+                  <div className="bg-thera-600 text-white p-1.5 rounded-md">
+                    <span className="font-bold text-lg">T</span>
+                  </div>
+                  <span className="font-bold text-lg text-sidebar-foreground">TheraLink</span>
+                </Link>
+              </div>
+              <SidebarContent />
             </div>
-            {!isCollapsed && <span className="font-bold text-lg text-sidebar-foreground">TheraLink</span>}
-          </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-sidebar-foreground"
-          >
-            {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
-          </Button>
-        </div>
-
-        {/* Navigation Links */}
-        <div className="flex-1 overflow-auto py-4 bg-white md:bg-transparent">
-          <nav className="px-2 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center px-3 py-2 rounded-md transition-colors relative ${
-                  isActive(item.path)
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-                } ${
-                  !onboardingComplete && item.path !== '/therapist/onboarding' && !isAdmin
-                    ? 'opacity-50 pointer-events-none'
-                    : ''
-                }`}
-              >
-                <item.icon className="h-5 w-5" />
-                {!isCollapsed && (
-                  <>
-                    <span className="ml-3">{item.label}</span>
-                    {item.badge && (
-                      <Badge variant="destructive" className="ml-auto text-xs">
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </>
-                )}
-                {isCollapsed && item.badge && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 text-xs h-5 w-5 rounded-full p-0 flex items-center justify-center"
-                  >
-                    {item.badge > 9 ? '9+' : item.badge}
-                  </Badge>
-                )}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-sidebar-border bg-white md:bg-transparent">
-          <Button
-            variant="ghost"
-            className={`w-full flex items-center justify-${isCollapsed ? 'center' : 'start'} text-sidebar-foreground hover:bg-sidebar-accent/50`}
-            onClick={handleLogout}
-          >
-            <LogOut className="h-5 w-5" />
-            {!isCollapsed && <span className="ml-2">Log Out</span>}
-          </Button>
-        </div>
-      </aside>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        /* Desktop Sidebar */
+        <aside
+          className={`bg-sidebar-background border-r border-sidebar-border transition-all duration-300 ease-in-out ${
+            isCollapsed ? 'w-20' : 'w-64'
+          } flex flex-col`}
+        >
+          {/* Desktop Sidebar Header */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
+            <Link to={isAdmin ? "/admin/dashboard" : "/therapist/dashboard"} className="flex items-center space-x-2">
+              <div className="bg-thera-600 text-white p-1.5 rounded-md">
+                <span className="font-bold text-lg">T</span>
+              </div>
+              {!isCollapsed && <span className="font-bold text-lg text-sidebar-foreground">TheraLink</span>}
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="text-sidebar-foreground"
+            >
+              {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+            </Button>
+          </div>
+          <SidebarContent />
+        </aside>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        {/* Top bar with notification bell */}
-        <div className="border-b px-4 py-2 flex justify-end items-center">
-          <TherapistNotificationBell />
+        {/* Top bar with hamburger menu for mobile */}
+        <div className="border-b px-4 py-2 flex justify-between items-center">
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
+          <div className="ml-auto">
+            <TherapistNotificationBell />
+          </div>
         </div>
         
         {!onboardingComplete && location.pathname !== '/therapist/onboarding' && !isAdmin && (
-          <div className="bg-yellow-100 p-4 text-yellow-800 text-center">
+          <div className="bg-yellow-100 p-4 text-yellow-800 text-center text-sm">
             Please complete your profile setup before accessing other features.
           </div>
         )}

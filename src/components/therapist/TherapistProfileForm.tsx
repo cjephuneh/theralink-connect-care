@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, Edit } from "lucide-react";
 
 interface TherapistData {
   full_name: string;
@@ -137,62 +137,67 @@ const TherapistProfileForm = () => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          Professional Information
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <CardTitle className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <span className="text-lg sm:text-xl">Professional Information</span>
           {!isEditing && (
-            <Button variant="outline" onClick={() => setIsEditing(true)}>
+            <Button variant="outline" onClick={() => setIsEditing(true)} size="sm">
+              <Edit className="h-4 w-4 mr-2" />
               Edit Profile
             </Button>
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="full_name">Full Name</Label>
+      <CardContent className="px-4 sm:px-6">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="full_name" className="text-sm font-medium">Full Name</Label>
               <Input
                 id="full_name"
                 value={formData.full_name}
                 onChange={(e) => handleInputChange('full_name', e.target.value)}
                 disabled={!isEditing}
                 required
+                className="w-full"
               />
             </div>
-            <div>
-              <Label htmlFor="phone">Phone Number</Label>
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
               <Input
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 disabled={!isEditing}
                 placeholder="Enter your phone number"
+                className="w-full"
               />
             </div>
-            <div>
-              <Label htmlFor="location">Location</Label>
+            <div className="space-y-2">
+              <Label htmlFor="location" className="text-sm font-medium">Location</Label>
               <Input
                 id="location"
                 value={formData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 disabled={!isEditing}
                 placeholder="Enter your location"
+                className="w-full"
               />
             </div>
-            <div>
-              <Label htmlFor="specialization">Specialization</Label>
+            <div className="space-y-2">
+              <Label htmlFor="specialization" className="text-sm font-medium">Specialization</Label>
               <Input
                 id="specialization"
                 value={formData.specialization}
                 onChange={(e) => handleInputChange('specialization', e.target.value)}
                 disabled={!isEditing}
                 placeholder="e.g., Anxiety, Depression, PTSD"
+                className="w-full"
               />
             </div>
-            <div>
-              <Label htmlFor="years_experience">Years of Experience</Label>
+            <div className="space-y-2">
+              <Label htmlFor="years_experience" className="text-sm font-medium">Years of Experience</Label>
               <Input
                 id="years_experience"
                 type="number"
@@ -200,16 +205,17 @@ const TherapistProfileForm = () => {
                 onChange={(e) => handleInputChange('years_experience', parseInt(e.target.value) || 0)}
                 disabled={!isEditing}
                 min="0"
+                className="w-full"
               />
             </div>
-            <div>
-              <Label htmlFor="preferred_currency">Preferred Currency</Label>
+            <div className="space-y-2">
+              <Label htmlFor="preferred_currency" className="text-sm font-medium">Preferred Currency</Label>
               {isEditing ? (
                 <Select
                   value={formData.preferred_currency}
                   onValueChange={(value) => handleInputChange('preferred_currency', value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select currency" />
                   </SelectTrigger>
                   <SelectContent>
@@ -224,12 +230,15 @@ const TherapistProfileForm = () => {
                 <Input
                   value={formData.preferred_currency}
                   disabled
+                  className="w-full"
                 />
               )}
             </div>
           </div>
-          <div>
-            <Label htmlFor="hourly_rate">Hourly Rate ({formData.preferred_currency})</Label>
+          <div className="space-y-2">
+            <Label htmlFor="hourly_rate" className="text-sm font-medium">
+              Hourly Rate ({formData.preferred_currency})
+            </Label>
             <Input
               id="hourly_rate"
               type="number"
@@ -238,10 +247,11 @@ const TherapistProfileForm = () => {
               disabled={!isEditing}
               min="0"
               step="0.01"
+              className="w-full"
             />
           </div>
-          <div>
-            <Label htmlFor="bio">Professional Bio</Label>
+          <div className="space-y-2">
+            <Label htmlFor="bio" className="text-sm font-medium">Professional Bio</Label>
             <Textarea
               id="bio"
               value={formData.bio}
@@ -249,11 +259,12 @@ const TherapistProfileForm = () => {
               disabled={!isEditing}
               placeholder="Tell clients about your approach and experience..."
               rows={4}
+              className="w-full resize-none"
             />
           </div>
           {isEditing && (
-            <div className="flex space-x-2">
-              <Button type="submit" disabled={isLoading}>
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -271,6 +282,7 @@ const TherapistProfileForm = () => {
                 variant="outline" 
                 onClick={() => setIsEditing(false)}
                 disabled={isLoading}
+                className="w-full sm:w-auto"
               >
                 Cancel
               </Button>
