@@ -116,7 +116,7 @@ const App = () => (
                 <Route path="for-friends" element={<FriendsLandingPage />} />
                 <Route path="therapists" element={<TherapistListing />} />
                 <Route path="friends" element={<FriendListing />} />
-                <Route path="therapists/:id" element={<TherapistProfile />} />
+                <Route path="/therapists/:id" element={<TherapistProfile />} />
                 <Route path="blog" element={<BlogPage />} />
                 <Route path="blog/:id" element={<BlogDetail />} />
                 <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
@@ -124,7 +124,8 @@ const App = () => (
                 <Route path="hipaa" element={<HIPAAPage />} />
                 
                 {/* Booking routes */}
-                <Route path="booking/:therapistId" element={<BookingPage />} />
+               <Route path="/therapists/:therapistId/book" element={<BookingPage />} />
+
                 <Route path="booking/:therapistId/payment" element={<BookingPaymentPage />} />
                 <Route path="booking/complete" element={<BookingComplete />} />
                 
