@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -16,223 +15,106 @@ import {
 import { Calendar, Clock, User, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+interface Appointment {
+  id: string;
+  start_time: string;
+  end_time: string;
+  session_type: string;
+  status: string;
+  therapist_id: string;
+  therapist?: {
+    full_name: string;
+    profile_image_url?: string;
+  };
+}
+
 const ClientAppointments = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("upcoming");
-  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
-  const [pastAppointments, setPastAppointments] = useState([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+  const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [therapists, setTherapists] = useState({});
 
   useEffect(() => {
     if (!user) return;
 
-    // Add mock therapists to the database
-    const addMockTherapists = async () => {
-      try {
-        // Check if we already have therapists in the database
-        const { data: existingTherapists, error: checkError } = await supabase
-          .from('therapists')
-          .select('id')
-          .limit(1);
-        
-        if (checkError) throw checkError;
-        
-        // Only seed therapists if none exist
-        if (existingTherapists && existingTherapists.length === 0) {
-          const mockTherapists = [
-            {
-              id: "f47ac10b-58cc-4372-a567-0e02b2c3d479", // Generate a UUID
-              bio: "Licensed clinical psychologist with over 8 years of experience helping clients navigate life's challenges.",
-              specialization: "Anxiety, Depression, Trauma, PTSD",
-              years_experience: 8,
-              hourly_rate: 85,
-              rating: 4.9
-            },
-            {
-              id: "550e8400-e29b-41d4-a716-446655440000", // Generate a UUID
-              bio: "Licensed marriage and family therapist with over 12 years of experience helping couples and families.",
-              specialization: "Relationships, Couples Therapy, Family Conflict",
-              years_experience: 12,
-              hourly_rate: 95,
-              rating: 4.8
-            },
-            {
-              id: "6ba7b810-9dad-11d1-80b4-00c04fd430c8", // Generate a UUID
-              bio: "Clinical social worker passionate about helping individuals navigate through depression and grief.",
-              specialization: "Depression, Grief, Life Transitions, Identity",
-              years_experience: 5,
-              hourly_rate: 75,
-              rating: 5.0
-            }
-          ];
-          
-          // Add mock therapists to the database
-          for (const therapist of mockTherapists) {
-            // Add therapist profile first
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .upsert({
-                id: therapist.id,
-                email: `therapist${therapist.id.substring(0, 4)}@example.com`,
-                full_name: `Dr. ${therapist.specialization.split(',')[0]} Specialist`,
-                role: 'therapist',
-                profile_image_url: `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000000)}?fit=crop&w=500&q=80`,
-              }, { onConflict: 'id' });
-              
-            if (profileError) console.error("Error creating therapist profile:", profileError);
-            
-            // Then add therapist record
-            const { error: therapistError } = await supabase
-              .from('therapists')
-              .upsert(therapist, { onConflict: 'id' });
-              
-            if (therapistError) console.error("Error creating therapist:", therapistError);
-          }
-          
-          console.log("Mock therapists added to database");
-        }
-      } catch (error) {
-        console.error("Error seeding therapists:", error);
-      }
-    };
-
-    // Create a mock appointment if needed for testing
-    const createMockAppointment = async () => {
-      try {
-        // First check if user already has appointments
-        const { data: existingAppointments, error: checkError } = await supabase
-          .from('appointments')
-          .select('id')
-          .eq('client_id', user.id)
-          .limit(1);
-          
-        if (checkError) throw checkError;
-        
-        // Only create a mock appointment if none exist
-        if (!existingAppointments || existingAppointments.length === 0) {
-          // Get a random therapist
-          const { data: randomTherapist, error: therapistError } = await supabase
-            .from('therapists')
-            .select('id')
-            .limit(1);
-            
-          if (therapistError) throw therapistError;
-          
-          if (randomTherapist && randomTherapist.length > 0) {
-            // Create a future appointment
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(10, 0, 0, 0);
-            
-            const endTime = new Date(tomorrow);
-            endTime.setMinutes(endTime.getMinutes() + 50);
-            
-            const { error: appointmentError } = await supabase
-              .from('appointments')
-              .insert({
-                client_id: user.id,
-                therapist_id: randomTherapist[0].id,
-                start_time: tomorrow.toISOString(),
-                end_time: endTime.toISOString(),
-                status: 'scheduled',
-                session_type: 'Initial Consultation'
-              });
-              
-            if (appointmentError) throw appointmentError;
-            
-            console.log("Mock appointment created");
-          }
-        }
-      } catch (error) {
-        console.error("Error creating mock appointment:", error);
-      }
-    };
-
     const fetchAppointments = async () => {
       setIsLoading(true);
       try {
-        // First ensure we have some therapists and an appointment for testing
-        await addMockTherapists();
-        await createMockAppointment();
-        
         const now = new Date().toISOString();
 
-        // Fetch upcoming appointments
+        // Fetch upcoming appointments with therapist data
         const { data: upcomingData, error: upcomingError } = await supabase
-          .from('appointments')
+          .from('bookings')
           .select(`
             id,
-            start_time,
-            end_time,
+            date,
+            time,
             session_type,
             status,
-            notes,
-            therapist_id
+            therapist_id,
+            therapists(
+              profiles(
+                full_name,
+                profile_image_url
+              )
+            )
           `)
-          .eq('client_id', user.id)
-          .gte('start_time', now)
-          .order('start_time', { ascending: true });
+          .eq('user_id', user.id)
+          .gte('date', new Date().toISOString().split('T')[0])
+          .order('date', { ascending: true })
+          .order('time', { ascending: true });
 
         if (upcomingError) throw upcomingError;
-        
-        // Fetch past appointments
+
+        // Fetch past appointments with therapist data
         const { data: pastData, error: pastError } = await supabase
-          .from('appointments')
+          .from('bookings')
           .select(`
             id,
-            start_time,
-            end_time,
+            date,
+            time,
             session_type,
             status,
-            notes,
-            therapist_id
+            therapist_id,
+            therapists(
+              profiles(
+                full_name,
+                profile_image_url
+              )
+            )
           `)
-          .eq('client_id', user.id)
-          .lt('start_time', now)
-          .order('start_time', { ascending: false });
+          .eq('user_id', user.id)
+          .lt('date', new Date().toISOString().split('T')[0])
+          .order('date', { ascending: false })
+          .order('time', { ascending: false });
 
         if (pastError) throw pastError;
-        
-        // Get unique therapist IDs from all appointments
-        const allAppointments = [...(upcomingData || []), ...(pastData || [])];
-        const therapistIds = [...new Set(allAppointments.map(apt => apt.therapist_id))];
-        
-        // Fetch therapist profiles separately if there are appointments
-        if (therapistIds.length > 0) {
-          const { data: therapistData, error: therapistError } = await supabase
-            .from('profiles')
-            .select('id, full_name, profile_image_url')
-            .in('id', therapistIds);
-            
-          if (therapistError) throw therapistError;
-          
-          // Create a map of therapist data for easy lookup
-          const therapistMap = {};
-          therapistData?.forEach(therapist => {
-            therapistMap[therapist.id] = therapist;
-          });
-          
-          setTherapists(therapistMap);
-          
-          // Enrich appointments with therapist data
-          const enrichedUpcomingData = upcomingData?.map(apt => ({
-            ...apt,
-            therapist: therapistMap[apt.therapist_id] || { full_name: 'Therapist' }
-          })) || [];
-          
-          const enrichedPastData = pastData?.map(apt => ({
-            ...apt,
-            therapist: therapistMap[apt.therapist_id] || { full_name: 'Therapist' }
-          })) || [];
-          
-          setUpcomingAppointments(enrichedUpcomingData);
-          setPastAppointments(enrichedPastData);
-        } else {
-          setUpcomingAppointments([]);
-          setPastAppointments([]);
-        }
+
+
+        const formatAppointment = (apt: RawAppointment): Appointment => {
+          const startTime = new Date(`${apt.date}T${apt.time}`);
+          const endTime = new Date(startTime);
+          endTime.setMinutes(endTime.getMinutes() + 50); // Assuming 50-minute sessions
+
+          return {
+            id: apt.id,
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString(),
+            session_type: apt.session_type || 'Therapy Session',
+            status: apt.status || 'scheduled',
+            therapist_id: apt.therapist_id,
+            therapist: {
+              full_name: apt.therapists?.profiles?.full_name || 'Therapist',
+              profile_image_url: apt.therapists?.profiles?.profile_image_url
+            }
+          };
+        };
+
+        setUpcomingAppointments(upcomingData?.map(formatAppointment) || []);
+        setPastAppointments(pastData?.map(formatAppointment) || []);
+
       } catch (error) {
         console.error('Error fetching appointments:', error);
         toast({
@@ -248,7 +130,7 @@ const ClientAppointments = () => {
     fetchAppointments();
   }, [user, toast]);
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(undefined, {
       weekday: 'long',
       year: 'numeric',
@@ -257,24 +139,24 @@ const ClientAppointments = () => {
     });
   };
 
-  const formatTime = (dateString) => {
+  const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit'
     });
   };
 
-  const cancelAppointment = async (appointmentId) => {
+  const cancelAppointment = async (appointmentId: string) => {
     try {
       const { error } = await supabase
-        .from('appointments')
+        .from('bookings')
         .update({ status: 'cancelled' })
         .eq('id', appointmentId)
-        .eq('client_id', user.id);
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
-      // Update the local state
+      // Update local state
       setUpcomingAppointments(upcomingAppointments.map(apt => 
         apt.id === appointmentId ? { ...apt, status: 'cancelled' } : apt
       ));
@@ -303,7 +185,9 @@ const ClientAppointments = () => {
   }
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">My Appointments</h1>
+      
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
@@ -312,32 +196,48 @@ const ClientAppointments = () => {
 
         <TabsContent value="upcoming">
           {upcomingAppointments.length > 0 ? (
-            <div className="space-y-4 mt-4">
+            <div className="grid gap-4 mt-4">
               {upcomingAppointments.map((appointment) => (
-                <Card key={appointment.id}>
+                <Card key={appointment.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <CardTitle>{appointment.session_type}</CardTitle>
-                    <CardDescription>
-                      <div className="flex items-center gap-2">
-                        <User size={16} />
-                        <span>{appointment.therapist?.full_name || 'Therapist'}</span>
+                    <CardTitle className="flex items-center gap-3">
+                      {appointment.therapist?.profile_image_url ? (
+                        <img 
+                          src={appointment.therapist.profile_image_url} 
+                          alt={appointment.therapist.full_name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
+                      <div>
+                        <div>{appointment.session_type}</div>
+                        <CardDescription className="mt-1">
+                          With {appointment.therapist?.full_name}
+                        </CardDescription>
                       </div>
-                    </CardDescription>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-2">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={16} />
+                    <div className="grid gap-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span>{formatDate(appointment.start_time)}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} />
-                        <span>{formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}</span>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>
+                          {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
+                        </span>
                       </div>
                       <div className="mt-2">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           appointment.status === 'scheduled' 
                             ? 'bg-green-100 text-green-800' 
+                            : appointment.status === 'cancelled'
+                            ? 'bg-red-100 text-red-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
                           {appointment.status}
@@ -345,8 +245,8 @@ const ClientAppointments = () => {
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button asChild variant="outline">
+                  <CardFooter className="flex justify-between gap-2">
+                    <Button asChild variant="outline" size="sm">
                       <Link to={`/chat/${appointment.therapist_id}`}>
                         Message Therapist
                       </Link>
@@ -354,6 +254,7 @@ const ClientAppointments = () => {
                     {appointment.status === 'scheduled' && (
                       <Button 
                         variant="destructive" 
+                        size="sm"
                         onClick={() => cancelAppointment(appointment.id)}
                       >
                         Cancel
@@ -364,9 +265,9 @@ const ClientAppointments = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No upcoming appointments</p>
-              <Button asChild variant="outline" className="mt-4">
+            <div className="text-center py-12 bg-muted/50 rounded-lg mt-4">
+              <p className="text-muted-foreground mb-4">No upcoming appointments</p>
+              <Button asChild>
                 <Link to="/therapists">Find a Therapist</Link>
               </Button>
             </div>
@@ -375,27 +276,41 @@ const ClientAppointments = () => {
 
         <TabsContent value="past">
           {pastAppointments.length > 0 ? (
-            <div className="space-y-4 mt-4">
+            <div className="grid gap-4 mt-4">
               {pastAppointments.map((appointment) => (
-                <Card key={appointment.id}>
+                <Card key={appointment.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
-                    <CardTitle>{appointment.session_type}</CardTitle>
-                    <CardDescription>
-                      <div className="flex items-center gap-2">
-                        <User size={16} />
-                        <span>{appointment.therapist?.full_name || 'Therapist'}</span>
+                    <CardTitle className="flex items-center gap-3">
+                      {appointment.therapist?.profile_image_url ? (
+                        <img 
+                          src={appointment.therapist.profile_image_url} 
+                          alt={appointment.therapist.full_name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
+                      <div>
+                        <div>{appointment.session_type}</div>
+                        <CardDescription className="mt-1">
+                          With {appointment.therapist?.full_name}
+                        </CardDescription>
                       </div>
-                    </CardDescription>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid gap-2">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={16} />
+                    <div className="grid gap-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span>{formatDate(appointment.start_time)}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock size={16} />
-                        <span>{formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}</span>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>
+                          {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
+                        </span>
                       </div>
                       <div className="mt-2">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -409,15 +324,17 @@ const ClientAppointments = () => {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button asChild variant="outline" className="w-full">
-                      <Link to="/therapists">Book Again</Link>
+                    <Button asChild variant="outline" size="sm" className="w-full">
+                      <Link to={`/therapists/${appointment.therapist_id}`}>
+                        Book Again
+                      </Link>
                     </Button>
                   </CardFooter>
                 </Card>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
+            <div className="text-center py-12 bg-muted/50 rounded-lg mt-4">
               <p className="text-muted-foreground">No past appointments</p>
             </div>
           )}

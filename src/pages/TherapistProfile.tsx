@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,11 +21,37 @@ import { useToast } from "@/hooks/use-toast";
 
 const TherapistProfile = () => {
   const { id } = useParams<{ id: string }>();
-  const [therapist, setTherapist] = useState<any | null>(null);
-  const [reviews, setReviews] = useState<any[]>([]);
+  interface Therapist {
+    id: string;
+    full_name: string;
+    profile_image_url?: string;
+    role?: string;
+    location?: string;
+    email?: string;
+    hourly_rate?: number;
+    availability?: { date: string; slots: string[] }[];
+    specialization?: string;
+    years_experience?: number;
+    rating?: number;
+    bio?: string;
+    license_type?: string;
+    therapy_approaches?: string;
+    languages?: string;
+    session_formats?: string;
+    is_verified?: boolean;
+    education?: string;
+  }
+  const [therapist, setTherapist] = useState<Therapist | null>(null);
+  type Review = {
+    rating: number;
+    comment: string;
+    created_at: string;
+  };
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bookingLoading, setBookingLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -35,30 +60,28 @@ const TherapistProfile = () => {
       if (!id) return;
       setLoading(true);
       try {
-        // Explicitly cast id to string for all Supabase queries
-        const idString = typeof id === "string" ? id : String(id);
+        const idString = String(id);
 
-        // Fetch therapist profile
         const { data: profile } = await supabase
-          .from("profiles")
+          .from("therapist")
           .select("id, full_name, profile_image_url, role, location, email")
           .eq("id", idString)
           .maybeSingle();
 
         const { data: therapistRow } = await supabase
-          .from("therapists")
+          .from("therapist")
           .select("hourly_rate, availability, specialization, years_experience, rating, bio")
           .eq("id", idString)
           .maybeSingle();
 
         const { data: detailsRow } = await supabase
-          .from("therapist_details")
+          .from("therapist")
           .select("license_type, therapy_approaches, languages, session_formats, is_verified, education")
           .eq("therapist_id", idString)
           .maybeSingle();
 
-        // Format availability into same structure as used everywhere else
-        let availability: any[] = [];
+        type AvailabilitySlot = { date: string; slots: string[] };
+        let availability: AvailabilitySlot[] = [];
         try {
           availability = Array.isArray(therapistRow?.availability)
             ? therapistRow.availability
@@ -67,30 +90,15 @@ const TherapistProfile = () => {
           availability = [];
         }
 
-        // Sessions from session_formats (comma-separated)
-        let sessions: any[] = [];
-        if (detailsRow?.session_formats) {
-          sessions = detailsRow.session_formats.split(",").map((s: string) => ({
-            id: s.toLowerCase().replace(/\s/g, "_"),
-            name: s.trim(),
-            description: "",
-            duration: 50,
-            price: therapistRow?.hourly_rate || 80,
-          }));
-        }
-
         setTherapist({
           ...profile,
           ...therapistRow,
           ...detailsRow,
           availability,
-          sessions,
         });
 
-        // Set selected date default
         if (availability.length > 0) setSelectedDate(availability[0].date);
 
-        // Fetch reviews for this therapist
         const { data: reviewsRow } = await supabase
           .from("reviews")
           .select("rating, comment, created_at")
@@ -110,8 +118,52 @@ const TherapistProfile = () => {
     };
 
     fetchTherapistData();
-    // eslint-disable-next-line
-  }, [id]);
+  }, [id, toast]);
+
+  const handleBookSession = async () => {
+    if (!selectedDate || !selectedTime || !id) return;
+    
+    setBookingLoading(true);
+    try {
+      // Create booking record
+      const { data: booking, error } = await supabase
+        .from("bookings")
+        .insert([{
+          therapist_id: id,
+          date: selectedDate,
+          time: selectedTime,
+          status: "pending",
+          amount: therapist.hourly_rate || 80
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Navigate to booking page
+      navigate(`/booking/${id}`, {
+        state: {
+          bookingId: booking.id,
+          date: selectedDate,
+          time: selectedTime,
+          therapist: {
+            id: therapist.id,
+            name: therapist.full_name,
+            rate: therapist.hourly_rate
+          }
+        }
+      });
+
+    } catch (error) {
+      toast({
+        title: "Booking failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setBookingLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -137,12 +189,6 @@ const TherapistProfile = () => {
       </div>
     );
   }
-
-  const handleBookSession = () => {
-    if (selectedDate && selectedTime) {
-      navigate(`/booking/complete/${String(therapist.id)}/${encodeURIComponent(selectedDate)}/${encodeURIComponent(selectedTime)}`);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -279,17 +325,22 @@ const TherapistProfile = () => {
             </Card>
           </div>
 
-          {/* Right Column - Booking (Sticky on desktop, normal on mobile) */}
-          <div className="xl:w-1/3" id="booking-section">
-            <div className="bg-white rounded-xl shadow-sm xl:sticky xl:top-24">
-              <div className="p-4 sm:p-6">
-                <h2 className="text-lg sm:text-xl font-bold mb-4">Book a Session</h2>
+          {/* Right Column - Booking */}
+          <div className="xl:w-1/3">
+            <Card className="xl:sticky xl:top-24">
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-thera-600" />
+                  Book Session
+                </h2>
+                
                 <div className="mb-6">
-                  <h3 className="font-medium mb-2 flex items-center gap-1 text-sm sm:text-base">
-                    <Calendar className="h-4 w-4" /> Select a Date
+                  <h3 className="font-medium mb-3 text-sm text-gray-700">
+                    <Calendar className="h-4 w-4 inline mr-1" />
+                    Available Dates
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-1 gap-2">
-                    {therapist.availability?.map((day: any) => (
+                  <div className="grid grid-cols-3 gap-2">
+                    {therapist.availability?.map((day: { date: string; slots: string[] }) => (
                       <Button
                         key={day.date}
                         variant={selectedDate === day.date ? "default" : "outline"}
@@ -297,27 +348,32 @@ const TherapistProfile = () => {
                           setSelectedDate(day.date);
                           setSelectedTime(null);
                         }}
-                        className="text-xs sm:text-sm"
+                        className="text-xs"
                       >
-                        {day.date}
+                        {new Date(day.date).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
                       </Button>
                     ))}
                   </div>
                 </div>
+
                 {selectedDate && (
                   <div className="mb-6">
-                    <h3 className="font-medium mb-2 flex items-center gap-1 text-sm sm:text-base">
-                      <Clock className="h-4 w-4" /> Select a Time
+                    <h3 className="font-medium mb-3 text-sm text-gray-700">
+                      <Clock className="h-4 w-4 inline mr-1" />
+                      Available Times
                     </h3>
                     <div className="grid grid-cols-3 gap-2">
                       {therapist.availability
-                        .find((day: any) => day.date === selectedDate)
+                        .find((day: { date: string; slots: string[] }) => day.date === selectedDate)
                         ?.slots.map((time: string) => (
                           <Button
                             key={time}
                             variant={selectedTime === time ? "default" : "outline"}
                             onClick={() => setSelectedTime(time)}
-                            className="text-xs sm:text-sm"
+                            className="text-xs"
                           >
                             {time}
                           </Button>
@@ -325,46 +381,46 @@ const TherapistProfile = () => {
                     </div>
                   </div>
                 )}
-                <div className="space-y-4">
-                  <Button
-                    className="w-full bg-thera-600 hover:bg-thera-700"
-                    disabled={!selectedDate || !selectedTime}
-                    onClick={handleBookSession}
-                    size="lg"
-                  >
-                    Book Session
+
+                <Button
+                  className="w-full bg-thera-600 hover:bg-thera-700"
+                  disabled={!selectedDate || !selectedTime || bookingLoading}
+                  onClick={handleBookSession}
+                  size="lg"
+                >
+                  {bookingLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Book Session'
+                  )}
+                </Button>
+
+                <div className="flex gap-2 mt-4">
+                  <Button asChild variant="outline" className="w-1/2 text-xs">
+                    <Link to={`/chat/${String(therapist.id)}`}>
+                      <MessageCircle className="h-3 w-3 mr-1" /> Message
+                    </Link>
                   </Button>
-                  <div className="flex gap-2">
-                    <Button asChild variant="outline" className="w-1/2 text-xs sm:text-sm">
-                      <Link to={`/chat/${String(therapist.id)}`}>
-                        <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Message
-                      </Link>
-                    </Button>
-                    <Button asChild variant="outline" className="w-1/2 text-xs sm:text-sm">
-                      <Link to={`/video/${String(therapist.id)}`}>
-                        <Video className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Quick Consult
-                      </Link>
-                    </Button>
-                  </div>
-                  <div className="text-xs sm:text-sm text-gray-500">
-                    <p className="flex items-center gap-1 mb-1">
-                      <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" /> ${therapist.hourly_rate || 80} per session
-                    </p>
-                    <p className="flex items-center gap-1">
-                      <Clock className="h-3 w-3 sm:h-4 sm:w-4" /> 50-minute session
-                    </p>
-                  </div>
+                  <Button asChild variant="outline" className="w-1/2 text-xs">
+                    <Link to={`/video/${String(therapist.id)}`}>
+                      <Video className="h-3 w-3 mr-1" /> Video Call
+                    </Link>
+                  </Button>
                 </div>
-              </div>
-              <div className="bg-gray-50 p-3 sm:p-4 rounded-b-xl border-t border-gray-100 text-xs sm:text-sm text-gray-500">
-                <p className="flex items-center gap-1">
-                  <Check className="h-3 w-3 sm:h-4 sm:w-4 text-mint-500" /> Secure & confidential
-                </p>
-                <p className="flex items-center gap-1">
-                  <Check className="h-3 w-3 sm:h-4 sm:w-4 text-mint-500" /> Cancel up to 24 hours before
-                </p>
-              </div>
-            </div>
+
+                <div className="mt-4 text-xs text-gray-500 space-y-1">
+                  <p className="flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" /> ${therapist.hourly_rate || 80} per session
+                  </p>
+                  <p className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> 50-minute session
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

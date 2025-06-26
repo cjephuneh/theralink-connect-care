@@ -26,7 +26,7 @@ interface TherapistData {
 }
 
 // Generic schema type to avoid TypeScript errors
-type SchemaType = Record<string, any>;
+type SchemaType = Record<string, unknown>;
 
 /**
  * Generates breadcrumb structured data for SEO
