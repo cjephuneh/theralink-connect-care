@@ -1,11 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Card, 
-  CardContent, 
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Star, Search, Calendar, MessageCircle, Video, Filter, Shield, Sparkles, CheckCircle, Languages } from "lucide-react";
 import { Link } from 'react-router-dom';
@@ -35,6 +31,7 @@ const TherapistListing = () => {
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [filterType, setFilterType] = useState("all"); // Filter type either "all", "community", or "paid"
   const { toast } = useToast();
 
   // Fetch therapists from Supabase
@@ -59,6 +56,11 @@ const TherapistListing = () => {
         }
         if (language) {
           query = query.contains('languages', [language]);
+        }
+        if (filterType === 'community') {
+          query = query.eq('is_community_therapist', true);
+        } else if (filterType === 'paid') {
+          query = query.eq('is_community_therapist', false);
         }
 
         const { data, error } = await query;
@@ -100,7 +102,7 @@ const TherapistListing = () => {
     }, 300);
 
     return () => clearTimeout(debounceTimer);
-  }, [searchQuery, specialty, language, toast]);
+  }, [searchQuery, specialty, language, filterType, toast]);
 
   // Get unique specialties and languages for filters
   const allSpecialties = Array.from(
@@ -119,6 +121,7 @@ const TherapistListing = () => {
     setSearchQuery("");
     setSpecialty("");
     setLanguage("");
+    setFilterType("all");
   };
 
   const getNextAvailable = (availability: { date: string }[]) => {
@@ -146,7 +149,6 @@ const TherapistListing = () => {
     if (diffDays === 1) return "Tomorrow";
     return `In ${diffDays} days`;
   };
-  
 
   return (
     <div className="w-full">
@@ -197,25 +199,39 @@ const TherapistListing = () => {
                     <SelectTrigger>
                       <SelectValue placeholder="Specialty" />
                     </SelectTrigger>
-                   <SelectContent>
-  <SelectItem value="all-specialties">All Specialties</SelectItem>
-  {allSpecialties.map((spec) => (
-    <SelectItem key={spec} value={spec}>{spec}</SelectItem>
-  ))}
-</SelectContent>
+                    <SelectContent>
+                      {allSpecialties.map((spec) => (
+                        <SelectItem key={spec} value={spec}>{spec}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-<SelectContent>
-  <SelectItem value="all-languages">All Languages</SelectItem>
-  {allLanguages.map((lang) => (
-    <SelectItem key={lang} value={lang}>{lang}</SelectItem>
-  ))}
-</SelectContent>
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Languages" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allLanguages.map((lang) => (
+                        <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="community">Community Therapists</SelectItem>
+                      <SelectItem value="paid">Paid Therapists</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
               
               {/* Applied filters */}
-              {(searchQuery || specialty || language) && (
+              {(searchQuery || specialty || language || filterType !== 'all') && (
                 <div className="flex flex-wrap items-center mt-4 pt-4 border-t border-border">
                   <span className="text-sm text-muted-foreground mr-2">Active filters:</span>
                   {searchQuery && (
@@ -231,6 +247,11 @@ const TherapistListing = () => {
                   {language && (
                     <span className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full mr-2 mb-2">
                       {language}
+                    </span>
+                  )}
+                  {filterType !== 'all' && (
+                    <span className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full mr-2 mb-2">
+                      {filterType === 'community' ? 'Community Therapist' : 'Paid Therapist'}
                     </span>
                   )}
                   <Button 
@@ -331,7 +352,7 @@ const TherapistListing = () => {
                           </div>
                         ) : (
                           <div className="absolute top-3 right-3 bg-gradient-to-r from-primary to-secondary text-white text-xs font-medium px-3 py-1 rounded-full">
-                            ${therapist.hourly_rate}/{therapist.preferred_currency}
+                            {therapist.preferred_currency} {therapist.hourly_rate}
                           </div>
                         )}
                       </div>
@@ -382,8 +403,8 @@ const TherapistListing = () => {
                         </div>
                       </CardContent>
                       
-                     <CardFooter className="p-6 pt-0 flex gap-2 border-t border-border/50">
-  <Link to={`/therapists/${therapist.id}`}>
+                      <CardFooter className="p-6 pt-0 flex gap-2 border-t border-border/50">
+                        <Link to={`/therapists/${therapist.id}`}>
     <Button
       variant="default"
       className="flex-1 bg-gradient-to-r from-primary to-secondary hover:opacity-90"

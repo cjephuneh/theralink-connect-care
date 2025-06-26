@@ -76,8 +76,8 @@ const Index = () => {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="group border-secondary/30 hover:border-secondary">
-                <Link to="/for-friends" className="flex items-center">
-                  I want to be a Friend
+                <Link to="friends" className="flex items-center">
+                  Find a Friend
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
