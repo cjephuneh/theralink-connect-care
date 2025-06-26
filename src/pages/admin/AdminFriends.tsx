@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,9 @@ import {
   XCircle,
   Clock,
   MessageCircle,
-  UserCheck
+  UserCheck,
+  Stethoscope,
+  Shield
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface Friend {
+interface UserProfile {
   id: string;
   full_name: string;
   email: string;
@@ -48,40 +51,41 @@ interface Friend {
     personal_story?: string;
     communication_preferences?: string;
   };
-}
-
-interface Client {
-  id: string;
-  full_name: string;
-  email: string;
-  phone?: string;
-  location?: string;
-  profile_image_url?: string;
-  created_at: string;
-  role: string;
+  therapist_details?: {
+    education?: string;
+    license_number?: string;
+    license_type?: string;
+    therapy_approaches?: string;
+    languages?: string;
+    application_status?: string;
+  };
 }
 
 const AdminFriends = () => {
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [filteredFriends, setFilteredFriends] = useState<Friend[]>([]);
-  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
   const { toast } = useToast();
 
+  // Separate users by role for easy access
+  const friends = allUsers.filter(user => user.role === 'friend');
+  const clients = allUsers.filter(user => user.role === 'client');
+  const therapists = allUsers.filter(user => user.role === 'therapist');
+  const admins = allUsers.filter(user => user.role === 'admin');
+
   useEffect(() => {
-    fetchData();
+    fetchAllUsers();
   }, []);
 
   useEffect(() => {
-    filterData();
-  }, [friends, clients, searchTerm, statusFilter]);
+    filterUsers();
+  }, [allUsers, searchTerm, roleFilter]);
 
-  const fetchData = async () => {
+  const fetchAllUsers = async () => {
     try {
-      console.log('Fetching friends and clients...');
+      console.log('Fetching all users...');
       
       // Fetch all profiles
       const { data: profilesData, error: profilesError } = await supabase
@@ -96,46 +100,44 @@ const AdminFriends = () => {
 
       console.log('All profiles fetched:', profilesData);
 
-      // Filter friends and clients based on role
-      const friendsData = profilesData?.filter(profile => profile.role === 'friend') || [];
-      const clientsData = profilesData?.filter(profile => profile.role === 'client') || [];
-
-      console.log('Friends found:', friendsData.length);
-      console.log('Clients found:', clientsData.length);
-      console.log('Friends data:', friendsData);
-      console.log('Clients data:', clientsData);
-
       // Fetch friend details for friends
-      if (friendsData.length > 0) {
-        const { data: friendDetailsData, error: detailsError } = await supabase
-          .from('friend_details')
-          .select('*');
+      const { data: friendDetailsData, error: friendDetailsError } = await supabase
+        .from('friend_details')
+        .select('*');
 
-        if (detailsError) {
-          console.error('Error fetching friend details:', detailsError);
-        } else {
-          console.log('Friend details fetched:', friendDetailsData);
-        }
-
-        // Combine friends with friend details
-        const combinedFriendsData = friendsData.map(profile => ({
-          ...profile,
-          friend_details: friendDetailsData?.find(detail => detail.friend_id === profile.id)
-        }));
-
-        console.log('Combined friends data:', combinedFriendsData);
-        setFriends(combinedFriendsData);
-      } else {
-        setFriends([]);
+      if (friendDetailsError) {
+        console.error('Error fetching friend details:', friendDetailsError);
       }
 
-      setClients(clientsData);
-      console.log('Final state - Friends:', friendsData.length, 'Clients:', clientsData.length);
+      // Fetch therapist details for therapists
+      const { data: therapistDetailsData, error: therapistDetailsError } = await supabase
+        .from('therapist_details')
+        .select('*');
+
+      if (therapistDetailsError) {
+        console.error('Error fetching therapist details:', therapistDetailsError);
+      }
+
+      // Combine users with their additional details
+      const combinedUsersData = profilesData?.map(profile => ({
+        ...profile,
+        friend_details: friendDetailsData?.find(detail => detail.friend_id === profile.id),
+        therapist_details: therapistDetailsData?.find(detail => detail.therapist_id === profile.id)
+      })) || [];
+
+      console.log('Combined users data:', combinedUsersData);
+      console.log(`Found ${combinedUsersData.length} total users:`);
+      console.log(`- Admins: ${combinedUsersData.filter(u => u.role === 'admin').length}`);
+      console.log(`- Therapists: ${combinedUsersData.filter(u => u.role === 'therapist').length}`);
+      console.log(`- Friends: ${combinedUsersData.filter(u => u.role === 'friend').length}`);
+      console.log(`- Clients: ${combinedUsersData.filter(u => u.role === 'client').length}`);
+
+      setAllUsers(combinedUsersData);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching users:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch data. Please check the console for details.",
+        description: "Failed to fetch users. Please check the console for details.",
         variant: "destructive",
       });
     } finally {
@@ -143,53 +145,74 @@ const AdminFriends = () => {
     }
   };
 
-  const filterData = () => {
-    console.log('Filtering data...');
+  const filterUsers = () => {
+    console.log('Filtering users...');
     console.log('Search term:', searchTerm);
-    console.log('Status filter:', statusFilter);
-    console.log('Total friends before filter:', friends.length);
-    console.log('Total clients before filter:', clients.length);
+    console.log('Role filter:', roleFilter);
 
-    // Filter friends
-    let filteredF = [...friends];
+    let filtered = [...allUsers];
     
+    // Filter by search term
     if (searchTerm) {
-      filteredF = filteredF.filter(friend =>
-        friend.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        friend.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        friend.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(user =>
+        user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.location?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    if (statusFilter === 'active') {
-      filteredF = filteredF.filter(f => f.friend_details?.experience_description);
-    } else if (statusFilter === 'pending') {
-      filteredF = filteredF.filter(f => !f.friend_details?.experience_description);
+    // Filter by role
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter(user => user.role === roleFilter);
     }
 
-    console.log('Filtered friends:', filteredF.length);
-    setFilteredFriends(filteredF);
-
-    // Filter clients
-    let filteredC = [...clients];
-    
-    if (searchTerm) {
-      filteredC = filteredC.filter(client =>
-        client.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.location?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    console.log('Filtered clients:', filteredC.length);
-    setFilteredClients(filteredC);
+    console.log(`Filtered to ${filtered.length} users`);
+    setFilteredUsers(filtered);
   };
 
-  const getStatusBadge = (friend: Friend) => {
-    if (friend.friend_details?.experience_description) {
-      return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'admin': return <Shield className="h-4 w-4" />;
+      case 'therapist': return <Stethoscope className="h-4 w-4" />;
+      case 'friend': return <Heart className="h-4 w-4" />;
+      case 'client': return <UserCheck className="h-4 w-4" />;
+      default: return <Users className="h-4 w-4" />;
     }
-    return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending Setup</Badge>;
+  };
+
+  const getRoleBadge = (user: UserProfile) => {
+    const roleColors = {
+      admin: 'bg-red-100 text-red-800',
+      therapist: 'bg-blue-100 text-blue-800',
+      friend: 'bg-green-100 text-green-800',
+      client: 'bg-purple-100 text-purple-800'
+    };
+
+    return (
+      <Badge variant="secondary" className={roleColors[user.role as keyof typeof roleColors] || 'bg-gray-100 text-gray-800'}>
+        {getRoleIcon(user.role)}
+        <span className="ml-1 capitalize">{user.role}</span>
+      </Badge>
+    );
+  };
+
+  const getStatusBadge = (user: UserProfile) => {
+    if (user.role === 'friend') {
+      if (user.friend_details?.experience_description) {
+        return <Badge variant="default" className="bg-green-100 text-green-800">Complete Profile</Badge>;
+      }
+      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending Setup</Badge>;
+    }
+    
+    if (user.role === 'therapist') {
+      const status = user.therapist_details?.application_status || 'pending';
+      if (status === 'approved') {
+        return <Badge variant="default" className="bg-green-100 text-green-800">Approved</Badge>;
+      }
+      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 capitalize">{status}</Badge>;
+    }
+    
+    return <Badge variant="default" className="bg-blue-100 text-blue-800">Active</Badge>;
   };
 
   const sendMessage = async (userId: string) => {
@@ -214,10 +237,18 @@ const AdminFriends = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Friends & Clients Management</h1>
-          <p className="text-muted-foreground">Manage community friends and registered clients</p>
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <p className="text-muted-foreground">Manage all platform users across different roles</p>
         </div>
         <div className="flex items-center gap-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Shield className="h-3 w-3" />
+            {admins.length} Admins
+          </Badge>
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Stethoscope className="h-3 w-3" />
+            {therapists.length} Therapists
+          </Badge>
           <Badge variant="outline" className="flex items-center gap-1">
             <Heart className="h-3 w-3" />
             {friends.length} Friends
@@ -233,54 +264,45 @@ const AdminFriends = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Friends</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{friends.length}</div>
-            <p className="text-xs text-muted-foreground">Community volunteers</p>
+            <div className="text-2xl font-bold">{allUsers.length}</div>
+            <p className="text-xs text-muted-foreground">All platform users</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-            <UserCheck className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium">Therapists</CardTitle>
+            <Stethoscope className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{therapists.length}</div>
+            <p className="text-xs text-muted-foreground">Healthcare providers</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Friends</CardTitle>
+            <Heart className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{friends.length}</div>
+            <p className="text-xs text-muted-foreground">Community supporters</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Clients</CardTitle>
+            <UserCheck className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{clients.length}</div>
-            <p className="text-xs text-muted-foreground">Registered users</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Friends</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {friends.filter(f => f.friend_details?.experience_description).length}
-            </div>
-            <p className="text-xs text-muted-foreground">With complete profiles</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {[...friends, ...clients].filter(u => {
-                const createdDate = new Date(u.created_at);
-                const now = new Date();
-                return createdDate.getMonth() === now.getMonth() && 
-                       createdDate.getFullYear() === now.getFullYear();
-              }).length}
-            </div>
-            <p className="text-xs text-muted-foreground">New registrations</p>
+            <p className="text-xs text-muted-foreground">Service users</p>
           </CardContent>
         </Card>
       </div>
@@ -296,71 +318,82 @@ const AdminFriends = () => {
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
           <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Filter by status" />
+            <SelectValue placeholder="Filter by role" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Users</SelectItem>
-            <SelectItem value="active">Active Friends</SelectItem>
-            <SelectItem value="pending">Pending Setup</SelectItem>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="admin">Admins</SelectItem>
+            <SelectItem value="therapist">Therapists</SelectItem>
+            <SelectItem value="friend">Friends</SelectItem>
+            <SelectItem value="client">Clients</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <Tabs defaultValue="friends" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="friends" className="relative">
-            Friends ({filteredFriends.length})
-          </TabsTrigger>
-          <TabsTrigger value="clients" className="relative">
-            Clients ({filteredClients.length})
-          </TabsTrigger>
+      <Tabs defaultValue="all" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="all">All Users ({filteredUsers.length})</TabsTrigger>
+          <TabsTrigger value="therapist">Therapists ({therapists.length})</TabsTrigger>
+          <TabsTrigger value="friend">Friends ({friends.length})</TabsTrigger>
+          <TabsTrigger value="client">Clients ({clients.length})</TabsTrigger>
+          <TabsTrigger value="admin">Admins ({admins.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="friends">
+        <TabsContent value="all">
           <Card>
             <CardHeader>
-              <CardTitle>Friends Directory</CardTitle>
+              <CardTitle>All Users</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {filteredFriends.map((friend) => (
-                  <div key={friend.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
+                {filteredUsers.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
                     <div className="flex items-center space-x-4">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={friend.profile_image_url} />
+                        <AvatarImage src={user.profile_image_url} />
                         <AvatarFallback>
-                          {friend.full_name?.charAt(0) || friend.email?.charAt(0) || 'F'}
+                          {user.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{friend.full_name || friend.email}</h3>
-                          {getStatusBadge(friend)}
+                          <h3 className="font-medium">{user.full_name || user.email}</h3>
+                          {getRoleBadge(user)}
+                          {getStatusBadge(user)}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Mail className="h-3 w-3" />
-                            {friend.email}
+                            {user.email}
                           </div>
-                          {friend.phone && (
+                          {user.phone && (
                             <div className="flex items-center gap-1">
                               <Phone className="h-3 w-3" />
-                              {friend.phone}
+                              {user.phone}
                             </div>
                           )}
-                          {friend.location && (
+                          {user.location && (
                             <div className="flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
-                              {friend.location}
+                              {user.location}
                             </div>
                           )}
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Joined {new Date(user.created_at).toLocaleDateString()}
+                          </div>
                         </div>
-                        {friend.friend_details?.areas_of_experience && (
+                        {user.role === 'friend' && user.friend_details?.areas_of_experience && (
                           <p className="text-sm text-muted-foreground">
-                            <strong>Experience:</strong> {friend.friend_details.areas_of_experience}
+                            <strong>Experience:</strong> {user.friend_details.areas_of_experience}
+                          </p>
+                        )}
+                        {user.role === 'therapist' && user.therapist_details?.therapy_approaches && (
+                          <p className="text-sm text-muted-foreground">
+                            <strong>Approaches:</strong> {user.therapist_details.therapy_approaches}
                           </p>
                         )}
                       </div>
@@ -370,7 +403,7 @@ const AdminFriends = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => sendMessage(friend.id)}
+                        onClick={() => sendMessage(user.id)}
                       >
                         <MessageCircle className="h-4 w-4 mr-1" />
                         Message
@@ -390,7 +423,7 @@ const AdminFriends = () => {
                           <DropdownMenuItem>View Activity</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-red-600">
-                            Deactivate Friend
+                            {user.role === 'admin' ? 'Remove Admin' : 'Suspend Account'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -398,15 +431,15 @@ const AdminFriends = () => {
                   </div>
                 ))}
                 
-                {filteredFriends.length === 0 && (
+                {filteredUsers.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    {friends.length === 0 ? (
+                    {allUsers.length === 0 ? (
                       <div>
-                        <p className="mb-2">No friends registered yet.</p>
-                        <p className="text-sm">Users need to register with role 'friend' to appear here.</p>
+                        <p className="mb-2">No users found.</p>
+                        <p className="text-sm">Users will appear here as they register.</p>
                       </div>
                     ) : (
-                      'No friends found matching your search.'
+                      'No users found matching your search criteria.'
                     )}
                   </div>
                 )}
@@ -415,102 +448,98 @@ const AdminFriends = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="clients">
-          <Card>
-            <CardHeader>
-              <CardTitle>Clients Directory</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {filteredClients.map((client) => (
-                  <div key={client.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={client.profile_image_url} />
-                        <AvatarFallback>
-                          {client.full_name?.charAt(0) || client.email?.charAt(0) || 'C'}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{client.full_name || client.email}</h3>
-                          <Badge variant="default" className="bg-blue-100 text-blue-800">Client</Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {client.email}
+        {/* Individual role tabs */}
+        {['therapist', 'friend', 'client', 'admin'].map((role) => (
+          <TabsContent key={role} value={role}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="capitalize">{role}s Directory</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {allUsers.filter(user => user.role === role).map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
+                      {/* Same user card structure as above */}
+                      <div className="flex items-center space-x-4">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={user.profile_image_url} />
+                          <AvatarFallback>
+                            {user.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium">{user.full_name || user.email}</h3>
+                            {getRoleBadge(user)}
+                            {getStatusBadge(user)}
                           </div>
-                          {client.phone && (
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {client.phone}
+                              <Mail className="h-3 w-3" />
+                              {user.email}
                             </div>
-                          )}
-                          {client.location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {client.location}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Joined {new Date(client.created_at).toLocaleDateString()}
+                            {user.phone && (
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {user.phone}
+                              </div>
+                            )}
+                            {user.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {user.location}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => sendMessage(client.id)}
-                      >
-                        <MessageCircle className="h-4 w-4 mr-1" />
-                        Message
-                      </Button>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>View Profile</DropdownMenuItem>
-                          <DropdownMenuItem>Send Email</DropdownMenuItem>
-                          <DropdownMenuItem>View Appointments</DropdownMenuItem>
-                          <DropdownMenuItem>View Activity</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
-                            Suspend Account
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                ))}
-                
-                {filteredClients.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {clients.length === 0 ? (
-                      <div>
-                        <p className="mb-2">No clients registered yet.</p>
-                        <p className="text-sm">Users need to register with role 'client' to appear here.</p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => sendMessage(user.id)}
+                        >
+                          <MessageCircle className="h-4 w-4 mr-1" />
+                          Message
+                        </Button>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>View Profile</DropdownMenuItem>
+                            <DropdownMenuItem>Send Email</DropdownMenuItem>
+                            <DropdownMenuItem>View Activity</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600">
+                              {role === 'admin' ? 'Remove Admin' : 'Suspend Account'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    ) : (
-                      'No clients found matching your search.'
-                    )}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                    </div>
+                  ))}
+                  
+                  {allUsers.filter(user => user.role === role).length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <div>
+                        <p className="mb-2">No {role}s registered yet.</p>
+                        <p className="text-sm">Users need to register with role '{role}' to appear here.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   );
