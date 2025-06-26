@@ -134,51 +134,6 @@ export type Database = {
         }
         Relationships: []
       }
-      bookings: {
-        Row: {
-          amount: number | null
-          created_at: string | null
-          date: string
-          duration: number
-          id: number
-          is_therapist: boolean
-          payment_status: string | null
-          profile_id: string
-          session_type: string
-          status: string | null
-          time: string
-          user_id: string
-        }
-        Insert: {
-          amount?: number | null
-          created_at?: string | null
-          date: string
-          duration: number
-          id?: number
-          is_therapist: boolean
-          payment_status?: string | null
-          profile_id: string
-          session_type: string
-          status?: string | null
-          time: string
-          user_id: string
-        }
-        Update: {
-          amount?: number | null
-          created_at?: string | null
-          date?: string
-          duration?: number
-          id?: number
-          is_therapist?: boolean
-          payment_status?: string | null
-          profile_id?: string
-          session_type?: string
-          status?: string | null
-          time?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       contact_messages: {
         Row: {
           created_at: string
@@ -308,24 +263,6 @@ export type Database = {
           id?: string
           personal_story?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      friends_test: {
-        Row: {
-          bio: string | null
-          id: number
-          name: string | null
-        }
-        Insert: {
-          bio?: string | null
-          id?: number
-          name?: string | null
-        }
-        Update: {
-          bio?: string | null
-          id?: number
-          name?: string | null
         }
         Relationships: []
       }
@@ -552,63 +489,6 @@ export type Database = {
           },
         ]
       }
-      therapist: {
-        Row: {
-          availability: Json | null
-          avatar_url: string | null
-          bio: string | null
-          created_at: string | null
-          full_name: string
-          hourly_rate: number
-          id: string
-          is_community_therapist: boolean | null
-          is_verified: boolean | null
-          languages: string[]
-          license_type: string | null
-          preferred_currency: string | null
-          rating: number
-          therapist_id: number
-          therapy_approaches: string | null
-          years_experience: number
-        }
-        Insert: {
-          availability?: Json | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          full_name: string
-          hourly_rate?: number
-          id?: string
-          is_community_therapist?: boolean | null
-          is_verified?: boolean | null
-          languages?: string[]
-          license_type?: string | null
-          preferred_currency?: string | null
-          rating?: number
-          therapist_id?: number
-          therapy_approaches?: string | null
-          years_experience?: number
-        }
-        Update: {
-          availability?: Json | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          full_name?: string
-          hourly_rate?: number
-          id?: string
-          is_community_therapist?: boolean | null
-          is_verified?: boolean | null
-          languages?: string[]
-          license_type?: string | null
-          preferred_currency?: string | null
-          rating?: number
-          therapist_id?: number
-          therapy_approaches?: string | null
-          years_experience?: number
-        }
-        Relationships: []
-      }
       therapist_details: {
         Row: {
           application_status: string | null
@@ -678,7 +558,6 @@ export type Database = {
           created_at: string
           hourly_rate: number | null
           id: string
-          is_approved: string | null
           preferred_currency: string | null
           rating: number | null
           specialization: string | null
@@ -691,7 +570,6 @@ export type Database = {
           created_at?: string
           hourly_rate?: number | null
           id: string
-          is_approved?: string | null
           preferred_currency?: string | null
           rating?: number | null
           specialization?: string | null
@@ -704,7 +582,6 @@ export type Database = {
           created_at?: string
           hourly_rate?: number | null
           id?: string
-          is_approved?: string | null
           preferred_currency?: string | null
           rating?: number | null
           specialization?: string | null
