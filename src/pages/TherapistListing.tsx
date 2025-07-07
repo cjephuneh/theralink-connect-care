@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Star, Search, Calendar, MessageCircle, Video, Filter, Shield, Sparkles, CheckCircle, Languages } from "lucide-react";
 import { Link } from 'react-router-dom';
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 interface Therapist {
   id: string;
@@ -20,7 +20,8 @@ interface Therapist {
   therapy_approaches: string;
   bio: string;
   availability: { date: string }[];
-  is_community_therapist: boolean;
+  education: string;
+  is_verified: boolean;
   preferred_currency: string;
 }
 
@@ -31,72 +32,94 @@ const TherapistListing = () => {
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
-  const [filterType, setFilterType] = useState("all"); // Filter type either "all", "community", or "paid"
+  const [filterType, setFilterType] = useState("all");
   const { toast } = useToast();
 
-  // Fetch therapists from Supabase
   useEffect(() => {
-    const fetchTherapists = async () => {
-      try {
-        setIsLoading(true);
-        
-        let query = supabase
-          .from('therapist')
-          .select('*')
-          .eq('is_verified', true);
-
-        // Apply filters
-        if (searchQuery) {
-          query = query.or(
-            `full_name.ilike.%${searchQuery}%,therapy_approaches.ilike.%${searchQuery}%,bio.ilike.%${searchQuery}%`
-          );
-        }
-        if (specialty) {
-          query = query.ilike('therapy_approaches', `%${specialty}%`);
-        }
-        if (language) {
-          query = query.contains('languages', [language]);
-        }
-        if (filterType === 'community') {
-          query = query.eq('is_community_therapist', true);
-        } else if (filterType === 'paid') {
-          query = query.eq('is_community_therapist', false);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        const formattedTherapists = data?.map((therapist) => ({
-          id: therapist.id,
-          full_name: therapist.full_name || 'Therapist',
-          profile_image_url: therapist.avatar_url,
-          specialization: therapist.license_type || 'General Therapy',
-          hourly_rate: therapist.hourly_rate || 80,
-          rating: therapist.rating || 4.5,
-          years_experience: therapist.years_experience || 5,
-          languages: therapist.languages || ['English'],
-          therapy_approaches: therapist.therapy_approaches || '',
-          bio: therapist.bio || 'Professional therapist',
-          availability: therapist.availability || [],
-          is_community_therapist: therapist.is_community_therapist || false,
-          preferred_currency: therapist.preferred_currency || 'USD'
-        })) || [];
-
-        setTherapists(formattedTherapists);
-      } catch (error) {
-        console.error('Error fetching therapists:', error);
-        toast({
-          title: "Error loading therapists",
-          description: "Could not fetch therapist data",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+  const fetchTherapists = async () => {
+    try {
+      setIsLoading(true);
+let query = supabase
+  .from('profiles')
+  .select(`
+    id,
+    full_name,
+    profile_image_url,
+    therapist_details (  
+      therapist_id,
+      education,
+      license_number,
+      license_type,
+      therapy_approaches,
+      is_verified,
+      languages,
+      session_formats
+    ),
+    therapists (
+      hourly_rate,
+      rating,
+      years_experience,
+      bio,
+      availability,
+      preferred_currency
+    )
+  `)
+  .eq('therapist_details.is_verified', true); // Filters only verified therapists
+      // Apply filters
+      if (searchQuery) {
+        query = query.or(
+          `full_name.ilike.%${searchQuery}%,therapist_details.therapy_approaches.ilike.%${searchQuery}%,therapists.bio.ilike.%${searchQuery}%`
+        );
       }
-    };
+      if (specialty) {
+        query = query.ilike('therapist_details.therapy_approaches', `%${specialty}%`);
+      }
+      if (language) {
+        query = query.contains('therapist_details.languages', [language]);
+      }
+      if (filterType === 'community') {
+        query = query.eq('therapist_details.is_community_therapist', true);
+      } else if (filterType === 'paid') {
+        query = query.eq('therapist_details.is_community_therapist', false);
+      }
 
-    // Add debounce to prevent too many requests
+      query = query.eq('therapist_details.is_verified', true); // Verified therapists filter
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Transform the nested data structure
+     const formattedTherapists = data?.map((item) => ({
+  id: item.id,
+  full_name: item.full_name || 'Therapist',
+  profile_image_url: item.profile_image_url || null,
+  specialization: item.therapist_details?.license_type || 'General Therapy',
+  hourly_rate: item.therapists?.hourly_rate || 80,
+  rating: item.therapists?.rating || 4.5,
+  years_experience: item.therapists?.years_experience || 5,
+  languages: item.therapist_details?.languages || ['English'],
+  therapy_approaches: item.therapist_details?.therapy_approaches || '',
+  bio: item.therapists?.bio || 'Professional therapist',
+  availability: Array.isArray(item.therapists?.availability) ? item.therapists?.availability : [],
+  is_community_therapist: item.therapist_details?.is_community_therapist || false,
+  is_verified: item.therapist_details?.is_verified || false,
+  preferred_currency: item.therapists?.preferred_currency || 'USD'
+})) || [];
+
+      setTherapists(formattedTherapists);
+    } catch (error) {
+      console.error('Error fetching therapists:', error);
+      toast({
+        title: "Error loading therapists",
+        description: "Could not fetch therapist data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
     const debounceTimer = setTimeout(() => {
       fetchTherapists();
     }, 300);
@@ -124,31 +147,28 @@ const TherapistListing = () => {
     setFilterType("all");
   };
 
-  const getNextAvailable = (availability: { date: string }[]) => {
-    if (!availability || availability.length === 0) return "In 3 days";
-    
-    // Get current date in YYYY-MM-DD format
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
-    
-    // Find the next available date
-    const nextDate = availability
-      .map(a => a.date)
-      .sort()
-      .find(date => date >= todayStr);
-    
-    if (!nextDate) return "In 3 days";
-    
-    // Calculate days difference
-    const diffDays = Math.floor(
-      (new Date(nextDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Tomorrow";
-    return `In ${diffDays} days`;
-  };
+  const getNextAvailable = (availability: { date: string }[] = []) => {
+  if (!Array.isArray(availability) || availability.length === 0) return "In 3 days";
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+  
+  const nextDate = availability
+    .map(a => a.date)
+    .sort()
+    .find(date => date >= todayStr);
+  
+  if (!nextDate) return "In 3 days";
+  
+  const diffDays = Math.floor(
+    (new Date(nextDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  return `In ${diffDays} days`;
+};
 
   return (
     <div className="w-full">
@@ -405,22 +425,16 @@ const TherapistListing = () => {
                       
                       <CardFooter className="p-6 pt-0 flex gap-2 border-t border-border/50">
                         <Link to={`/therapists/${therapist.id}`}>
-    <Button
-      variant="default"
-      className="flex-1 bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-    >
-      View Profile
-    </Button>
-  </Link>
-  <Link to={`/therapists/${therapist.id}/book`}>
-    <Button
-      variant="outline"
-      className="flex-1"
-    >
-      Book Session
-    </Button>
-  </Link>
-</CardFooter>
+                          <Button variant="default" className="flex-1 bg-gradient-to-r from-primary to-secondary hover:opacity-90">
+                            View Profile
+                          </Button>
+                        </Link>
+                        <Link to={`/therapists/${therapist.id}/book`}>
+                          <Button variant="outline" className="flex-1">
+                            Book Session
+                          </Button>
+                        </Link>
+                      </CardFooter>
                     </Card>
                   );
                 })}
