@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -26,6 +25,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { createNotification } from '@/utils/notifications';
+
+interface TherapistProfile {
+  full_name: string;
+}
 
 interface AppointmentData {
   id: string;
@@ -68,93 +71,82 @@ const BookingPaymentPage = () => {
   const [cardCvc, setCardCvc] = useState("");
 
   useEffect(() => {
-    const fetchAppointmentData = async () => {
-      if (!appointmentId) return;
+    const fetchData = async () => {
+      if (!appointmentId || !user) return;
+      
+      setIsLoading(true);
       
       try {
-        // First fetch the appointment details
-        const { data: appointmentData, error: appointmentError } = await supabase
-          .from('appointments')
-          .select(`
-            id,
-            therapist_id,
-            start_time,
-            session_type
-          `)
-          .eq('id', appointmentId)
-          .single();
-
-        if (appointmentError) throw appointmentError;
-        
-        // Get the therapist details
-        const { data: therapistData, error: therapistError } = await supabase
-          .from('therapists')
-          .select(`hourly_rate`)
-          .eq('id', appointmentData.therapist_id)
-          .single();
-          
-        if (therapistError) throw therapistError;
-        
-        // Get the therapist's profile information
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select(`full_name`)
-          .eq('id', appointmentData.therapist_id)
-          .single();
-          
-        if (profileError) throw profileError;
-
-        if (appointmentData && therapistData && profileData) {
-          const appointmentInfo: AppointmentData = {
-            id: appointmentData.id,
-            therapist_id: appointmentData.therapist_id,
-            therapist_name: profileData.full_name || 'Unnamed Therapist',
-            date: new Date(appointmentData.start_time).toLocaleDateString(),
-            time: new Date(appointmentData.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            hourly_rate: therapistData.hourly_rate,
-            session_type: appointmentData.session_type
-          };
-          
-          setAppointmentData(appointmentInfo);
-        }
-        
-        // Fetch user's wallet balance
-        if (user) {
-          const { data: walletData, error: walletError } = await supabase
+        // Fetch appointment, therapist, and payment methods in parallel
+        const [
+          { data: appointmentData, error: appointmentError },
+          { data: walletData, error: walletError },
+          { data: paymentMethodsData, error: paymentMethodsError }
+        ] = await Promise.all([
+          supabase
+            .from('appointments')
+            .select(`
+              id,
+              therapist_id,
+              start_time,
+              session_type,
+              profiles:therapist_id(full_name),
+              therapists:therapist_id(hourly_rate)
+            `)
+            .eq('id', appointmentId)
+            .single(),
+          supabase
             .from('wallets')
             .select('balance')
             .eq('user_id', user.id)
-            .single();
-            
-          if (walletError) {
-            console.error('Error fetching wallet:', walletError);
-          } else {
-            setWalletBalance(walletData?.balance || 0);
-          }
+            .single(),
+          supabase
+            .from('payment_methods')
+            .select('id, type, last4, expiry, is_default')
+            .eq('user_id', user.id)
+            .order('is_default', { ascending: false })
+        ]);
+        // Set appointment data
+        const appointmentInfo: AppointmentData = {
+          id: appointmentData.id,
+          therapist_id: appointmentData.therapist_id,
+          therapist_name: (appointmentData.profiles as TherapistProfile)?.full_name || 'Therapist',
+          date: new Date(appointmentData.start_time).toLocaleDateString(),
+          time: new Date(appointmentData.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          hourly_rate: (appointmentData.therapists as { hourly_rate: number })?.hourly_rate || 0,
+          session_type: appointmentData.session_type
+        };
+        
+        setAppointmentData(appointmentInfo);
+
+        // Set wallet balance
+        if (!walletError && walletData) {
+          setWalletBalance(walletData.balance || 0);
+        }
+
+        // Set payment methods
+        if (!paymentMethodsError && paymentMethodsData) {
+          const methods = paymentMethodsData.map(method => ({
+            id: method.id,
+            type: method.type,
+            last4: method.last4,
+            expiry: method.expiry,
+            isDefault: method.is_default
+          }));
           
-          // Mock payment methods for the demo
-          setPaymentMethods([
-            { 
-              id: 'pm_1234', 
-              type: 'visa', 
-              last4: '4242', 
-              expiry: '12/25', 
-              isDefault: true 
-            },
-            { 
-              id: 'pm_5678', 
-              type: 'mastercard', 
-              last4: '8888', 
-              expiry: '06/26', 
-              isDefault: false 
-            }
-          ]);
+          setPaymentMethods(methods);
+          
+          // Select the default payment method if available
+          const defaultMethod = methods.find(m => m.isDefault);
+          if (defaultMethod) {
+            setSelectedPaymentMethod(defaultMethod.id);
+          }
         }
       } catch (error) {
-        console.error('Error fetching appointment:', error);
+        console.error('Error fetching data:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load appointment details',
+          description: 'Failed to load booking details',
           variant: 'destructive',
         });
       } finally {
@@ -162,18 +154,15 @@ const BookingPaymentPage = () => {
       }
     };
 
-    fetchAppointmentData();
+    fetchData();
   }, [appointmentId, toast, user]);
 
   const handlePayWithCard = async () => {
-    if (!user || !appointmentData) return;
+    if (!user || !appointmentData || !selectedPaymentMethod) return;
     
     setIsProcessing(true);
     
     try {
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
       // Create transaction record
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
@@ -184,7 +173,8 @@ const BookingPaymentPage = () => {
           transaction_type: 'payment',
           reference: `booking-${Date.now()}`,
           status: 'completed',
-          description: `Payment for ${appointmentData.session_type} session on ${appointmentData.date} at ${appointmentData.time}`
+          description: `Payment for ${appointmentData.session_type} session on ${appointmentData.date} at ${appointmentData.time}`,
+          payment_method_id: selectedPaymentMethod
         })
         .select()
         .single();
@@ -202,23 +192,23 @@ const BookingPaymentPage = () => {
         
       if (appointmentError) throw appointmentError;
       
-      // Create notification for client
-      await createNotification({
-        user_id: user.id,
-        title: 'Booking Confirmed',
-        message: `Your appointment with ${appointmentData.therapist_name} on ${appointmentData.date} at ${appointmentData.time} has been confirmed.`,
-        type: 'appointment',
-        action_url: `/client/appointments`
-      });
-      
-      // Create notification for therapist
-      await createNotification({
-        user_id: appointmentData.therapist_id,
-        title: 'New Appointment',
-        message: `You have a new ${appointmentData.session_type} session booked on ${appointmentData.date} at ${appointmentData.time}.`,
-        type: 'appointment',
-        action_url: `/therapist/appointments`
-      });
+      // Create notifications
+      await Promise.all([
+        createNotification({
+          user_id: user.id,
+          title: 'Booking Confirmed',
+          message: `Your appointment with ${appointmentData.therapist_name} on ${appointmentData.date} at ${appointmentData.time} has been confirmed.`,
+          type: 'appointment',
+          action_url: `/client/appointments`
+        }),
+        createNotification({
+          user_id: appointmentData.therapist_id,
+          title: 'New Appointment',
+          message: `You have a new ${appointmentData.session_type} session booked on ${appointmentData.date} at ${appointmentData.time}.`,
+          type: 'appointment',
+          action_url: `/therapist/appointments`
+        })
+      ]);
 
       setIsSuccess(true);
       setShowSuccessDialog(true);
@@ -268,26 +258,26 @@ const BookingPaymentPage = () => {
         throw new Error(paymentResponse.message || 'Payment failed');
       }
       
-      // Update wallet balance locally
-      setWalletBalance(prevBalance => prevBalance - appointmentData.hourly_rate);
+      // Update wallet balance in state
+      setWalletBalance(prev => prev - appointmentData.hourly_rate);
       
-      // Create notification for client
-      await createNotification({
-        user_id: user.id,
-        title: 'Booking Confirmed',
-        message: `Your appointment with ${appointmentData.therapist_name} on ${appointmentData.date} at ${appointmentData.time} has been confirmed.`,
-        type: 'appointment',
-        action_url: `/client/appointments`
-      });
-      
-      // Create notification for therapist
-      await createNotification({
-        user_id: appointmentData.therapist_id,
-        title: 'New Appointment',
-        message: `You have a new ${appointmentData.session_type} session booked on ${appointmentData.date} at ${appointmentData.time}.`,
-        type: 'appointment',
-        action_url: `/therapist/appointments`
-      });
+      // Create notifications
+      await Promise.all([
+        createNotification({
+          user_id: user.id,
+          title: 'Booking Confirmed',
+          message: `Your appointment with ${appointmentData.therapist_name} on ${appointmentData.date} at ${appointmentData.time} has been confirmed.`,
+          type: 'appointment',
+          action_url: `/client/appointments`
+        }),
+        createNotification({
+          user_id: appointmentData.therapist_id,
+          title: 'New Appointment',
+          message: `You have a new ${appointmentData.session_type} session booked on ${appointmentData.date} at ${appointmentData.time}.`,
+          type: 'appointment',
+          action_url: `/therapist/appointments`
+        })
+      ]);
 
       setIsSuccess(true);
       setShowSuccessDialog(true);
@@ -310,6 +300,8 @@ const BookingPaymentPage = () => {
   };
 
   const handleAddCard = async () => {
+    if (!user) return;
+    
     // Validate form fields
     if (!cardName || !cardNumber || !cardExpiry || !cardCvc) {
       toast({
@@ -333,20 +325,38 @@ const BookingPaymentPage = () => {
     setIsProcessing(true);
     
     try {
-      // Simulate adding a card
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // In a real app, you would tokenize the card with your payment processor
+      // Here we'll simulate adding to Supabase
+      const { data: newPaymentMethod, error } = await supabase
+        .from('payment_methods')
+        .insert({
+          user_id: user.id,
+          type: cardNumber.startsWith('4') ? 'visa' : 'mastercard',
+          last4: cardNumber.slice(-4),
+          expiry: cardExpiry,
+          is_default: paymentMethods.length === 0
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
       
-      // Add the new card to the list (in a real app, this would be stored in the database)
+      // Add the new card to the list
       const newCard = {
-        id: `pm_${Math.random().toString(36).substring(2, 10)}`,
-        type: cardNumber.startsWith('4') ? 'visa' : 'mastercard',
-        last4: cardNumber.slice(-4),
-        expiry: cardExpiry,
-        isDefault: paymentMethods.length === 0
+        id: newPaymentMethod.id,
+        type: newPaymentMethod.type,
+        last4: newPaymentMethod.last4,
+        expiry: newPaymentMethod.expiry,
+        isDefault: newPaymentMethod.is_default
       };
       
       setPaymentMethods(prev => [...prev, newCard]);
-      setSelectedPaymentMethod(newCard.id);
+      
+      // Select the new card if it's the first one
+      if (paymentMethods.length === 0) {
+        setSelectedPaymentMethod(newCard.id);
+      }
+      
       setShowAddCardDialog(false);
       
       // Reset form
@@ -360,6 +370,7 @@ const BookingPaymentPage = () => {
         description: 'Your payment method has been added successfully',
       });
     } catch (error) {
+      console.error('Error adding card:', error);
       toast({
         title: 'Error',
         description: 'Failed to add payment method',
@@ -424,6 +435,20 @@ const BookingPaymentPage = () => {
     );
   }
 
+  if (!appointmentData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <h3 className="text-lg font-medium mb-2">Appointment Not Found</h3>
+          <p className="text-muted-foreground mb-4">The requested appointment could not be loaded.</p>
+          <Button onClick={() => navigate('/client/appointments')}>
+            View My Appointments
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container max-w-md mx-auto p-4 mt-8">
       <Card>
@@ -432,121 +457,122 @@ const BookingPaymentPage = () => {
           <CardDescription>Review and pay for your appointment</CardDescription>
         </CardHeader>
         <CardContent>
-          {appointmentData && (
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Therapist:</span>
-                <span className="font-medium">{appointmentData.therapist_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Date:</span>
-                <span className="font-medium">{appointmentData.date}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Time:</span>
-                <span className="font-medium">{appointmentData.time}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Session Type:</span>
-                <span className="font-medium">{appointmentData.session_type}</span>
-              </div>
-              <div className="flex justify-between border-t pt-4 mt-4">
-                <span className="text-muted-foreground">Total Amount:</span>
-                <span className="font-bold">Ksh{appointmentData.hourly_rate.toLocaleString()}</span>
-              </div>
-              
-              <Tabs defaultValue="card" className="w-full mt-6" onValueChange={setPaymentTab}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="card">Credit Card</TabsTrigger>
-                  <TabsTrigger value="wallet">
-                    Wallet (Ksh{walletBalance.toLocaleString()})
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="card" className="space-y-4 pt-4">
-                  {paymentMethods.length > 0 ? (
-                    <div className="space-y-3">
-                      {paymentMethods.map((method) => (
-                        <div 
-                          key={method.id}
-                          className={`border rounded-lg p-3 flex items-center justify-between cursor-pointer transition-colors ${
-                            selectedPaymentMethod === method.id ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
-                          }`}
-                          onClick={() => setSelectedPaymentMethod(method.id)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-6 bg-gradient-to-r from-blue-600 to-blue-800 rounded flex items-center justify-center text-white text-xs">
-                              {method.type.toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">•••• {method.last4}</p>
-                              <p className="text-xs text-muted-foreground">Expires {method.expiry}</p>
-                            </div>
-                          </div>
-                          {method.isDefault && <Badge variant="outline">Default</Badge>}
-                        </div>
-                      ))}
-                      
-                      <Button 
-                        variant="outline" 
-                        className="w-full mt-2 border-dashed"
-                        onClick={() => setShowAddCardDialog(true)}
-                      >
-                        <CreditCard className="mr-2 h-4 w-4" /> Add New Card
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <p className="text-muted-foreground mb-4">No payment methods found</p>
-                      <Button onClick={() => setShowAddCardDialog(true)}>
-                        <CreditCard className="mr-2 h-4 w-4" /> Add Payment Method
-                      </Button>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="wallet" className="space-y-4 pt-4">
-                  <div className="bg-muted/50 p-4 rounded-lg">
-                    <div className="flex justify-between mb-2">
-                      <span>Current Balance:</span>
-                      <span className="font-bold">Ksh{walletBalance.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Required:</span>
-                      <span className="font-medium">Ksh{appointmentData.hourly_rate.toLocaleString()}</span>
-                    </div>
-                    <div className="border-t mt-2 pt-2 flex justify-between font-medium">
-                      <span>Balance after payment:</span>
-                      <span className={walletBalance >= appointmentData.hourly_rate ? 'text-green-600' : 'text-red-600'}>
-                        Ksh{(walletBalance - appointmentData.hourly_rate).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {walletBalance < appointmentData.hourly_rate && (
-                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
-                      <p className="text-amber-800 text-sm">
-                        Your wallet balance is insufficient. Please add funds or select another payment method.
-                      </p>
-                      <Button 
-                        className="w-full mt-2" 
-                        variant="outline"
-                        onClick={() => navigate('/client/billing')}
-                      >
-                        Add Funds to Wallet
-                      </Button>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Therapist:</span>
+              <span className="font-medium">{appointmentData.therapist_name}</span>
             </div>
-          )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Date:</span>
+              <span className="font-medium">{appointmentData.date}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Time:</span>
+              <span className="font-medium">{appointmentData.time}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Session Type:</span>
+              <span className="font-medium">{appointmentData.session_type}</span>
+            </div>
+            <div className="flex justify-between border-t pt-4 mt-4">
+              <span className="text-muted-foreground">Total Amount:</span>
+              <span className="font-bold">Ksh{appointmentData.hourly_rate.toLocaleString()}</span>
+            </div>
+            
+            <Tabs defaultValue="card" className="w-full mt-6" onValueChange={setPaymentTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="card">Credit Card</TabsTrigger>
+                <TabsTrigger value="wallet">
+                  Wallet (Ksh{walletBalance.toLocaleString()})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="card" className="space-y-4 pt-4">
+                {paymentMethods.length > 0 ? (
+                  <div className="space-y-3">
+                    {paymentMethods.map((method) => (
+                      <div 
+                        key={method.id}
+                        className={`border rounded-lg p-3 flex items-center justify-between cursor-pointer transition-colors ${
+                          selectedPaymentMethod === method.id ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
+                        }`}
+                        onClick={() => setSelectedPaymentMethod(method.id)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-10 h-6 rounded flex items-center justify-center text-white text-xs ${
+                            method.type === 'visa' ? 'bg-gradient-to-r from-blue-600 to-blue-800' : 
+                            method.type === 'mastercard' ? 'bg-gradient-to-r from-orange-600 to-red-600' : 'bg-gray-600'
+                          }`}>
+                            {method.type.toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">•••• {method.last4}</p>
+                            <p className="text-xs text-muted-foreground">Expires {method.expiry}</p>
+                          </div>
+                        </div>
+                        {method.isDefault && <Badge variant="outline">Default</Badge>}
+                      </div>
+                    ))}
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-2 border-dashed"
+                      onClick={() => setShowAddCardDialog(true)}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" /> Add New Card
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-muted-foreground mb-4">No payment methods found</p>
+                    <Button onClick={() => setShowAddCardDialog(true)}>
+                      <CreditCard className="mr-2 h-4 w-4" /> Add Payment Method
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="wallet" className="space-y-4 pt-4">
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <div className="flex justify-between mb-2">
+                    <span>Current Balance:</span>
+                    <span className="font-bold">Ksh{walletBalance.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Required:</span>
+                    <span className="font-medium">Ksh{appointmentData.hourly_rate.toLocaleString()}</span>
+                  </div>
+                  <div className="border-t mt-2 pt-2 flex justify-between font-medium">
+                    <span>Balance after payment:</span>
+                    <span className={walletBalance >= appointmentData.hourly_rate ? 'text-green-600' : 'text-red-600'}>
+                      Ksh{(walletBalance - appointmentData.hourly_rate).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                
+                {walletBalance < appointmentData.hourly_rate && (
+                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+                    <p className="text-amber-800 text-sm">
+                      Your wallet balance is insufficient. Please add funds or select another payment method.
+                    </p>
+                    <Button 
+                      className="w-full mt-2" 
+                      variant="outline"
+                      onClick={() => navigate('/client/billing')}
+                    >
+                      Add Funds to Wallet
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button variant="outline" onClick={() => navigate(-1)}>Back</Button>
           <Button 
             onClick={handlePayment} 
-            disabled={isProcessing || (paymentTab === 'card' && !selectedPaymentMethod) || (paymentTab === 'wallet' && walletBalance < (appointmentData?.hourly_rate || 0))}
+            disabled={isProcessing || (paymentTab === 'card' && !selectedPaymentMethod) || (paymentTab === 'wallet' && walletBalance < appointmentData.hourly_rate)}
             className="bg-thera-600 hover:bg-thera-700"
           >
             {isProcessing ? (
@@ -618,12 +644,6 @@ const BookingPaymentPage = () => {
                 />
               </div>
             </div>
-            <div className="bg-muted/50 p-3 rounded-lg text-xs text-muted-foreground">
-              <p>For testing, you can use:</p>
-              <p>Card number: 4242 4242 4242 4242</p>
-              <p>Expiry: Any future date</p>
-              <p>CVC: Any 3 digits</p>
-            </div>
           </div>
           <DialogFooter className="sm:justify-between">
             <Button variant="outline" onClick={() => setShowAddCardDialog(false)}>
@@ -651,22 +671,22 @@ const BookingPaymentPage = () => {
               <CheckCircle className="h-10 w-10 text-green-600" />
             </div>
             <p className="text-center mb-4">
-              Your appointment with {appointmentData?.therapist_name} has been successfully booked.
+              Your appointment with {appointmentData.therapist_name} has been successfully booked.
             </p>
             <div className="bg-muted/50 p-4 rounded-lg w-full">
               <p className="font-medium">Appointment Details</p>
               <div className="text-sm mt-2 space-y-1">
                 <div className="flex justify-between">
                   <span>Date:</span>
-                  <span>{appointmentData?.date}</span>
+                  <span>{appointmentData.date}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Time:</span>
-                  <span>{appointmentData?.time}</span>
+                  <span>{appointmentData.time}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Session Type:</span>
-                  <span>{appointmentData?.session_type}</span>
+                  <span>{appointmentData.session_type}</span>
                 </div>
               </div>
             </div>
