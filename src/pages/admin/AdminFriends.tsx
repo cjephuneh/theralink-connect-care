@@ -87,10 +87,14 @@ const AdminFriends = () => {
     try {
       console.log('Fetching all users...');
       
-      // Fetch all profiles
+      // Fetch all profiles with detailed information
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          friend_details!left(*),
+          therapist_details!left(*)
+        `)
         .order('created_at', { ascending: false });
 
       if (profilesError) {

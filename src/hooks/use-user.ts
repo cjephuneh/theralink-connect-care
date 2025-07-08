@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface User {
   id: string;
-  email: string;
+  email?: string;
 }
 
 export const useUser = () => {
@@ -23,7 +24,7 @@ export const useUser = () => {
         console.error('Error fetching session:', error);
         setUser(null);
       } else {
-        setUser(session?.user || null);
+        setUser(session?.user as User | null);
       }
 
       setLoading(false);
@@ -34,7 +35,7 @@ export const useUser = () => {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_IN') {
-          setUser(session?.user || null);
+          setUser(session?.user as User | null);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
         }
@@ -42,7 +43,7 @@ export const useUser = () => {
     );
 
     return () => {
-      authListener?.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
