@@ -22,7 +22,7 @@ import FriendListing from "./pages/FriendListing";
 import TherapistProfile from "./pages/TherapistProfile";
 import BlogPage from "./pages/BlogPage";
 import BookingPage from "./pages/BookingPage";
-import BookingPaymentPage from "./pages/BookingPaymentPage";
+// import BookingPaymentPage from "./pages/BookingPaymentPage";
 import BookingComplete from "./pages/BookingComplete";
 import VideoChat from "./pages/VideoChat";
 import ChatPage from "./pages/ChatPage";
@@ -126,7 +126,7 @@ const App = () => (
                 {/* Booking routes */}
                <Route path="/therapists/:therapistId/book" element={<BookingPage />} />
 
-                <Route path="booking/:therapistId/payment" element={<BookingPaymentPage />} />
+                {/* <Route path="booking/:therapistId/payment" element={<BookingPaymentPage />} /> */}
                 <Route path="booking/complete" element={<BookingComplete />} />
                 
                 {/* Chat and video routes */}

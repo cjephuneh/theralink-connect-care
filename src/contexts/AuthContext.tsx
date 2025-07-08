@@ -50,54 +50,75 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener first
+    let isMounted = true;
+
+    // Initialize session first
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (isMounted) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (currentSession?.user) {
+            await fetchProfile(currentSession.user.id);
+          }
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log('Auth state change:', event);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        console.log('Auth state change:', event, currentSession?.user?.id);
         
-        if (currentSession?.user) {
-          // For OAuth logins, we might need to update the profile with the role
-          if (event === 'SIGNED_IN') {
-            const queryParams = new URLSearchParams(window.location.search);
-            const role = queryParams.get('role');
-            
-            // If we have a role in the URL and it's a new OAuth sign-in
-            if (role && ['client', 'therapist', 'friend'].includes(role)) {
-              try {
-                await supabase.from('profiles')
-                  .update({ role })
-                  .eq('id', currentSession.user.id);
-              } catch (error) {
-                console.error('Error updating profile role:', error);
+        if (isMounted) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (currentSession?.user) {
+            // For OAuth logins, we might need to update the profile with the role
+            if (event === 'SIGNED_IN') {
+              const queryParams = new URLSearchParams(window.location.search);
+              const role = queryParams.get('role');
+              
+              // If we have a role in the URL and it's a new OAuth sign-in
+              if (role && ['client', 'therapist', 'friend'].includes(role)) {
+                try {
+                  await supabase.from('profiles')
+                    .update({ role })
+                    .eq('id', currentSession.user.id);
+                } catch (error) {
+                  console.error('Error updating profile role:', error);
+                }
               }
             }
+            
+            // Fetch the profile
+            await fetchProfile(currentSession.user.id);
+          } else {
+            setProfile(null);
           }
           
-          // Fetch the profile
-          setTimeout(() => {
-            fetchProfile(currentSession.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
+          if (event !== 'TOKEN_REFRESHED') {
+            setIsLoading(false);
+          }
         }
-        setIsLoading(false);
       }
     );
 
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        fetchProfile(currentSession.user.id);
-      }
-      setIsLoading(false);
-    });
+    // Initialize auth
+    initializeAuth();
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);

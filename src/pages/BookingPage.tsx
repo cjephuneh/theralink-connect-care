@@ -6,10 +6,10 @@ import { CalendarClock, ChevronLeft, Clock, User, Video, MessageCircle } from "l
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// type Availability = {
-//   date: string;
-//   slots: string[];
-// };
+type Availability = {
+  date: string;
+  slots: string[];
+};
 
 type Therapist = {
   id: string;
@@ -38,16 +38,17 @@ const BookingPage = () => {
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from('therapist')
+          .from('therapists')
           .select(`
             id,
-            full_name,
-            avatar_url,
+            bio,
             hourly_rate,
-            specialization,
-            availability,
             is_community_therapist,
-            bio
+            user_id,
+            profiles!therapists_user_id_fkey (
+              full_name,
+              profile_image_url
+            )
           `)
           .eq('id', therapistId)
           .single();
@@ -55,11 +56,17 @@ const BookingPage = () => {
         if (error) throw error;
         if (!data) throw new Error('Therapist not found');
 
-        // // Ensure availability is properly formatted
-        // const therapistData: Therapist = {
-        //   ...data,
-        //   availability: data.availability || []
-        // };
+        // Ensure availability is properly formatted
+        const therapistData: Therapist = {
+          id: data.id,
+          full_name: data.profiles?.full_name || '',
+          avatar_url: data.profiles?.profile_image_url || null,
+          hourly_rate: data.hourly_rate || 0,
+          specialization: 'General Therapy',
+          availability: [],
+          is_community_therapist: data.is_community_therapist || false,
+          bio: data.bio || ''
+        };
 
         setTherapist(therapistData);
 
@@ -102,16 +109,16 @@ const BookingPage = () => {
 
     try {
       const sessionDetails = {
+        client_id: therapist.id, // This should be current user ID
         therapist_id: therapist.id,
-        date: selectedDate,
-        time: selectedTime,
+        start_time: `${selectedDate} ${selectedTime}`,
+        end_time: `${selectedDate} ${selectedTime}`, // Calculate end time based on duration
         session_type: selectedSessionType,
-        amount: therapist.hourly_rate * (selectedSessionType === 'video' ? 1 : 0.7),
-        status: therapist.is_community_therapist ? 'confirmed' : 'pending',
+        status: therapist.is_community_therapist ? 'confirmed' : 'pending'
       };
 
       const { error } = await supabase
-        .from('bookings')
+        .from('appointments')
         .insert([sessionDetails]);
 
       if (error) throw error;
