@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -26,25 +25,6 @@ import {
   UserPlus,
 } from "lucide-react";
 
-// Mock therapist data
-const mockTherapists = [
-  {
-    id: "1",
-    name: "Dr. Sarah Johnson",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: "2",
-    name: "Dr. Michael Chen",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: "3",
-    name: "Dr. Amara Okafor",
-    image: "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80",
-  },
-];
-
 const VideoChat = () => {
   const { therapistId } = useParams<{ therapistId: string }>();
   const [therapist, setTherapist] = useState<any | null>(null);
@@ -59,7 +39,7 @@ const VideoChat = () => {
   const [screenShareActive, setScreenShareActive] = useState(false);
   const [networkQuality, setNetworkQuality] = useState(3); // 1-3 scale
   
-  // Mock timing interval for session duration
+  // Timing interval for session duration
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
@@ -86,20 +66,27 @@ const VideoChat = () => {
   // Load therapist data
   useEffect(() => {
     setLoading(true);
-    // In a real app, this would be an API call to get therapist details
-    setTimeout(() => {
-      const found = mockTherapists.find(t => t.id === therapistId);
-      setTherapist(found || null);
-      setLoading(false);
-    }, 800);
+    // TODO: Replace with API call to fetch therapist details
+    const fetchTherapist = async () => {
+      try {
+        // const response = await fetch(`/api/therapists/${therapistId}`);
+        // const data = await response.json();
+        // setTherapist(data);
+      } catch (error) {
+        console.error("Error fetching therapist:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTherapist();
   }, [therapistId]);
   
   // Start video call
   const startCall = () => {
     setConnecting(true);
     
-    // In a real app, this would initiate a WebRTC connection
-    // For demo, we'll simulate connecting and then a successful call
+    // TODO: Replace with WebRTC connection setup
     setTimeout(() => {
       setConnecting(false);
       setCallActive(true);
@@ -265,11 +252,10 @@ const VideoChat = () => {
                 ) : (
                   // Therapist video (main)
                   <div className="w-full h-full relative">
-                    <img 
-                      src={therapist.image}
-                      alt={therapist.name}
-                      className="w-full h-full object-cover"
-                    />
+                    {/* TODO: Replace with actual video stream */}
+                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                      <Video className="h-16 w-16 text-gray-500" />
+                    </div>
                     {screenShareActive && (
                       <div className="absolute inset-0 bg-white p-8 flex items-center justify-center z-10">
                         <div className="text-center">
@@ -288,6 +274,7 @@ const VideoChat = () => {
                 <div className="absolute top-4 right-4 w-52 h-40 bg-gray-800 rounded-lg overflow-hidden border border-primary/50 shadow-lg">
                   {videoEnabled ? (
                     <div className="bg-gray-700 w-full h-full flex items-center justify-center text-white">
+                      {/* TODO: Replace with actual self-view video */}
                       <p>Your camera view</p>
                     </div>
                   ) : (

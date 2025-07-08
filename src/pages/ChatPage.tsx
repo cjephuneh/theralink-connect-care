@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -24,78 +23,6 @@ import {
   ArrowLeftCircle,
   MessageCircle
 } from "lucide-react";
-
-// Mock therapist data
-const mockTherapists = [
-  {
-    id: "1",
-    name: "Dr. Sarah Johnson",
-    title: "Licensed Clinical Psychologist",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=150&q=80",
-    status: "online",
-    lastActive: "Just now"
-  },
-  {
-    id: "2",
-    name: "Dr. Michael Chen",
-    title: "Licensed Marriage & Family Therapist",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=150&q=80",
-    status: "offline",
-    lastActive: "3 hours ago"
-  },
-  {
-    id: "3",
-    name: "Dr. Amara Okafor",
-    title: "Clinical Social Worker",
-    image: "https://images.unsplash.com/photo-1573497620053-ea5300f94f21?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=150&q=80",
-    status: "away",
-    lastActive: "20 minutes ago"
-  },
-];
-
-// Mock message data
-const mockMessages = [
-  {
-    id: 1,
-    senderId: "client",
-    receiverId: "1",
-    content: "Hello Dr. Johnson, I've been feeling anxious about my upcoming job interview. Do you have any techniques I could use to stay calm?",
-    timestamp: "2025-05-10T14:30:00Z",
-    read: true
-  },
-  {
-    id: 2,
-    senderId: "1",
-    receiverId: "client",
-    content: "Hi there! It's completely normal to feel anxious about interviews. One technique you might find helpful is the 4-7-8 breathing method. Inhale for 4 seconds, hold for 7, and exhale for 8. This can help regulate your nervous system.",
-    timestamp: "2025-05-10T14:35:00Z",
-    read: true
-  },
-  {
-    id: 3,
-    senderId: "client",
-    receiverId: "1",
-    content: "I'll try that, thank you. I'm also worried about blanking on questions. Any advice for that?",
-    timestamp: "2025-05-10T14:40:00Z",
-    read: true
-  },
-  {
-    id: 4,
-    senderId: "1",
-    receiverId: "client",
-    content: "That's a common concern! I recommend the STAR method for answering interview questions: Situation, Task, Action, Result. Prepare a few stories from your experience that showcase your skills. If you do blank momentarily, it's okay to take a breath and say, 'That's a great question, let me think about that for a moment.'",
-    timestamp: "2025-05-10T14:45:00Z",
-    read: true
-  },
-  {
-    id: 5,
-    senderId: "1",
-    receiverId: "client",
-    content: "Would you like to schedule a quick session before your interview to practice some techniques together?",
-    timestamp: "2025-05-10T14:47:00Z",
-    read: false
-  },
-];
 
 const formatMessageDate = (timestamp: string) => {
   const date = new Date(timestamp);
@@ -132,25 +59,31 @@ const ChatPage = () => {
   const [inputMessage, setInputMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Load therapist data
+  // Load therapist data and messages
   useEffect(() => {
     setLoading(true);
-    // In a real app, this would be an API call to get therapist details and message history
-    setTimeout(() => {
-      const found = mockTherapists.find(t => t.id === therapistId);
-      setTherapist(found || null);
-      
-      if (found) {
-        // Filter messages for this therapist
-        const filteredMessages = mockMessages.filter(
-          m => (m.senderId === found.id && m.receiverId === "client") || 
-               (m.senderId === "client" && m.receiverId === found.id)
-        );
-        setMessages(filteredMessages);
+    
+    const fetchChatData = async () => {
+      try {
+        // TODO: Replace with API calls to fetch therapist and messages
+        // const therapistResponse = await fetch(`/api/therapists/${therapistId}`);
+        // const therapistData = await therapistResponse.json();
+        // setTherapist(therapistData);
+        
+        // const messagesResponse = await fetch(`/api/messages?therapistId=${therapistId}`);
+        // const messagesData = await messagesResponse.json();
+        // setMessages(messagesData);
+        
+        setTherapist(null); // Set to null for now since we removed mock data
+        setMessages([]);
+      } catch (error) {
+        console.error("Error fetching chat data:", error);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
-    }, 800);
+    };
+    
+    fetchChatData();
   }, [therapistId]);
   
   // Scroll to bottom when messages change
@@ -164,7 +97,7 @@ const ChatPage = () => {
     const newMessage = {
       id: Date.now(),
       senderId: "client",
-      receiverId: therapist.id,
+      receiverId: therapist?.id,
       content: inputMessage,
       timestamp: new Date().toISOString(),
       read: false
@@ -173,19 +106,28 @@ const ChatPage = () => {
     setMessages([...messages, newMessage]);
     setInputMessage("");
     
-    // Mock response after a delay (in a real app, this would be a WebSocket message from the server)
-    setTimeout(() => {
-      const responseMessage = {
-        id: Date.now() + 1,
-        senderId: therapist.id,
-        receiverId: "client",
-        content: "Thanks for your message! I'll get back to you as soon as possible.",
-        timestamp: new Date().toISOString(),
-        read: false
-      };
-      
-      setMessages(prevMessages => [...prevMessages, responseMessage]);
-    }, 1500);
+    // TODO: Replace with actual WebSocket or API call to send message
+    // In a real implementation, you would:
+    // 1. Send the message to your backend
+    // 2. Wait for confirmation
+    // 3. Update the UI with the confirmed message
+    // 4. Handle responses via WebSocket or polling
+    
+    // This setTimeout simulates a response from the therapist
+    if (therapist) {
+      setTimeout(() => {
+        const responseMessage = {
+          id: Date.now() + 1,
+          senderId: therapist.id,
+          receiverId: "client",
+          content: "Thanks for your message! I'll get back to you as soon as possible.",
+          timestamp: new Date().toISOString(),
+          read: false
+        };
+        
+        setMessages(prevMessages => [...prevMessages, responseMessage]);
+      }, 1500);
+    }
   };
   
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -241,25 +183,20 @@ const ChatPage = () => {
                 </Link>
               </Button>
               <div className="relative">
-                <img 
-                  src={therapist.image} 
-                  alt={therapist.name}
-                  className="w-12 h-12 rounded-full object-cover mr-3 border border-border"
-                />
-                <span className={`absolute bottom-0 right-2 w-3 h-3 rounded-full border-2 border-white ${
-                  therapist.status === 'online' ? 'bg-green-500' : 
-                  therapist.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'
-                }`} />
+                {/* TODO: Replace with actual therapist image */}
+                <div className="w-12 h-12 rounded-full bg-gray-200 mr-3 border border-border flex items-center justify-center">
+                  <MessageCircle className="h-5 w-5 text-gray-400" />
+                </div>
+                {/* TODO: Replace with actual status indicator */}
+                <span className={`absolute bottom-0 right-2 w-3 h-3 rounded-full border-2 border-white bg-gray-400`} />
               </div>
               
               <div>
-                <h2 className="font-bold">{therapist.name}</h2>
+                {/* TODO: Replace with actual therapist name */}
+                <h2 className="font-bold">Therapist Name</h2>
                 <p className="text-xs text-muted-foreground">
-                  {therapist.status === 'online' ? (
-                    <span className="text-green-500">Online now</span>
-                  ) : (
-                    <span>Last active {therapist.lastActive}</span>
-                  )}
+                  {/* TODO: Replace with actual status */}
+                  <span>Status unknown</span>
                 </p>
               </div>
             </div>
@@ -271,7 +208,7 @@ const ChatPage = () => {
                 asChild
                 className="text-muted-foreground hover:text-primary"
               >
-                <Link to={`/video/${therapist.id}`}>
+                <Link to={`/video/${therapistId}`}>
                   <Video className="h-5 w-5" />
                 </Link>
               </Button>
@@ -282,7 +219,7 @@ const ChatPage = () => {
                 asChild
                 className="text-muted-foreground hover:text-primary"
               >
-                <Link to={`/call/${therapist.id}`}>
+                <Link to={`/call/${therapistId}`}>
                   <Phone className="h-5 w-5" />
                 </Link>
               </Button>
@@ -293,7 +230,7 @@ const ChatPage = () => {
                 asChild
                 className="text-muted-foreground hover:text-primary"
               >
-                <Link to={`/therapists/${therapist.id}/book`}>
+                <Link to={`/therapists/${therapistId}/book`}>
                   <Calendar className="h-5 w-5" />
                 </Link>
               </Button>

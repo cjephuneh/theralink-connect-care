@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const TherapistProfile = () => {
   const { id } = useParams<{ id: string }>();
+  
   interface Therapist {
     id: string;
     full_name: string;
@@ -36,11 +37,12 @@ const TherapistProfile = () => {
     bio?: string;
     license_type?: string;
     therapy_approaches?: string;
-    languages?: string;
+    languages?: string[];
     session_formats?: string;
     is_verified?: boolean;
     education?: string;
   }
+  
   const [therapist, setTherapist] = useState<Therapist | null>(null);
   type Review = {
     rating: number;
@@ -60,51 +62,27 @@ const TherapistProfile = () => {
       if (!id) return;
       setLoading(true);
       try {
-        const idString = String(id);
+        const { data: therapistData, error } = await supabase
+          .from('therapist')
+          .select('*')
+          .eq('id', id)
+          .single();
 
-        const { data: profile } = await supabase
-          .from("therapist")
-          .select("id, full_name, profile_image_url, role, location, email")
-          .eq("id", idString)
-          .maybeSingle();
+        if (error) throw error;
 
-        const { data: therapistRow } = await supabase
-          .from("therapist")
-          .select("hourly_rate, availability, specialization, years_experience, rating, bio")
-          .eq("id", idString)
-          .maybeSingle();
-
-        const { data: detailsRow } = await supabase
-          .from("therapist")
-          .select("license_type, therapy_approaches, languages, session_formats, is_verified, education")
-          .eq("therapist_id", idString)
-          .maybeSingle();
-
-        type AvailabilitySlot = { date: string; slots: string[] };
-        let availability: AvailabilitySlot[] = [];
-        try {
-          availability = Array.isArray(therapistRow?.availability)
-            ? therapistRow.availability
-            : JSON.parse(JSON.stringify(therapistRow?.availability) || "[]");
-        } catch {
-          availability = [];
+        setTherapist(therapistData);
+        if (therapistData.availability && therapistData.availability.length > 0) {
+          setSelectedDate(therapistData.availability[0].date);
         }
 
-        setTherapist({
-          ...profile,
-          ...therapistRow,
-          ...detailsRow,
-          availability,
-        });
-
-        if (availability.length > 0) setSelectedDate(availability[0].date);
-
-        const { data: reviewsRow } = await supabase
+        const { data: reviewsData, error: reviewsError } = await supabase
           .from("reviews")
           .select("rating, comment, created_at")
-          .eq("therapist_id", idString)
+          .eq("therapist_id", id)
           .order("created_at", { ascending: false });
-        setReviews(reviewsRow || []);
+
+        if (reviewsError) throw reviewsError;
+        setReviews(reviewsData || []);
       } catch (err) {
         toast({
           title: "Error loading therapist",
@@ -121,11 +99,10 @@ const TherapistProfile = () => {
   }, [id, toast]);
 
   const handleBookSession = async () => {
-    if (!selectedDate || !selectedTime || !id) return;
+    if (!selectedDate || !selectedTime || !therapist) return;
     
     setBookingLoading(true);
     try {
-      // Create booking record
       const { data: booking, error } = await supabase
         .from("bookings")
         .insert([{
@@ -140,7 +117,6 @@ const TherapistProfile = () => {
 
       if (error) throw error;
 
-      // Navigate to booking page
       navigate(`/booking/${id}`, {
         state: {
           bookingId: booking.id,
@@ -242,11 +218,11 @@ const TherapistProfile = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Languages className="h-4 w-4 sm:h-5 sm:w-5 text-thera-600 flex-shrink-0" />
-                        <span>{therapist.languages || "English"}</span>
+                        <span>{therapist.languages?.join(', ') || "English"}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-thera-600 flex-shrink-0" />
-                        <span>${therapist.hourly_rate || 80} per session</span>
+                        <span>{therapist.preferred_currency || 'ksh'} {therapist.hourly_rate || 8000} per session</span>
                       </div>
                     </div>
                   </div>
@@ -329,10 +305,13 @@ const TherapistProfile = () => {
           <div className="xl:w-1/3">
             <Card className="xl:sticky xl:top-24">
               <CardContent className="p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-thera-600" />
+                <Button
+                  className="text-xl font-bold mb-4 w-full flex items-center gap-2 justify-center bg-thera-600 hover:bg-thera-700"
+                  onClick={() => navigate(`/therapists/${therapist.id}/book`)}
+                >
+                  <Calendar className="h-5 w-5 text-white" />
                   Book Session
-                </h2>
+                </Button>
                 
                 <div className="mb-6">
                   <h3 className="font-medium mb-3 text-sm text-gray-700">
@@ -367,8 +346,8 @@ const TherapistProfile = () => {
                     </h3>
                     <div className="grid grid-cols-3 gap-2">
                       {therapist.availability
-                        .find((day: { date: string; slots: string[] }) => day.date === selectedDate)
-                        ?.slots.map((time: string) => (
+                        ?.find((day: { date: string; slots: string[] }) => day.date === selectedDate)
+                        ?.slots?.map((time: string) => (
                           <Button
                             key={time}
                             variant={selectedTime === time ? "default" : "outline"}
@@ -377,7 +356,7 @@ const TherapistProfile = () => {
                           >
                             {time}
                           </Button>
-                        ))}
+                        )) || <p className="text-gray-500 text-xs">No slots available</p>}
                     </div>
                   </div>
                 )}
@@ -413,7 +392,7 @@ const TherapistProfile = () => {
 
                 <div className="mt-4 text-xs text-gray-500 space-y-1">
                   <p className="flex items-center gap-1">
-                    <DollarSign className="h-3 w-3" /> ${therapist.hourly_rate || 80} per session
+                    <DollarSign className="h-3 w-3" /> ksh{therapist.hourly_rate || 80} per session
                   </p>
                   <p className="flex items-center gap-1">
                     <Clock className="h-3 w-3" /> 50-minute session
