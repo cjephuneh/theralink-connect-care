@@ -5,29 +5,31 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { CalendarClock, ChevronLeft, Clock, User, Video, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Availability = {
   date: string;
   slots: string[];
 };
 
-type Therapist = {
+interface BookingTherapist {
   id: string;
   full_name: string;
-  avatar_url: string | null;
+  profile_image_url: string | null;
   hourly_rate: number;
   specialization: string;
-  availability: Availability[];
+  availability: any;
   is_community_therapist: boolean;
   bio: string;
-};
+}
 
 const BookingPage = () => {
   const { therapistId } = useParams<{ therapistId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const [therapist, setTherapist] = useState<Therapist | null>(null);
+  const [therapist, setTherapist] = useState<BookingTherapist | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -38,39 +40,49 @@ const BookingPage = () => {
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from('profiles')
+          .from('therapists')
           .select(`
-            id,
-            full_name,
-            profile_image_url
+            *,
+            profiles!inner (
+              id,
+              full_name,
+              profile_image_url
+            )
           `)
-          .eq('role', 'therapist')
           .eq('id', therapistId)
           .single();
 
         if (error) throw error;
         if (!data) throw new Error('Therapist not found');
 
-        // Create therapist data with basic info
-        const therapistData: Therapist = {
+        // Create therapist data from database
+        const therapistData: BookingTherapist = {
           id: data.id,
-          full_name: data.full_name || '',
-          avatar_url: data.profile_image_url || null,
-          hourly_rate: 80,
-          specialization: 'General Therapy',
-          availability: [
-            { date: '2025-01-15', slots: ['09:00', '10:00', '11:00'] },
-            { date: '2025-01-16', slots: ['14:00', '15:00', '16:00'] }
-          ],
-          is_community_therapist: false,
-          bio: 'Experienced therapist specializing in anxiety and depression.'
+          full_name: data.profiles.full_name || '',
+          profile_image_url: data.profiles.profile_image_url || null,
+          hourly_rate: data.hourly_rate || 80,
+          specialization: data.specialization || 'General Therapy',
+          availability: data.availability,
+          is_community_therapist: false, // Default for now until field exists
+          bio: data.bio || 'Professional therapist.'
         };
 
         setTherapist(therapistData);
 
-        // Set first available date if exists
-        if (therapistData.availability.length > 0) {
-          setSelectedDate(therapistData.availability[0].date);
+        // Parse availability and set first available date
+        try {
+          const availabilityData = typeof data.availability === 'string' 
+            ? JSON.parse(data.availability) 
+            : data.availability;
+          
+          if (Array.isArray(availabilityData) && availabilityData.length > 0) {
+            setSelectedDate(availabilityData[0].date);
+          }
+        } catch (e) {
+          // Default availability if parsing fails
+          const defaultDate = new Date();
+          defaultDate.setDate(defaultDate.getDate() + 1);
+          setSelectedDate(defaultDate.toISOString().split('T')[0]);
         }
 
       } catch (error) {
@@ -103,16 +115,27 @@ const BookingPage = () => {
   };
 
   const handleBookSession = async () => {
-    if (!therapist || !selectedDate || !selectedTime) return;
+    if (!therapist || !selectedDate || !selectedTime || !user) {
+      toast({
+        title: "Error",
+        description: "Please login to book a session",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
+      // Calculate end time (assume 50-minute sessions)
+      const startDateTime = new Date(`${selectedDate}T${selectedTime}`);
+      const endDateTime = new Date(startDateTime.getTime() + 50 * 60000);
+
       const sessionDetails = {
-        client_id: therapist.id, // This should be current user ID
+        client_id: user.id,
         therapist_id: therapist.id,
-        start_time: `${selectedDate} ${selectedTime}`,
-        end_time: `${selectedDate} ${selectedTime}`, // Calculate end time based on duration
+        start_time: startDateTime.toISOString(),
+        end_time: endDateTime.toISOString(),
         session_type: selectedSessionType,
-        status: therapist.is_community_therapist ? 'confirmed' : 'pending'
+        status: therapist.is_community_therapist ? 'confirmed' : 'scheduled'
       };
 
       const { error } = await supabase
@@ -125,10 +148,10 @@ const BookingPage = () => {
         title: "Booking successful!",
         description: therapist.is_community_therapist 
           ? "Your session has been confirmed." 
-          : "Your request has been sent for approval.",
+          : "Your session has been scheduled.",
       });
 
-      navigate('/my-sessions');
+      navigate('/client/appointments');
 
     } catch (error) {
       console.error('Error booking session:', error);
@@ -164,7 +187,25 @@ const BookingPage = () => {
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
-  const currentDateSlots = therapist.availability.find(day => day.date === selectedDate)?.slots || [];
+  // Parse availability slots for selected date
+  const getCurrentDateSlots = () => {
+    try {
+      const availabilityData = typeof therapist.availability === 'string' 
+        ? JSON.parse(therapist.availability) 
+        : therapist.availability;
+      
+      if (Array.isArray(availabilityData)) {
+        const dayData = availabilityData.find(day => day.date === selectedDate);
+        return dayData?.slots || [];
+      }
+      return [];
+    } catch (e) {
+      // Default time slots if parsing fails
+      return ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
+    }
+  };
+
+  const currentDateSlots = getCurrentDateSlots();
 
   return (
     <div className="max-w-3xl mx-auto p-4">
@@ -182,9 +223,9 @@ const BookingPage = () => {
       <Card className="mb-6">
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
-            {therapist.avatar_url ? (
+            {therapist.profile_image_url ? (
               <img
-                src={therapist.avatar_url}
+                src={therapist.profile_image_url}
                 alt={therapist.full_name}
                 className="w-20 h-20 rounded-full object-cover"
                 onError={(e) => {
@@ -251,21 +292,57 @@ const BookingPage = () => {
             <div>
               <h3 className="font-medium mb-3">Select Date</h3>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {therapist.availability.map((day) => (
-                  <button
-                    key={day.date}
-                    onClick={() => handleDateSelect(day.date)}
-                    className={`p-3 text-center rounded-lg ${
-                      selectedDate === day.date
-                        ? 'bg-primary text-white'
-                        : 'bg-muted/50 hover:bg-muted'
-                    }`}
-                  >
-                    <div className="text-sm font-medium">
-                      {formatDate(day.date)}
-                    </div>
-                  </button>
-                ))}
+                {(() => {
+                  try {
+                    const availabilityData = typeof therapist.availability === 'string' 
+                      ? JSON.parse(therapist.availability) 
+                      : therapist.availability;
+                    
+                    if (Array.isArray(availabilityData)) {
+                      return availabilityData.map((day) => (
+                        <button
+                          key={day.date}
+                          onClick={() => handleDateSelect(day.date)}
+                          className={`p-3 text-center rounded-lg ${
+                            selectedDate === day.date
+                              ? 'bg-primary text-white'
+                              : 'bg-muted/50 hover:bg-muted'
+                          }`}
+                        >
+                          <div className="text-sm font-medium">
+                            {formatDate(day.date)}
+                          </div>
+                        </button>
+                      ));
+                    }
+                    
+                    // Default dates if no availability data
+                    const defaultDates = [];
+                    for (let i = 1; i <= 7; i++) {
+                      const date = new Date();
+                      date.setDate(date.getDate() + i);
+                      const dateStr = date.toISOString().split('T')[0];
+                      defaultDates.push(
+                        <button
+                          key={dateStr}
+                          onClick={() => handleDateSelect(dateStr)}
+                          className={`p-3 text-center rounded-lg ${
+                            selectedDate === dateStr
+                              ? 'bg-primary text-white'
+                              : 'bg-muted/50 hover:bg-muted'
+                          }`}
+                        >
+                          <div className="text-sm font-medium">
+                            {formatDate(dateStr)}
+                          </div>
+                        </button>
+                      );
+                    }
+                    return defaultDates;
+                  } catch (e) {
+                    return <div className="text-muted-foreground">No availability data</div>;
+                  }
+                })()}
               </div>
             </div>
 

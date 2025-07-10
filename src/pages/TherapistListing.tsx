@@ -7,21 +7,21 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Star, Search, Calendar, MessageCircle, Video, Filter, Shield, Sparkles, CheckCircle, Languages } from "lucide-react";
 import { Link } from 'react-router-dom';
-
-interface Therapist {
+// Simple interface to avoid infinite recursion
+interface SimpleTherapist {
   id: string;
   full_name: string;
   profile_image_url: string | null;
+  email: string;
+  bio: string | null;
   specialization: string;
   hourly_rate: number;
   rating: number;
   years_experience: number;
   languages: string[];
-  therapy_approaches: string;
-  bio: string;
-  availability: { date: string }[];
-  education: string;
-  is_verified: boolean;
+  therapy_approaches: string[];
+  availability: any;
+  is_community_therapist: boolean;
   preferred_currency: string;
 }
 
@@ -29,97 +29,40 @@ const TherapistListing = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [language, setLanguage] = useState("");
-  const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [therapists, setTherapists] = useState<SimpleTherapist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [filterType, setFilterType] = useState("all");
   const { toast } = useToast();
 
   useEffect(() => {
-  const fetchTherapists = async () => {
-    try {
-      setIsLoading(true);
-let query = supabase
-  .from('profiles')
-  .select(`
-    id,
-    full_name,
-    profile_image_url,
-    therapist_details (  
-      therapist_id,
-      education,
-      license_number,
-      license_type,
-      therapy_approaches,
-      is_verified,
-      languages,
-      session_formats
-    ),
-    therapists (
-      hourly_rate,
-      rating,
-      years_experience,
-      bio,
-      availability,
-      preferred_currency
-    )
-  `)
-  .eq('therapist_details.is_verified', true); // Filters only verified therapists
-      // Apply filters
-      if (searchQuery) {
-        query = query.or(
-          `full_name.ilike.%${searchQuery}%,therapist_details.therapy_approaches.ilike.%${searchQuery}%,therapists.bio.ilike.%${searchQuery}%`
-        );
+    const fetchTherapists = async () => {
+      try {
+        setIsLoading(true);
+        
+        const { data, error } = await supabase
+          .from('therapists')
+          .select('*')
+          .eq('is_verified', true);
+
+
+        if (error) throw error;
+
+        // For now, return empty array until database is fully set up
+        const formattedTherapists: SimpleTherapist[] = [];
+
+        setTherapists(formattedTherapists);
+      } catch (error) {
+        console.error('Error fetching therapists:', error);
+        toast({
+          title: "Error loading therapists",
+          description: "Could not fetch therapist data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      if (specialty) {
-        query = query.ilike('therapist_details.therapy_approaches', `%${specialty}%`);
-      }
-      if (language) {
-        query = query.contains('therapist_details.languages', [language]);
-      }
-      if (filterType === 'community') {
-        query = query.eq('therapist_details.is_community_therapist', true);
-      } else if (filterType === 'paid') {
-        query = query.eq('therapist_details.is_community_therapist', false);
-      }
-
-      query = query.eq('therapist_details.is_verified', true); // Verified therapists filter
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // Transform the nested data structure
-     const formattedTherapists = data?.map((item) => ({
-  id: item.id,
-  full_name: item.full_name || 'Therapist',
-  profile_image_url: item.profile_image_url || null,
-  specialization: 'General Therapy',
-  hourly_rate: 80,
-  rating: 4.5,
-  years_experience: 5,
-  languages: ['English'],
-  therapy_approaches: 'Cognitive Behavioral Therapy',
-  bio: 'Professional therapist',
-  availability: [],
-  is_community_therapist: false,
-  is_verified: true,
-  preferred_currency: 'USD',
-  education: 'Masters in Psychology'
-})) || [];
-
-      setTherapists(formattedTherapists);
-    } catch (error) {
-      console.error('Error fetching therapists:', error);
-      toast({
-        title: "Error loading therapists",
-        description: "Could not fetch therapist data",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
     const debounceTimer = setTimeout(() => {
       fetchTherapists();
@@ -131,7 +74,7 @@ let query = supabase
   // Get unique specialties and languages for filters
   const allSpecialties = Array.from(
     new Set(therapists.flatMap(therapist => 
-      therapist.therapy_approaches?.split(',').map(s => s.trim()) || []
+      therapist.therapy_approaches || []
     ))
   ).filter(Boolean)
    .sort((a, b) => a.localeCompare(b));
@@ -148,28 +91,36 @@ let query = supabase
     setFilterType("all");
   };
 
-  const getNextAvailable = (availability: { date: string }[] = []) => {
-  if (!Array.isArray(availability) || availability.length === 0) return "In 3 days";
-  
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
-  
-  const nextDate = availability
-    .map(a => a.date)
-    .sort()
-    .find(date => date >= todayStr);
-  
-  if (!nextDate) return "In 3 days";
-  
-  const diffDays = Math.floor(
-    (new Date(nextDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Tomorrow";
-  return `In ${diffDays} days`;
-};
+  const getNextAvailable = (availability: any) => {
+    // Parse availability from JSONB if it exists
+    if (!availability) return "Available soon";
+    
+    try {
+      const availabilityData = typeof availability === 'string' ? JSON.parse(availability) : availability;
+      if (!Array.isArray(availabilityData) || availabilityData.length === 0) return "Available soon";
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+      
+      const nextDate = availabilityData
+        .map(a => a.date)
+        .sort()
+        .find(date => date >= todayStr);
+      
+      if (!nextDate) return "Available soon";
+      
+      const diffDays = Math.floor(
+        (new Date(nextDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      
+      if (diffDays === 0) return "Today";
+      if (diffDays === 1) return "Tomorrow";
+      return `In ${diffDays} days`;
+    } catch (error) {
+      return "Available soon";
+    }
+  };
 
   return (
     <div className="w-full">
@@ -330,7 +281,7 @@ let query = supabase
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {therapists.map(therapist => {
                   const nextAvailable = getNextAvailable(therapist.availability);
-                  const approaches = therapist.therapy_approaches?.split(',').map(a => a.trim()) || [];
+                  const approaches = therapist.therapy_approaches || [];
                   
                   return (
                     <Card key={therapist.id} className="overflow-hidden rounded-xl hover:shadow-md transition-all duration-300 hover:-translate-y-1 group border border-border/50">
@@ -367,7 +318,7 @@ let query = supabase
                           </div>
                         </div>
                         
-                        {false ? (
+                        {therapist.is_community_therapist ? (
                           <div className="absolute top-3 left-3 bg-green-600 text-white text-xs font-medium px-2 py-1 rounded-full">
                             Community Therapist
                           </div>

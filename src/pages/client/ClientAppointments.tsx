@@ -44,82 +44,39 @@ const ClientAppointments = () => {
       try {
         const now = new Date().toISOString();
 
-        // Fetch upcoming appointments with therapist data
-        const { data: upcomingData, error: upcomingError } = await supabase
-          .from('bookings')
-          .select(`
-            id,
-            date,
-            time,
-            session_type,
-            status,
-            therapist_id,
-            therapists(
-              profiles(
-                full_name,
-                profile_image_url
-              )
-            )
-          `)
-          .eq('user_id', user.id)
-          .gte('date', new Date().toISOString().split('T')[0])
-          .order('date', { ascending: true })
-          .order('time', { ascending: true });
+        // Fetch appointments with therapist profile data
+        const { data: appointmentsData, error } = await supabase
+          .from('appointments')
+          .select(`*`)
+          .eq('client_id', user.id)
+          .order('start_time', { ascending: true });
 
-        if (upcomingError) throw upcomingError;
+        if (error) throw error;
 
-        // Fetch past appointments with therapist data
-        const { data: pastData, error: pastError } = await supabase
-          .from('bookings')
-          .select(`
-            id,
-            date,
-            time,
-            session_type,
-            status,
-            therapist_id,
-            therapists(
-              profiles(
-                full_name,
-                profile_image_url
-              )
-            )
-          `)
-          .eq('user_id', user.id)
-          .lt('date', new Date().toISOString().split('T')[0])
-          .order('date', { ascending: false })
-          .order('time', { ascending: false });
-
-        if (pastError) throw pastError;
+        // Fetch therapist names separately for now
+        const transformedAppointments = appointmentsData?.map(appointment => ({
+          ...appointment,
+          therapist: {
+            full_name: 'Therapist',
+            profile_image_url: null
+          }
+        })) || [];
 
 
-        const formatAppointment = (apt: any): Appointment => {
-          const startTime = new Date(`${apt.date}T${apt.time}`);
-          const endTime = new Date(startTime);
-          endTime.setMinutes(endTime.getMinutes() + 50); // Assuming 50-minute sessions
+        const upcoming = transformedAppointments.filter(
+          appointment => appointment.start_time >= now
+        );
+        const past = transformedAppointments.filter(
+          appointment => appointment.start_time < now
+        );
 
-          return {
-            id: apt.id,
-            start_time: startTime.toISOString(),
-            end_time: endTime.toISOString(),
-            session_type: apt.session_type || 'Therapy Session',
-            status: apt.status || 'scheduled',
-            therapist_id: apt.therapist_id,
-            therapist: {
-              full_name: apt.therapists?.profiles?.full_name || 'Therapist',
-              profile_image_url: apt.therapists?.profiles?.profile_image_url
-            }
-          };
-        };
-
-        setUpcomingAppointments(upcomingData?.map(formatAppointment) || []);
-        setPastAppointments(pastData?.map(formatAppointment) || []);
-
+        setUpcomingAppointments(upcoming);
+        setPastAppointments(past);
       } catch (error) {
         console.error('Error fetching appointments:', error);
         toast({
-          title: "Failed to load appointments",
-          description: "Please try refreshing the page",
+          title: "Error loading appointments",
+          description: "Could not fetch your appointments",
           variant: "destructive",
         });
       } finally {
@@ -130,212 +87,156 @@ const ClientAppointments = () => {
     fetchAppointments();
   }, [user, toast]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, {
+  const formatDate = (dateTimeString: string) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
-      month: 'long', 
-      day: 'numeric'
+      month: 'long',
+      day: 'numeric',
     });
   };
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit'
+  const formatTime = (dateTimeString: string) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
     });
   };
 
-  const cancelAppointment = async (appointmentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: 'cancelled' })
-        .eq('id', parseInt(appointmentId))
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setUpcomingAppointments(upcomingAppointments.map(apt => 
-        apt.id === appointmentId ? { ...apt, status: 'cancelled' } : apt
-      ));
-
-      toast({
-        title: "Appointment cancelled",
-        description: "Your appointment has been successfully cancelled",
-      });
-    } catch (error) {
-      console.error('Error cancelling appointment:', error);
-      toast({
-        title: "Failed to cancel appointment",
-        description: "Please try again later",
-        variant: "destructive",
-      });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'scheduled':
+        return 'bg-blue-100 text-blue-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'completed':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
     }
   };
 
+  const renderAppointmentCard = (appointment: Appointment) => (
+    <Card key={appointment.id} className="mb-4">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            {appointment.therapist?.profile_image_url ? (
+              <img
+                src={appointment.therapist.profile_image_url}
+                alt={appointment.therapist.full_name}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                <User className="h-5 w-5 text-gray-500" />
+              </div>
+            )}
+            <div>
+              <CardTitle className="text-lg">
+                {appointment.therapist?.full_name || 'Therapist'}
+              </CardTitle>
+              <CardDescription>
+                {appointment.session_type === 'video' ? 'Video Session' : 'Chat Session'}
+              </CardDescription>
+            </div>
+          </div>
+          <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(appointment.status)}`}>
+            {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+          <div className="flex items-center space-x-1">
+            <Calendar className="h-4 w-4" />
+            <span>{formatDate(appointment.start_time)}</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <Clock className="h-4 w-4" />
+            <span>
+              {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
+            </span>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button variant="outline" size="sm" asChild>
+          <Link to={`/therapists/${appointment.therapist_id}`}>
+            View Therapist
+          </Link>
+        </Button>
+        {appointment.status === 'scheduled' && (
+          <Button size="sm">
+            Join Session
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-2 text-muted-foreground">Loading appointments...</p>
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">My Appointments</h1>
-      
+      <h1 className="text-3xl font-bold mb-6">My Appointments</h1>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-          <TabsTrigger value="past">Past</TabsTrigger>
+          <TabsTrigger value="upcoming">
+            Upcoming ({upcomingAppointments.length})
+          </TabsTrigger>
+          <TabsTrigger value="past">
+            Past ({pastAppointments.length})
+          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="upcoming">
-          {upcomingAppointments.length > 0 ? (
-            <div className="grid gap-4 mt-4">
-              {upcomingAppointments.map((appointment) => (
-                <Card key={appointment.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                      {appointment.therapist?.profile_image_url ? (
-                        <img 
-                          src={appointment.therapist.profile_image_url} 
-                          alt={appointment.therapist.full_name}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="h-5 w-5 text-primary" />
-                        </div>
-                      )}
-                      <div>
-                        <div>{appointment.session_type}</div>
-                        <CardDescription className="mt-1">
-                          With {appointment.therapist?.full_name}
-                        </CardDescription>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{formatDate(appointment.start_time)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>
-                          {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
-                        </span>
-                      </div>
-                      <div className="mt-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          appointment.status === 'scheduled' 
-                            ? 'bg-green-100 text-green-800' 
-                            : appointment.status === 'cancelled'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {appointment.status}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-between gap-2">
-                    <Button asChild variant="outline" size="sm">
-                      <Link to={`/chat/${appointment.therapist_id}`}>
-                        Message Therapist
-                      </Link>
-                    </Button>
-                    {appointment.status === 'scheduled' && (
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => cancelAppointment(appointment.id)}
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+        
+        <TabsContent value="upcoming" className="mt-6">
+          {upcomingAppointments.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">No upcoming appointments</h3>
+                <p className="text-muted-foreground mb-4">
+                  Ready to book your first session?
+                </p>
+                <Button asChild>
+                  <Link to="/therapists">Find a Therapist</Link>
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="text-center py-12 bg-muted/50 rounded-lg mt-4">
-              <p className="text-muted-foreground mb-4">No upcoming appointments</p>
-              <Button asChild>
-                <Link to="/therapists">Find a Therapist</Link>
-              </Button>
+            <div>
+              {upcomingAppointments.map(renderAppointmentCard)}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="past">
-          {pastAppointments.length > 0 ? (
-            <div className="grid gap-4 mt-4">
-              {pastAppointments.map((appointment) => (
-                <Card key={appointment.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                      {appointment.therapist?.profile_image_url ? (
-                        <img 
-                          src={appointment.therapist.profile_image_url} 
-                          alt={appointment.therapist.full_name}
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="h-5 w-5 text-primary" />
-                        </div>
-                      )}
-                      <div>
-                        <div>{appointment.session_type}</div>
-                        <CardDescription className="mt-1">
-                          With {appointment.therapist?.full_name}
-                        </CardDescription>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-3">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{formatDate(appointment.start_time)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>
-                          {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
-                        </span>
-                      </div>
-                      <div className="mt-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          appointment.status === 'completed' 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {appointment.status}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button asChild variant="outline" size="sm" className="w-full">
-                      <Link to={`/therapists/${appointment.therapist_id}`}>
-                        Book Again
-                      </Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+        <TabsContent value="past" className="mt-6">
+          {pastAppointments.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">No past appointments</h3>
+                <p className="text-muted-foreground">
+                  Your completed sessions will appear here.
+                </p>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="text-center py-12 bg-muted/50 rounded-lg mt-4">
-              <p className="text-muted-foreground">No past appointments</p>
+            <div>
+              {pastAppointments.map(renderAppointmentCard)}
             </div>
           )}
         </TabsContent>

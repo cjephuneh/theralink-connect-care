@@ -2,75 +2,46 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
-
-interface Friend {
-  id: string;
-  full_name: string;
-  profile_image_url?: string;
-  bio?: string;
-}
-
-interface FriendDetails {
-  friend_id: string; // Assuming this column links to Friend's `id`
-  experience_description: string;
-  area_of_experience: string;
-  personal_story: string;
-  communication_preferences: string;
-}
+import { Friend, FriendDetails, FriendWithDetails } from "@/types/friend";
 
 const FriendListing = () => {
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [friendDetails, setFriendDetails] = useState<FriendDetails[]>([]);
+  const [friends, setFriends] = useState<FriendWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchFriendsAndDetails = async () => {
+    const fetchFriendsWithDetails = async () => {
       setLoading(true);
 
       try {
-        // Fetch friends' profiles independently
-        const { data: friendData, error: friendError } = await supabase
+        // Fetch friends with their details using a join
+        const { data: friendsData, error } = await supabase
           .from("profiles")
-          .select("*")
+          .select(`
+            *,
+            friend_details (*)
+          `)
           .eq("role", "friend");
 
-        if (friendError) {
-          throw friendError;
+        if (error) {
+          throw error;
         }
 
-        // Fetch friend details independently
-        const { data: detailsData, error: detailsError } = await supabase
-          .from("friend_details")
-          .select("*");
+        // Transform the data to match our interface
+        const formattedFriends: FriendWithDetails[] = friendsData?.map(friend => ({
+          ...friend,
+          friend_details: Array.isArray(friend.friend_details) ? friend.friend_details[0] || null : friend.friend_details || null
+        })) || [];
 
-        if (detailsError) {
-          throw detailsError;
-        }
-
-        // Set the fetched data
-        setFriends(friendData || []);
-        setFriendDetails((detailsData || []).map(detail => ({
-          ...detail,
-          area_of_experience: detail.areas_of_experience || ''
-        })));
+        setFriends(formattedFriends);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching friends data:", error);
       }
 
       setLoading(false);
     };
 
-    fetchFriendsAndDetails();
+    fetchFriendsWithDetails();
   }, []);
-
-  // Combine profiles with their details based on the shared identifier `friend_id`
-  const friendsWithDetails = friends.map(friend => {
-    const details = friendDetails.find(detail => detail.friend_id === friend.id);
-    return {
-      ...friend,
-      friend_details: details || null, // Attach details or null if none exist
-    };
-  });
 
   if (loading) {
     return (
@@ -93,7 +64,7 @@ const FriendListing = () => {
       <h1 className="text-3xl font-bold text-center mb-6">Available Friends</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {friendsWithDetails.map((friend) => (
+        {friends.map((friend) => (
           <Card key={friend.id} className="p-4">
             <CardContent>
               <div className="flex flex-col items-center text-center">
@@ -107,8 +78,8 @@ const FriendListing = () => {
                   <div className="w-24 h-24 rounded-full bg-gray-300 mb-4" />
                 )}
 
-                <h2 className="text-xl font-semibold">{friend.full_name}</h2>
-                <p className="text-sm text-gray-600 mb-4">{friend.bio || "No bio available"}</p>
+                <h2 className="text-xl font-semibold">{friend.full_name || 'Friend'}</h2>
+                <p className="text-sm text-gray-600 mb-4">Friend profile</p>
 
                 {friend.friend_details ? (
                   <div className="text-left mt-4">

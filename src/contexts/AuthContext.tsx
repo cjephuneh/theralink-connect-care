@@ -34,12 +34,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         console.error('Error fetching profile:', error);
-        return;
+        return null;
       }
       
       setProfile(data);
+      return data;
     } catch (error) {
       console.error('Error fetching profile:', error);
+      return null;
     }
   };
 
@@ -52,7 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let isMounted = true;
 
-    // Initialize session first
+    // Initialize session and check for existing auth state
     const initializeAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -74,7 +76,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    // Set up auth state listener
+    // Set up auth state listener for persistent sessions
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('Auth state change:', event, currentSession?.user?.id);
@@ -84,25 +86,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(currentSession?.user ?? null);
           
           if (currentSession?.user) {
-            // For OAuth logins, we might need to update the profile with the role
-            if (event === 'SIGNED_IN') {
-              const queryParams = new URLSearchParams(window.location.search);
-              const role = queryParams.get('role');
-              
-              // If we have a role in the URL and it's a new OAuth sign-in
-              if (role && ['client', 'therapist', 'friend'].includes(role)) {
-                try {
-                  await supabase.from('profiles')
-                    .update({ role })
-                    .eq('id', currentSession.user.id);
-                } catch (error) {
-                  console.error('Error updating profile role:', error);
-                }
+            await fetchProfile(currentSession.user.id);
+            
+            // Handle dashboard redirect after successful sign in
+            if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+              const profile = await fetchProfile(currentSession.user.id);
+              if (profile?.role) {
+                window.location.href = `/${profile.role}/overview`;
               }
             }
-            
-            // Fetch the profile
-            await fetchProfile(currentSession.user.id);
           } else {
             setProfile(null);
           }
@@ -114,7 +106,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // Initialize auth
+    // Initialize auth immediately
     initializeAuth();
 
     return () => {
