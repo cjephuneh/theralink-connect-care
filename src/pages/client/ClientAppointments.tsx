@@ -93,7 +93,7 @@ const ClientAppointments = () => {
         if (pastError) throw pastError;
 
 
-        const formatAppointment = (apt: RawAppointment): Appointment => {
+        const formatAppointment = (apt: any): Appointment => {
           const startTime = new Date(`${apt.date}T${apt.time}`);
           const endTime = new Date(startTime);
           endTime.setMinutes(endTime.getMinutes() + 50); // Assuming 50-minute sessions
@@ -151,7 +151,7 @@ const ClientAppointments = () => {
       const { error } = await supabase
         .from('bookings')
         .update({ status: 'cancelled' })
-        .eq('id', appointmentId)
+        .eq('id', parseInt(appointmentId))
         .eq('user_id', user.id);
 
       if (error) throw error;

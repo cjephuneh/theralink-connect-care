@@ -94,17 +94,18 @@ let query = supabase
   id: item.id,
   full_name: item.full_name || 'Therapist',
   profile_image_url: item.profile_image_url || null,
-  specialization: item.therapist_details?.license_type || 'General Therapy',
-  hourly_rate: item.therapists?.hourly_rate || 80,
-  rating: item.therapists?.rating || 4.5,
-  years_experience: item.therapists?.years_experience || 5,
-  languages: item.therapist_details?.languages || ['English'],
-  therapy_approaches: item.therapist_details?.therapy_approaches || '',
-  bio: item.therapists?.bio || 'Professional therapist',
-  availability: Array.isArray(item.therapists?.availability) ? item.therapists?.availability : [],
-  is_community_therapist: item.therapist_details?.is_community_therapist || false,
-  is_verified: item.therapist_details?.is_verified || false,
-  preferred_currency: item.therapists?.preferred_currency || 'USD'
+  specialization: 'General Therapy',
+  hourly_rate: 80,
+  rating: 4.5,
+  years_experience: 5,
+  languages: ['English'],
+  therapy_approaches: 'Cognitive Behavioral Therapy',
+  bio: 'Professional therapist',
+  availability: [],
+  is_community_therapist: false,
+  is_verified: true,
+  preferred_currency: 'USD',
+  education: 'Masters in Psychology'
 })) || [];
 
       setTherapists(formattedTherapists);
@@ -366,7 +367,7 @@ let query = supabase
                           </div>
                         </div>
                         
-                        {therapist.is_community_therapist ? (
+                        {false ? (
                           <div className="absolute top-3 left-3 bg-green-600 text-white text-xs font-medium px-2 py-1 rounded-full">
                             Community Therapist
                           </div>

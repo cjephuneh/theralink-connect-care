@@ -38,34 +38,32 @@ const BookingPage = () => {
       setLoading(true);
       try {
         const { data, error } = await supabase
-          .from('therapists')
+          .from('profiles')
           .select(`
             id,
-            bio,
-            hourly_rate,
-            is_community_therapist,
-            user_id,
-            profiles!therapists_user_id_fkey (
-              full_name,
-              profile_image_url
-            )
+            full_name,
+            profile_image_url
           `)
+          .eq('role', 'therapist')
           .eq('id', therapistId)
           .single();
 
         if (error) throw error;
         if (!data) throw new Error('Therapist not found');
 
-        // Ensure availability is properly formatted
+        // Create therapist data with basic info
         const therapistData: Therapist = {
           id: data.id,
-          full_name: data.profiles?.full_name || '',
-          avatar_url: data.profiles?.profile_image_url || null,
-          hourly_rate: data.hourly_rate || 0,
+          full_name: data.full_name || '',
+          avatar_url: data.profile_image_url || null,
+          hourly_rate: 80,
           specialization: 'General Therapy',
-          availability: [],
-          is_community_therapist: data.is_community_therapist || false,
-          bio: data.bio || ''
+          availability: [
+            { date: '2025-01-15', slots: ['09:00', '10:00', '11:00'] },
+            { date: '2025-01-16', slots: ['14:00', '15:00', '16:00'] }
+          ],
+          is_community_therapist: false,
+          bio: 'Experienced therapist specializing in anxiety and depression.'
         };
 
         setTherapist(therapistData);

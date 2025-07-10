@@ -49,7 +49,10 @@ const FriendListing = () => {
 
         // Set the fetched data
         setFriends(friendData || []);
-        setFriendDetails(detailsData || []);
+        setFriendDetails((detailsData || []).map(detail => ({
+          ...detail,
+          area_of_experience: detail.areas_of_experience || ''
+        })));
       } catch (error) {
         console.error("Error fetching data:", error);
       }
