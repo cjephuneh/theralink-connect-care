@@ -35,64 +35,66 @@ const TherapistListing = () => {
   const [filterType, setFilterType] = useState("all");
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchTherapists = async () => {
-      try {
-        setIsLoading(true);
-        
-        const { data, error } = await supabase
-          .from('therapists')
-          .select(`
-            *,
-            profiles!therapists_id_fkey (
-              id,
-              full_name,
-              email,
-              profile_image_url,
-              location
-            )
-          `)
-          .eq('is_verified', true);
+const fetchTherapists = async () => {
+  try {
+    setIsLoading(true);
 
+    // Fetch all profiles with their therapist data
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        full_name,
+        profile_image_url,
+        therapists (
+          id,
+          bio,
+          specialization,
+          hourly_rate,
+          rating,
+          years_experience,
+          languages,
+          therapy_approaches,
+          availability,
+          is_community_therapist,
+          preferred_currency,
+          is_verified
+        )
+      `);
 
-        if (error) throw error;
+    if (error) throw error;
 
-        const formattedTherapists: SimpleTherapist[] = (data || []).map((therapist: any) => ({
-          id: therapist.id,
-          full_name: therapist.profiles?.full_name || 'Unknown',
-          profile_image_url: therapist.profiles?.profile_image_url,
-          email: therapist.profiles?.email || '',
-          bio: therapist.bio || '',
-          specialization: therapist.specialization || 'General Therapy',
-          hourly_rate: therapist.hourly_rate || 0,
-          rating: therapist.rating || 0,
-          years_experience: therapist.years_experience || 0,
-          languages: therapist.languages || ['English'],
-          therapy_approaches: therapist.therapy_approaches || [],
-          availability: therapist.availability,
-          is_community_therapist: therapist.is_community_therapist || false,
-          preferred_currency: therapist.preferred_currency || 'USD',
-        }));
+    
 
-        setTherapists(formattedTherapists);
-      } catch (error) {
-        console.error('Error fetching therapists:', error);
-        toast({
-          title: "Error loading therapists",
-          description: "Could not fetch therapist data",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    const formattedTherapists: SimpleTherapist[] = filtered.map((profile: any) => ({
+      id: profile.id,
+      full_name: profile.full_name || 'Unknown',
+      profile_image_url: profile.profile_image_url,
+      email: profile.email || '',
+      bio: profile.therapists?.bio || '',
+      specialization: profile.therapists?.specialization || 'General Therapy',
+      hourly_rate: profile.therapists?.hourly_rate || 0,
+      rating: profile.therapists?.rating || 0,
+      years_experience: profile.therapists?.years_experience || 0,
+      languages: profile.therapists?.languages || ['English'],
+      therapy_approaches: profile.therapists?.therapy_approaches || [],
+      availability: profile.therapists?.availability,
+      is_community_therapist: profile.therapists?.is_community_therapist || false,
+      preferred_currency: profile.therapists?.preferred_currency || 'USD',
+    }));
 
-    const debounceTimer = setTimeout(() => {
-      fetchTherapists();
-    }, 300);
-
-    return () => clearTimeout(debounceTimer);
-  }, [searchQuery, specialty, language, filterType, toast]);
+    setTherapists(formattedTherapists);
+  } catch (error) {
+    console.error('Error fetching therapists:', error);
+    toast({
+      title: "Error loading therapists",
+      description: "Could not fetch therapist data",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   // Get unique specialties and languages for filters
   const allSpecialties = Array.from(

@@ -136,9 +136,18 @@ const TherapistOnboarding = () => {
         .from('therapists')
         .upsert({
           id: user.id,
-          hourly_rate: values.therapist_type === 'community' ? 0 : null,
-          preferred_currency: values.preferred_currency,
-          availability: availability as any,
+          education: values.education,
+          license_number: values.license_number,
+          license_type: values.license_type,
+         therapy_approaches: values.therapy_approaches,
+         languages: values.languages,
+         insurance_info: values.insurance_info,
+         session_formats: values.session_formats,
+         has_insurance: values.has_insurance,
+         therapist_type: values.therapist_type,
+         preferred_currency: values.preferred_currency,
+         hourly_rate: values.therapist_type === 'community' ? 0 : null,
+         availability: availability as any,
         });
 
       toast({
