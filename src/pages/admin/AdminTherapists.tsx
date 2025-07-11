@@ -11,7 +11,7 @@ import {
   Search, 
   MoreVertical, 
   Mail, 
-  Phone, 
+  Phone,
   MapPin,
   Calendar,
   CheckCircle,
@@ -36,6 +36,7 @@ import { TherapistDetailsModal } from '@/components/admin/TherapistDetailsModal'
 import { TherapistAppointmentsModal } from '@/components/admin/TherapistAppointmentsModal';
 import { TherapistEarningsModal } from '@/components/admin/TherapistEarningsModal';
 import { SendEmailModal } from '@/components/admin/SendEmailModal';
+import TherapistListing from '../TherapistListing';
 
 interface TherapistAdmin {
   id: string;
@@ -148,23 +149,23 @@ const AdminTherapists = () => {
     let filtered = therapists;
 
     if (searchTerm) {
-      filtered = filtered.filter(therapist =>
-        therapist.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        therapist.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        therapist.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        therapist.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(therapists =>
+        therapists.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        therapists.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        therapists.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        TherapistListing.location?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(therapist => {
+      filtered = filtered.filter(therapists => {
         switch (statusFilter) {
           case 'verified':
-            return therapist.therapist_details?.is_verified;
+            return therapist.therapists?.is_verified;
           case 'pending':
-            return therapist.therapist_details?.application_status === 'pending';
+            return therapist.therapists?.application_status === 'pending';
           case 'active':
-            return therapist.therapist_details?.is_verified && therapist.therapist_details?.license_number;
+            return therapist.therapists?.is_verified && therapist.therapists?.license_number;
           default:
             return true;
         }
