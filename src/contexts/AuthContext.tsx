@@ -54,7 +54,55 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let isMounted = true;
 
-    // Initialize session and check for existing auth state
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        console.log('Auth state change:', event, currentSession?.user?.id);
+        
+        if (!isMounted) return;
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (currentSession?.user) {
+          // Use setTimeout to avoid infinite loops in auth state changes
+          setTimeout(async () => {
+            if (!isMounted) return;
+            
+            const profile = await fetchProfile(currentSession.user.id);
+            
+            // Handle dashboard redirect after successful sign in
+            if (event === 'SIGNED_IN' && profile?.role) {
+              const currentPath = window.location.pathname;
+              if (currentPath.includes('/auth/login') || currentPath === '/') {
+                switch (profile.role) {
+                  case 'therapist':
+                    window.location.href = '/therapist/dashboard';
+                    break;
+                  case 'friend':
+                    window.location.href = '/friend/dashboard';
+                    break;
+                  case 'admin':
+                    window.location.href = '/admin/dashboard';
+                    break;
+                  default:
+                    window.location.href = '/client/overview';
+                    break;
+                }
+              }
+            }
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+        
+        if (event !== 'TOKEN_REFRESHED') {
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // THEN check for existing session
     const initializeAuth = async () => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -76,37 +124,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    // Set up auth state listener for persistent sessions
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log('Auth state change:', event, currentSession?.user?.id);
-        
-        if (isMounted) {
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          
-          if (currentSession?.user) {
-            await fetchProfile(currentSession.user.id);
-            
-            // Handle dashboard redirect after successful sign in
-            if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
-              const profile = await fetchProfile(currentSession.user.id);
-              if (profile?.role) {
-                window.location.href = `/${profile.role}/overview`;
-              }
-            }
-          } else {
-            setProfile(null);
-          }
-          
-          if (event !== 'TOKEN_REFRESHED') {
-            setIsLoading(false);
-          }
-        }
-      }
-    );
-
-    // Initialize auth immediately
     initializeAuth();
 
     return () => {

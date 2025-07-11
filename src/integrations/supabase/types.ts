@@ -139,51 +139,6 @@ export type Database = {
         }
         Relationships: []
       }
-      bookings: {
-        Row: {
-          amount: number | null
-          created_at: string | null
-          date: string
-          duration: number
-          id: number
-          is_therapist: boolean
-          payment_status: string | null
-          profile_id: string
-          session_type: string
-          status: string | null
-          time: string
-          user_id: string
-        }
-        Insert: {
-          amount?: number | null
-          created_at?: string | null
-          date: string
-          duration: number
-          id?: number
-          is_therapist: boolean
-          payment_status?: string | null
-          profile_id: string
-          session_type: string
-          status?: string | null
-          time: string
-          user_id: string
-        }
-        Update: {
-          amount?: number | null
-          created_at?: string | null
-          date?: string
-          duration?: number
-          id?: number
-          is_therapist?: boolean
-          payment_status?: string | null
-          profile_id?: string
-          session_type?: string
-          status?: string | null
-          time?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       contact_messages: {
         Row: {
           created_at: string
@@ -285,7 +240,7 @@ export type Database = {
       }
       friend_details: {
         Row: {
-          areas_of_experience: string | null
+          area_of_experience: string | null
           communication_preferences: string | null
           created_at: string
           experience_description: string | null
@@ -295,7 +250,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          areas_of_experience?: string | null
+          area_of_experience?: string | null
           communication_preferences?: string | null
           created_at?: string
           experience_description?: string | null
@@ -305,7 +260,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          areas_of_experience?: string | null
+          area_of_experience?: string | null
           communication_preferences?: string | null
           created_at?: string
           experience_description?: string | null
@@ -314,25 +269,15 @@ export type Database = {
           personal_story?: string | null
           updated_at?: string
         }
-        Relationships: []
-      }
-      friends_test: {
-        Row: {
-          bio: string | null
-          id: number
-          name: string | null
-        }
-        Insert: {
-          bio?: string | null
-          id?: number
-          name?: string | null
-        }
-        Update: {
-          bio?: string | null
-          id?: number
-          name?: string | null
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "friend_details_friend_id_fkey"
+            columns: ["friend_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -557,178 +502,79 @@ export type Database = {
           },
         ]
       }
-      therapist: {
-        Row: {
-          availability: Json | null
-          avatar_url: string | null
-          bio: string | null
-          created_at: string | null
-          full_name: string
-          hourly_rate: number
-          id: string
-          is_community_therapist: boolean | null
-          is_verified: boolean | null
-          languages: string[]
-          license_type: string | null
-          preferred_currency: string | null
-          rating: number
-          therapist_id: number
-          therapy_approaches: string | null
-          years_experience: number
-        }
-        Insert: {
-          availability?: Json | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          full_name: string
-          hourly_rate?: number
-          id?: string
-          is_community_therapist?: boolean | null
-          is_verified?: boolean | null
-          languages?: string[]
-          license_type?: string | null
-          preferred_currency?: string | null
-          rating?: number
-          therapist_id?: number
-          therapy_approaches?: string | null
-          years_experience?: number
-        }
-        Update: {
-          availability?: Json | null
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string | null
-          full_name?: string
-          hourly_rate?: number
-          id?: string
-          is_community_therapist?: boolean | null
-          is_verified?: boolean | null
-          languages?: string[]
-          license_type?: string | null
-          preferred_currency?: string | null
-          rating?: number
-          therapist_id?: number
-          therapy_approaches?: string | null
-          years_experience?: number
-        }
-        Relationships: []
-      }
-      therapist_details: {
+      therapists: {
         Row: {
           application_status: string | null
-          created_at: string
+          availability: Json | null
+          bio: string | null
+          created_at: string | null
           education: string | null
           has_insurance: boolean | null
+          hourly_rate: number | null
           id: string
           insurance_info: string | null
           is_community_therapist: boolean | null
           is_verified: boolean | null
-          languages: string | null
+          languages: string[] | null
           license_number: string | null
           license_type: string | null
           preferred_currency: string | null
-          session_formats: string | null
-          therapist_id: string
-          therapy_approaches: string | null
-          updated_at: string
-        }
-        Insert: {
-          application_status?: string | null
-          created_at?: string
-          education?: string | null
-          has_insurance?: boolean | null
-          id?: string
-          insurance_info?: string | null
-          is_community_therapist?: boolean | null
-          is_verified?: boolean | null
-          languages?: string | null
-          license_number?: string | null
-          license_type?: string | null
-          preferred_currency?: string | null
-          session_formats?: string | null
-          therapist_id: string
-          therapy_approaches?: string | null
-          updated_at?: string
-        }
-        Update: {
-          application_status?: string | null
-          created_at?: string
-          education?: string | null
-          has_insurance?: boolean | null
-          id?: string
-          insurance_info?: string | null
-          is_community_therapist?: boolean | null
-          is_verified?: boolean | null
-          languages?: string | null
-          license_number?: string | null
-          license_type?: string | null
-          preferred_currency?: string | null
-          session_formats?: string | null
-          therapist_id?: string
-          therapy_approaches?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_therapist"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "therapist_details_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      therapists: {
-        Row: {
-          availability: Json | null
-          bio: string | null
-          created_at: string
-          hourly_rate: number | null
-          id: string
-          is_approved: string | null
-          preferred_currency: string | null
           rating: number | null
+          session_formats: string[] | null
           specialization: string | null
-          updated_at: string
+          therapy_approaches: string[] | null
+          updated_at: string | null
           years_experience: number | null
         }
         Insert: {
+          application_status?: string | null
           availability?: Json | null
           bio?: string | null
-          created_at?: string
+          created_at?: string | null
+          education?: string | null
+          has_insurance?: boolean | null
           hourly_rate?: number | null
           id: string
-          is_approved?: string | null
+          insurance_info?: string | null
+          is_community_therapist?: boolean | null
+          is_verified?: boolean | null
+          languages?: string[] | null
+          license_number?: string | null
+          license_type?: string | null
           preferred_currency?: string | null
           rating?: number | null
+          session_formats?: string[] | null
           specialization?: string | null
-          updated_at?: string
+          therapy_approaches?: string[] | null
+          updated_at?: string | null
           years_experience?: number | null
         }
         Update: {
+          application_status?: string | null
           availability?: Json | null
           bio?: string | null
-          created_at?: string
+          created_at?: string | null
+          education?: string | null
+          has_insurance?: boolean | null
           hourly_rate?: number | null
           id?: string
-          is_approved?: string | null
+          insurance_info?: string | null
+          is_community_therapist?: boolean | null
+          is_verified?: boolean | null
+          languages?: string[] | null
+          license_number?: string | null
+          license_type?: string | null
           preferred_currency?: string | null
           rating?: number | null
+          session_formats?: string[] | null
           specialization?: string | null
-          updated_at?: string
+          therapy_approaches?: string[] | null
+          updated_at?: string | null
           years_experience?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "fk_profile"
+            foreignKeyName: "therapists_id_fkey"
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "profiles"

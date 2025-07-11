@@ -42,14 +42,37 @@ const TherapistListing = () => {
         
         const { data, error } = await supabase
           .from('therapists')
-          .select('*')
+          .select(`
+            *,
+            profiles!therapists_id_fkey (
+              id,
+              full_name,
+              email,
+              profile_image_url,
+              location
+            )
+          `)
           .eq('is_verified', true);
 
 
         if (error) throw error;
 
-        // For now, return empty array until database is fully set up
-        const formattedTherapists: SimpleTherapist[] = [];
+        const formattedTherapists: SimpleTherapist[] = (data || []).map((therapist: any) => ({
+          id: therapist.id,
+          full_name: therapist.profiles?.full_name || 'Unknown',
+          profile_image_url: therapist.profiles?.profile_image_url,
+          email: therapist.profiles?.email || '',
+          bio: therapist.bio || '',
+          specialization: therapist.specialization || 'General Therapy',
+          hourly_rate: therapist.hourly_rate || 0,
+          rating: therapist.rating || 0,
+          years_experience: therapist.years_experience || 0,
+          languages: therapist.languages || ['English'],
+          therapy_approaches: therapist.therapy_approaches || [],
+          availability: therapist.availability,
+          is_community_therapist: therapist.is_community_therapist || false,
+          preferred_currency: therapist.preferred_currency || 'USD',
+        }));
 
         setTherapists(formattedTherapists);
       } catch (error) {
