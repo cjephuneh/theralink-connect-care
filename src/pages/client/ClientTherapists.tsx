@@ -26,9 +26,9 @@ interface Therapist {
   availability?: any;
   therapist_details?: {
     license_type?: string;
-    therapy_approaches?: string;
-    languages?: string;
-    session_formats?: string;
+    therapy_approaches?: string[];
+    languages?: string[];
+    session_formats?: string[];
     is_verified: boolean;
   };
 }
@@ -112,18 +112,18 @@ const ClientTherapists = () => {
       if (profilesError) throw profilesError;
       console.log('profilesData:', profilesData);
 
-      // 4. Get therapist_details for those therapists
+      // 4. Get therapist details (now in therapists table)
       const { data: detailsData, error: detailsError } = await supabase
-        .from('therapist_details')
+        .from('therapists')
         .select(`
-          therapist_id,
+          id,
           license_type,
           therapy_approaches,
           languages,
           session_formats,
           is_verified
         `)
-        .in('therapist_id', therapistIds);
+        .in('id', therapistIds);
 
       if (detailsError) throw detailsError;
       console.log('detailsData:', detailsData);
@@ -133,7 +133,7 @@ const ClientTherapists = () => {
         therapistsData
           ?.map((therapist: any) => {
             const profile = profilesData?.find((p: any) => p.id === therapist.id);
-            const details = detailsData?.find((d: any) => d.therapist_id === therapist.id);
+            const details = detailsData?.find((d: any) => d.id === therapist.id);
 
             // If missing a profile skip this therapist (must have matching profile)
             if (!profile) return null;

@@ -47,14 +47,14 @@ interface Therapist {
   therapist_details?: {
     license_number?: string;
     license_type?: string;
-    therapy_approaches?: string;
-    languages?: string;
+    therapy_approaches?: string | string[];
+    languages?: string | string[];
     application_status?: string;
     is_verified?: boolean;
     preferred_currency?: string;
     education?: string;
     insurance_info?: string;
-    session_formats?: string;
+    session_formats?: string | string[];
     has_insurance?: boolean;
   };
 }
@@ -125,12 +125,12 @@ export const TherapistDetailsModal = ({ therapist, isOpen, onClose, onStatusUpda
 
     try {
       const { error } = await supabase
-        .from('therapist_details')
+        .from('therapists')
         .update({ 
           is_verified: isVerified,
           application_status: isVerified ? 'approved' : 'rejected'
         })
-        .eq('therapist_id', therapist.id);
+        .eq('id', therapist.id);
 
       if (error) throw error;
 
@@ -286,19 +286,31 @@ export const TherapistDetailsModal = ({ therapist, isOpen, onClose, onStatusUpda
                 {therapist.therapist_details.therapy_approaches && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Therapy Approaches</label>
-                    <p className="text-sm">{therapist.therapist_details.therapy_approaches}</p>
+                    <p className="text-sm">
+                      {Array.isArray(therapist.therapist_details.therapy_approaches) 
+                        ? therapist.therapist_details.therapy_approaches.join(', ') 
+                        : therapist.therapist_details.therapy_approaches}
+                    </p>
                   </div>
                 )}
                 {therapist.therapist_details.languages && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Languages</label>
-                    <p className="text-sm">{therapist.therapist_details.languages}</p>
+                    <p className="text-sm">
+                      {Array.isArray(therapist.therapist_details.languages) 
+                        ? therapist.therapist_details.languages.join(', ') 
+                        : therapist.therapist_details.languages}
+                    </p>
                   </div>
                 )}
                 {therapist.therapist_details.session_formats && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Session Formats</label>
-                    <p className="text-sm">{therapist.therapist_details.session_formats}</p>
+                    <p className="text-sm">
+                      {Array.isArray(therapist.therapist_details.session_formats) 
+                        ? therapist.therapist_details.session_formats.join(', ') 
+                        : therapist.therapist_details.session_formats}
+                    </p>
                   </div>
                 )}
                 {therapist.therapist_details.insurance_info && (

@@ -65,37 +65,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          // Use setTimeout to avoid infinite loops in auth state changes
-          setTimeout(async () => {
-            if (!isMounted) return;
-            
-            const profile = await fetchProfile(currentSession.user.id);
-            
-            // Handle dashboard redirect after successful sign in
-            if (event === 'SIGNED_IN' && profile?.role) {
-              const currentPath = window.location.pathname;
-              if (currentPath.includes('/auth/login') || currentPath === '/') {
-                switch (profile.role) {
-                  case 'therapist':
-                    window.location.href = '/therapist/dashboard';
-                    break;
-                  case 'friend':
-                    window.location.href = '/friend/dashboard';
-                    break;
-                  case 'admin':
-                    window.location.href = '/admin/dashboard';
-                    break;
-                  default:
-                    window.location.href = '/client/overview';
-                    break;
+          // Only fetch profile and handle redirects for SIGNED_IN event, not token refreshes
+          if (event === 'SIGNED_IN') {
+            setTimeout(async () => {
+              if (!isMounted) return;
+              
+              const profile = await fetchProfile(currentSession.user.id);
+              
+              // Handle dashboard redirect after successful sign in
+              if (profile?.role) {
+                const currentPath = window.location.pathname;
+                if (currentPath.includes('/auth/login') || currentPath === '/') {
+                  switch (profile.role) {
+                    case 'therapist':
+                      window.location.href = '/therapist/dashboard';
+                      break;
+                    case 'friend':
+                      window.location.href = '/friend/dashboard';
+                      break;
+                    case 'admin':
+                      window.location.href = '/admin/dashboard';
+                      break;
+                    default:
+                      window.location.href = '/client/overview';
+                      break;
+                  }
                 }
               }
-            }
-          }, 0);
+            }, 100);
+          } else if (event === 'INITIAL_SESSION') {
+            // For initial session, just fetch profile without redirect
+            setTimeout(async () => {
+              if (!isMounted) return;
+              await fetchProfile(currentSession.user.id);
+            }, 0);
+          }
         } else {
           setProfile(null);
         }
         
+        // Only set loading to false for non-token-refresh events
         if (event !== 'TOKEN_REFRESHED') {
           setIsLoading(false);
         }
@@ -107,13 +116,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (isMounted) {
+        if (isMounted && currentSession) {
           setSession(currentSession);
-          setUser(currentSession?.user ?? null);
-          
-          if (currentSession?.user) {
-            await fetchProfile(currentSession.user.id);
-          }
+          setUser(currentSession.user);
+          await fetchProfile(currentSession.user.id);
+        }
+        
+        if (isMounted) {
           setIsLoading(false);
         }
       } catch (error) {

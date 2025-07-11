@@ -82,9 +82,9 @@ const TherapistLayout = () => {
         if (profile.role === 'therapist') {
           try {
             const { data, error } = await supabase
-              .from('therapist_details')
+              .from('therapists')
               .select('*')
-              .eq('therapist_id', user.id)
+              .eq('id', user.id)
               .single();
             
             // If no data or empty important fields, onboarding is incomplete

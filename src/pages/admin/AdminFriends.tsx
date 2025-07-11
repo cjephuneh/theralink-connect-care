@@ -55,9 +55,21 @@ interface UserProfile {
     education?: string;
     license_number?: string;
     license_type?: string;
-    therapy_approaches?: string;
-    languages?: string;
+    therapy_approaches?: string[];
+    languages?: string[];
     application_status?: string;
+    is_verified?: boolean;
+    bio?: string;
+    specialization?: string;
+    years_experience?: number;
+    hourly_rate?: number;
+    rating?: number;
+    preferred_currency?: string;
+    has_insurance?: boolean;
+    insurance_info?: string;
+    session_formats?: string[];
+    is_community_therapist?: boolean;
+    availability?: any;
   };
 }
 
@@ -92,8 +104,7 @@ const AdminFriends = () => {
         .from('profiles')
         .select(`
           *,
-          friend_details!left(*),
-          therapist_details!left(*)
+          friend_details!left(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -115,7 +126,7 @@ const AdminFriends = () => {
 
       // Fetch therapist details for therapists
       const { data: therapistDetailsData, error: therapistDetailsError } = await supabase
-        .from('therapist_details')
+        .from('therapists')
         .select('*');
 
       if (therapistDetailsError) {
@@ -126,7 +137,7 @@ const AdminFriends = () => {
       const combinedUsersData = profilesData?.map(profile => ({
         ...profile,
         friend_details: friendDetailsData?.find(detail => detail.friend_id === profile.id),
-        therapist_details: therapistDetailsData?.find(detail => detail.therapist_id === profile.id)
+        therapist_details: therapistDetailsData?.find(detail => detail.id === profile.id)
       })) || [];
 
       console.log('Combined users data:', combinedUsersData);
@@ -210,7 +221,7 @@ const AdminFriends = () => {
     
     if (user.role === 'therapist') {
       const status = user.therapist_details?.application_status || 'pending';
-      if (status === 'approved') {
+      if (status === 'approved' || user.therapist_details?.is_verified) {
         return <Badge variant="default" className="bg-green-100 text-green-800">Approved</Badge>;
       }
       return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 capitalize">{status}</Badge>;
@@ -395,9 +406,11 @@ const AdminFriends = () => {
                             <strong>Experience:</strong> {user.friend_details.areas_of_experience}
                           </p>
                         )}
-                        {user.role === 'therapist' && user.therapist_details?.therapy_approaches && (
+                         {user.role === 'therapist' && user.therapist_details?.therapy_approaches && (
                           <p className="text-sm text-muted-foreground">
-                            <strong>Approaches:</strong> {user.therapist_details.therapy_approaches}
+                            <strong>Approaches:</strong> {Array.isArray(user.therapist_details.therapy_approaches) 
+                              ? user.therapist_details.therapy_approaches.join(', ') 
+                              : user.therapist_details.therapy_approaches}
                           </p>
                         )}
                       </div>

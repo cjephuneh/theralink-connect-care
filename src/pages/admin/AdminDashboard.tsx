@@ -144,7 +144,7 @@ const AdminDashboard = () => {
 
         // Count pending therapists
         const { count: pendingTherapistsCount } = await supabase
-          .from("therapist_details")
+          .from("therapists")
           .select("*", { count: "exact", head: true })
           .or("application_status.is.null,application_status.eq.pending");
 

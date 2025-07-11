@@ -125,11 +125,11 @@ const TherapistOnboarding = () => {
 
       if (error) throw error;
 
-      // Update therapist details with currency
+      // Update therapist details with currency (now in therapists table)
       await supabase
-        .from('therapist_details')
+        .from('therapists')
         .update({ preferred_currency: values.preferred_currency })
-        .eq('therapist_id', user.id);
+        .eq('id', user.id);
 
       // Update the therapist profile to indicate type and currency
       await supabase
