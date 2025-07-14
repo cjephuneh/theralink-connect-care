@@ -18,12 +18,25 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { startOfToday, addDays, format } from "date-fns";
+
+// Helper to get the next date for a given day
+const getNextDateForDay = (day: string) => {
+  const today = startOfToday();
+  const daysOfWeek = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const targetDayIndex = daysOfWeek.indexOf(day.toLowerCase());
+  const todayIndex = today.getDay();
+  const daysToAdd = (targetDayIndex - todayIndex + 7) % 7 || 7;
+  return addDays(today, daysToAdd);
+};
+
 
 const TherapistProfile = () => {
   const { id } = useParams<{ id: string }>();
   
   interface Therapist {
     id: string;
+    user_id: string; // Add this line to ensure we have the user_id
     full_name: string;
     profile_image_url?: string;
     role?: string;
@@ -62,31 +75,41 @@ const TherapistProfile = () => {
       if (!id) return;
       setLoading(true);
       try {
-        const { data: therapistData, error } = await supabase
-          .from('profiles')
+        // First fetch therapist data from therapists table
+        const { data: therapistData, error: therapistError } = await supabase
+          .from('therapists')
           .select('*')
-          .eq('role', 'therapist')
           .eq('id', id)
           .single();
 
-        if (error) throw error;
+        if (therapistError || !therapistData) {
+          throw therapistError || new Error("Therapist not found");
+        }
 
-        setTherapist({
-          ...therapistData,
-          availability: [],
-          hourly_rate: 80,
-          rating: 4.8,
-          years_experience: 5,
-          specialization: 'General Therapy',
-          license_type: 'Licensed Therapist',
-          therapy_approaches: 'Cognitive Behavioral Therapy',
-          languages: ['English'],
-          session_formats: 'Individual',
-          is_verified: true,
-          education: 'Masters in Psychology'
-        });
-        // No availability check needed for now
+        // Then fetch profile data from profiles table using user_id
+       // Then fetch profile data from profiles table using user_id
+const { data: profileData, error: profileError } = await supabase
+  .from('profiles')
+  .select('*')
+  .eq('role', 'therapist')
+  .eq('id', id)
+  .single();
 
+
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+          // If profile fetch fails, use therapist data as fallback
+          setTherapist(therapistData);
+        } else {
+          // Merge profile data with therapist data
+          setTherapist({
+            ...therapistData,
+            full_name: profileData?.full_name || therapistData.full_name,
+            profile_image_url: profileData?.avatar_url || therapistData.profile_image_url
+          });
+        }
+
+        // Fetch reviews
         const { data: reviewsData, error: reviewsError } = await supabase
           .from("reviews")
           .select("rating, comment, created_at")
@@ -235,7 +258,7 @@ const TherapistProfile = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-thera-600 flex-shrink-0" />
-                        <span>ksh {therapist.hourly_rate || 8000} per session</span>
+                        <span>ksh {therapist.hourly_rate ||0} per session</span>
                       </div>
                     </div>
                   </div>
@@ -258,7 +281,7 @@ const TherapistProfile = () => {
                   <p className="text-gray-700 mb-4 text-sm sm:text-base">{therapist.bio || "No bio provided."}</p>
                   <h3 className="text-base sm:text-lg font-bold mt-6 mb-3">Therapeutic Approach</h3>
                   <ul className="space-y-2">
-                    {therapist.therapy_approaches
+                    {typeof therapist.therapy_approaches === "string" && therapist.therapy_approaches.length > 0
                       ? therapist.therapy_approaches.split(',').map((approach: string, idx: number) => (
                           <li key={idx} className="flex items-center gap-2 text-sm sm:text-base">
                             <Check className="h-4 w-4 sm:h-5 sm:w-5 text-mint-500 flex-shrink-0" />
@@ -318,38 +341,36 @@ const TherapistProfile = () => {
           <div className="xl:w-1/3">
             <Card className="xl:sticky xl:top-24">
               <CardContent className="p-6">
-                <Button
-                  className="text-xl font-bold mb-4 w-full flex items-center gap-2 justify-center bg-thera-600 hover:bg-thera-700"
-                  onClick={() => navigate(`/therapists/${therapist.id}/book`)}
-                >
-                  <Calendar className="h-5 w-5 text-white" />
-                  Book Session
-                </Button>
-                
                 <div className="mb-6">
-                  <h3 className="font-medium mb-3 text-sm text-gray-700">
-                    <Calendar className="h-4 w-4 inline mr-1" />
-                    Available Dates
-                  </h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {therapist.availability?.map((day: { date: string; slots: string[] }) => (
-                      <Button
-                        key={day.date}
-                        variant={selectedDate === day.date ? "default" : "outline"}
-                        onClick={() => {
-                          setSelectedDate(day.date);
-                          setSelectedTime(null);
-                        }}
-                        className="text-xs"
-                      >
-                        {new Date(day.date).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+  <h3 className="font-medium mb-3 text-sm text-gray-700">
+    <Calendar className="h-4 w-4 inline mr-1" />
+    Available Days
+  </h3>
+  <div className="grid grid-cols-3 gap-2">
+    {therapist.availability && therapist.availability.length > 0 ? (
+      therapist.availability.map((dayObj) => {
+        const nextDate = getNextDateForDay(dayObj.day);
+        const formattedDate = format(nextDate, "yyyy-MM-dd"); // e.g. "2025-07-21"
+        return (
+          <Button
+            key={formattedDate}
+            variant={selectedDate === formattedDate ? "default" : "outline"}
+            onClick={() => {
+              setSelectedDate(formattedDate);
+              setSelectedTime(null);
+            }}
+            className="text-xs"
+          >
+            {format(nextDate, "MMM d")} {/* e.g. "Jul 21" */}
+          </Button>
+        );
+      })
+    ) : (
+      <span className="text-xs text-gray-500">No availability</span>
+    )}
+  </div>
+</div>
+
 
                 {selectedDate && (
                   <div className="mb-6">
@@ -405,7 +426,7 @@ const TherapistProfile = () => {
 
                 <div className="mt-4 text-xs text-gray-500 space-y-1">
                   <p className="flex items-center gap-1">
-                    <DollarSign className="h-3 w-3" /> ksh{therapist.hourly_rate || 80} per session
+                    <DollarSign className="h-3 w-3" /> ksh{therapist.hourly_rate ?? "N/A"} per session
                   </p>
                   <p className="flex items-center gap-1">
                     <Clock className="h-3 w-3" /> 50-minute session

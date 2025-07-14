@@ -6,6 +6,10 @@ import { CalendarClock, ChevronLeft, Clock, User, Video, MessageCircle } from "l
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, isValid, parseISO } from "date-fns";
 
 type Availability = {
   date: string;
@@ -31,9 +35,11 @@ const BookingPage = () => {
 
   const [therapist, setTherapist] = useState<BookingTherapist | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedSessionType, setSelectedSessionType] = useState<'video' | 'chat'>('video');
+  const [additionalNotes, setAdditionalNotes] = useState('');
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
     const fetchTherapist = async () => {
@@ -55,34 +61,36 @@ const BookingPage = () => {
         if (error) throw error;
         if (!data) throw new Error('Therapist not found');
 
-        // Create therapist data from database
         const therapistData: BookingTherapist = {
           id: data.id,
           full_name: data.profiles.full_name || '',
           profile_image_url: data.profiles.profile_image_url || null,
-          hourly_rate: data.hourly_rate || 80,
+          hourly_rate: data.hourly_rate || 0,
           specialization: data.specialization || 'General Therapy',
           availability: data.availability,
-          is_community_therapist: false, // Default for now until field exists
+          is_community_therapist: false,
           bio: data.bio || 'Professional therapist.'
         };
 
         setTherapist(therapistData);
 
-        // Parse availability and set first available date
         try {
           const availabilityData = typeof data.availability === 'string' 
             ? JSON.parse(data.availability) 
             : data.availability;
           
           if (Array.isArray(availabilityData) && availabilityData.length > 0) {
-            setSelectedDate(availabilityData[0].date);
+            const firstAvailableDate = parseISO(availabilityData[0].date);
+            if (isValid(firstAvailableDate)) {
+              setSelectedDate(firstAvailableDate);
+            } else {
+              setDefaultDate();
+            }
+          } else {
+            setDefaultDate();
           }
         } catch (e) {
-          // Default availability if parsing fails
-          const defaultDate = new Date();
-          defaultDate.setDate(defaultDate.getDate() + 1);
-          setSelectedDate(defaultDate.toISOString().split('T')[0]);
+          setDefaultDate();
         }
 
       } catch (error) {
@@ -102,12 +110,21 @@ const BookingPage = () => {
       }
     };
 
+    const setDefaultDate = () => {
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 1);
+      setSelectedDate(defaultDate);
+    };
+
     if (therapistId) fetchTherapist();
   }, [therapistId, toast, navigate]);
 
-  const handleDateSelect = (date: string) => {
-    setSelectedDate(date);
-    setSelectedTime(null);
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date && isValid(date)) {
+      setSelectedDate(date);
+      setSelectedTime(null);
+      setCalendarOpen(false);
+    }
   };
 
   const handleTimeSelect = (time: string) => {
@@ -118,16 +135,20 @@ const BookingPage = () => {
     if (!therapist || !selectedDate || !selectedTime || !user) {
       toast({
         title: "Error",
-        description: "Please login to book a session",
+        description: "Please select a date and time for your session",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      // Calculate end time (assume 50-minute sessions)
-      const startDateTime = new Date(`${selectedDate}T${selectedTime}`);
-      const endDateTime = new Date(startDateTime.getTime() + 50 * 60000);
+      const sessionDuration = selectedSessionType === 'video' ? 50 : 30;
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      
+      const startDateTime = new Date(selectedDate);
+      startDateTime.setHours(hours, minutes, 0, 0);
+      
+      const endDateTime = new Date(startDateTime.getTime() + sessionDuration * 60000);
 
       const sessionDetails = {
         client_id: user.id,
@@ -135,7 +156,8 @@ const BookingPage = () => {
         start_time: startDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
         session_type: selectedSessionType,
-        status: therapist.is_community_therapist ? 'confirmed' : 'scheduled'
+        status: therapist.is_community_therapist ? 'confirmed' : 'scheduled',
+        client_notes: additionalNotes || null
       };
 
       const { error } = await supabase
@@ -182,30 +204,65 @@ const BookingPage = () => {
     );
   }
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const formatDisplayDate = (date: Date | null) => {
+    if (!date || !isValid(date)) return "Select a date";
+    return format(date, "EEE, MMM d");
   };
 
-  // Parse availability slots for selected date
+  const formatDateForComparison = (date: Date) => {
+    return format(date, "yyyy-MM-dd");
+  };
+
+  const formatCalendarDate = (date: Date | null) => {
+    if (!date || !isValid(date)) return <span>Pick a date</span>;
+    return format(date, "PPP");
+  };
+
   const getCurrentDateSlots = () => {
+    if (!selectedDate) return [];
+    
     try {
       const availabilityData = typeof therapist.availability === 'string' 
         ? JSON.parse(therapist.availability) 
         : therapist.availability;
       
       if (Array.isArray(availabilityData)) {
-        const dayData = availabilityData.find(day => day.date === selectedDate);
+        const selectedDateStr = formatDateForComparison(selectedDate);
+        const dayData = availabilityData.find((day: any) => day.date === selectedDateStr);
         return dayData?.slots || [];
       }
       return [];
     } catch (e) {
-      // Default time slots if parsing fails
       return ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
     }
   };
 
+  const getAvailableDates = () => {
+    try {
+      const availabilityData = typeof therapist.availability === 'string' 
+        ? JSON.parse(therapist.availability) 
+        : therapist.availability;
+      
+      if (Array.isArray(availabilityData)) {
+        return availabilityData.map((day: any) => {
+          const date = parseISO(day.date);
+          return isValid(date) ? date : null;
+        }).filter(Boolean) as Date[];
+      }
+      return [];
+    } catch (e) {
+      const defaultDates = [];
+      for (let i = 1; i <= 7; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() + i);
+        defaultDates.push(date);
+      }
+      return defaultDates;
+    }
+  };
+
   const currentDateSlots = getCurrentDateSlots();
+  const availableDates = getAvailableDates();
 
   return (
     <div className="max-w-3xl mx-auto p-4">
@@ -247,7 +304,7 @@ const BookingPage = () => {
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-blue-100 text-blue-800'
                 }`}>
-                  {therapist.is_community_therapist ? 'Community Therapist' : `$${therapist.hourly_rate}/hr`}
+                  {therapist.is_community_therapist ? 'Community Therapist' : `ksh${therapist.hourly_rate}/hr`}
                 </span>
               </div>
             </div>
@@ -268,7 +325,7 @@ const BookingPage = () => {
                   <Video className="h-6 w-6 mb-2" />
                   <span>Video Session</span>
                   <span className="text-sm text-muted-foreground">
-                    {therapist.is_community_therapist ? 'Free' : `$${therapist.hourly_rate}`}
+                    {therapist.is_community_therapist ? 'Free' : `ksh${therapist.hourly_rate}`}
                   </span>
                 </button>
                 
@@ -283,7 +340,7 @@ const BookingPage = () => {
                   <MessageCircle className="h-6 w-6 mb-2" />
                   <span>Chat Session</span>
                   <span className="text-sm text-muted-foreground">
-                    {therapist.is_community_therapist ? 'Free' : `$${Math.round(therapist.hourly_rate * 0.7)}`}
+                    {therapist.is_community_therapist ? 'Free' : `ksh${Math.round(therapist.hourly_rate * 0.7)}`}
                   </span>
                 </button>
               </div>
@@ -291,62 +348,54 @@ const BookingPage = () => {
 
             <div>
               <h3 className="font-medium mb-3">Select Date</h3>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {(() => {
-                  try {
-                    const availabilityData = typeof therapist.availability === 'string' 
-                      ? JSON.parse(therapist.availability) 
-                      : therapist.availability;
-                    
-                    if (Array.isArray(availabilityData)) {
-                      return availabilityData.map((day) => (
-                        <button
-                          key={day.date}
-                          onClick={() => handleDateSelect(day.date)}
-                          className={`p-3 text-center rounded-lg ${
-                            selectedDate === day.date
-                              ? 'bg-primary text-white'
-                              : 'bg-muted/50 hover:bg-muted'
-                          }`}
-                        >
-                          <div className="text-sm font-medium">
-                            {formatDate(day.date)}
-                          </div>
-                        </button>
-                      ));
-                    }
-                    
-                    // Default dates if no availability data
-                    const defaultDates = [];
-                    for (let i = 1; i <= 7; i++) {
-                      const date = new Date();
-                      date.setDate(date.getDate() + i);
-                      const dateStr = date.toISOString().split('T')[0];
-                      defaultDates.push(
-                        <button
-                          key={dateStr}
-                          onClick={() => handleDateSelect(dateStr)}
-                          className={`p-3 text-center rounded-lg ${
-                            selectedDate === dateStr
-                              ? 'bg-primary text-white'
-                              : 'bg-muted/50 hover:bg-muted'
-                          }`}
-                        >
-                          <div className="text-sm font-medium">
-                            {formatDate(dateStr)}
-                          </div>
-                        </button>
-                      );
-                    }
-                    return defaultDates;
-                  } catch (e) {
-                    return <div className="text-muted-foreground">No availability data</div>;
-                  }
-                })()}
+              <div className="flex flex-col gap-4">
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarClock className="mr-2 h-4 w-4" />
+                      {formatCalendarDate(selectedDate)}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate || undefined}
+                      onSelect={handleDateSelect}
+                      disabled={(date) => {
+                        const dateStr = formatDateForComparison(date);
+                        return !availableDates.some(availDate => 
+                          formatDateForComparison(availDate) === dateStr
+                        );
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <div className="flex overflow-x-auto gap-2 pb-2">
+                  {availableDates.map((date) => (
+                    <button
+                      key={date.toString()}
+                      onClick={() => handleDateSelect(date)}
+                      className={`min-w-[120px] p-3 text-center rounded-lg ${
+                        selectedDate && formatDateForComparison(selectedDate) === formatDateForComparison(date)
+                          ? 'bg-primary text-white'
+                          : 'bg-muted/50 hover:bg-muted'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">
+                        {formatDisplayDate(date)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {selectedDate && (
+            {selectedDate && currentDateSlots.length > 0 && (
               <div>
                 <h3 className="font-medium mb-3">Select Time</h3>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -366,6 +415,16 @@ const BookingPage = () => {
                 </div>
               </div>
             )}
+
+            <div>
+              <h3 className="font-medium mb-3">Additional Preferences (Optional)</h3>
+              <Textarea
+                placeholder="Let the therapist know if you have any specific preferences or topics you'd like to focus on..."
+                value={additionalNotes}
+                onChange={(e) => setAdditionalNotes(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
           </div>
         </CardContent>
 
