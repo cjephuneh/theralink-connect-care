@@ -153,7 +153,7 @@ const AdminTherapists = () => {
         therapists.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         therapists.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         therapists.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        TherapistListing.location?.toLowerCase().includes(searchTerm.toLowerCase())
+        therapists.location?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -161,11 +161,11 @@ const AdminTherapists = () => {
       filtered = filtered.filter(therapists => {
         switch (statusFilter) {
           case 'verified':
-            return therapist.therapists?.is_verified;
+            return therapists.is_verified;
           case 'pending':
-            return therapist.therapists?.application_status === 'pending';
+            return therapists.application_status === 'pending';
           case 'active':
-            return therapist.therapists?.is_verified && therapist.therapists?.license_number;
+            return therapists.is_verified && therapists.license_number;
           default:
             return true;
         }

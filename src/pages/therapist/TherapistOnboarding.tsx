@@ -271,12 +271,12 @@ const TherapistOnboarding = () => {
           languages: values.languages,
           insurance_info: values.insurance_info,
           session_formats: values.session_formats,
-          specialization: values.specialization,
+          specialization: values.specializations.join(', '),
           bio: values.bio,
           has_insurance: values.has_insurance,
           preferred_currency: values.preferred_currency,
           hourly_rate: values.therapist_type === 'community' ? 0 : values.hourly_rate,
-          availability: availability,
+          availability: JSON.parse(JSON.stringify(availability)),
         });
 
       toast({
