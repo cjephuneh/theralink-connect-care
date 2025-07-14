@@ -49,6 +49,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          booking_request_id: string | null
           client_id: string
           created_at: string
           end_time: string
@@ -62,6 +63,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          booking_request_id?: string | null
           client_id: string
           created_at?: string
           end_time: string
@@ -75,6 +77,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          booking_request_id?: string | null
           client_id?: string
           created_at?: string
           end_time?: string
@@ -88,6 +91,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_booking_request_id_fkey"
+            columns: ["booking_request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_requests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_payment_id_fkey"
             columns: ["payment_id"]
@@ -135,6 +145,60 @@ export type Database = {
           image_url?: string | null
           published?: boolean
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      booking_requests: {
+        Row: {
+          client_id: string
+          created_at: string
+          currency: string | null
+          duration: number
+          id: string
+          message: string | null
+          payment_amount: number | null
+          payment_required: boolean
+          rejected_reason: string | null
+          requested_date: string
+          requested_time: string
+          session_type: string
+          status: string
+          therapist_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          currency?: string | null
+          duration?: number
+          id?: string
+          message?: string | null
+          payment_amount?: number | null
+          payment_required?: boolean
+          rejected_reason?: string | null
+          requested_date: string
+          requested_time: string
+          session_type: string
+          status?: string
+          therapist_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          currency?: string | null
+          duration?: number
+          id?: string
+          message?: string | null
+          payment_amount?: number | null
+          payment_required?: boolean
+          rejected_reason?: string | null
+          requested_date?: string
+          requested_time?: string
+          session_type?: string
+          status?: string
+          therapist_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -338,6 +402,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_intents: {
+        Row: {
+          amount: number
+          booking_request_id: string
+          created_at: string
+          currency: string
+          id: string
+          payment_method: string
+          payment_reference: string | null
+          status: string
+          therapist_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          booking_request_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string
+          payment_reference?: string | null
+          status?: string
+          therapist_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          booking_request_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string
+          payment_reference?: string | null
+          status?: string
+          therapist_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_intents_booking_request_id_fkey"
+            columns: ["booking_request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_settings: {
         Row: {
@@ -620,6 +734,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_sessions: {
+        Row: {
+          appointment_id: string
+          client_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          room_id: string
+          room_token: string | null
+          started_at: string | null
+          status: string
+          therapist_id: string
+        }
+        Insert: {
+          appointment_id: string
+          client_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          room_id: string
+          room_token?: string | null
+          started_at?: string | null
+          status?: string
+          therapist_id: string
+        }
+        Update: {
+          appointment_id?: string
+          client_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          room_id?: string
+          room_token?: string | null
+          started_at?: string | null
+          status?: string
+          therapist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallets: {
         Row: {
