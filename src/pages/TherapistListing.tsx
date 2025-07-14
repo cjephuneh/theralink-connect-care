@@ -35,6 +35,10 @@ const TherapistListing = () => {
   const [filterType, setFilterType] = useState("all");
   const { toast } = useToast();
 
+  useEffect(() => {
+    fetchTherapists();
+  }, []);
+
 const fetchTherapists = async () => {
   try {
     setIsLoading(true);
@@ -46,6 +50,7 @@ const fetchTherapists = async () => {
         id,
         full_name,
         profile_image_url,
+        email,
         therapists (
           id,
           bio,
@@ -60,11 +65,15 @@ const fetchTherapists = async () => {
           preferred_currency,
           is_verified
         )
-      `);
+      `)
+      .eq('role', 'therapist');
 
     if (error) throw error;
 
-    
+    // Filter for verified therapists only
+    const filtered = (data || []).filter((profile: any) => 
+      profile.therapists && profile.therapists.is_verified === true
+    );
 
     const formattedTherapists: SimpleTherapist[] = filtered.map((profile: any) => ({
       id: profile.id,
@@ -115,6 +124,42 @@ const fetchTherapists = async () => {
     setLanguage("");
     setFilterType("all");
   };
+
+  // Filter therapists based on search and filters
+  const filteredTherapists = therapists.filter(therapist => {
+    // Search filter
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = 
+        therapist.full_name.toLowerCase().includes(searchLower) ||
+        therapist.specialization.toLowerCase().includes(searchLower) ||
+        therapist.bio?.toLowerCase().includes(searchLower) ||
+        therapist.therapy_approaches.some(approach => 
+          approach.toLowerCase().includes(searchLower)
+        );
+      if (!matchesSearch) return false;
+    }
+
+    // Specialty filter
+    if (specialty && !therapist.therapy_approaches.includes(specialty)) {
+      return false;
+    }
+
+    // Language filter
+    if (language && !therapist.languages.includes(language)) {
+      return false;
+    }
+
+    // Type filter
+    if (filterType === 'community' && !therapist.is_community_therapist) {
+      return false;
+    }
+    if (filterType === 'paid' && therapist.is_community_therapist) {
+      return false;
+    }
+
+    return true;
+  });
 
   const getNextAvailable = (availability: any) => {
     // Parse availability from JSONB if it exists
@@ -266,7 +311,7 @@ const fetchTherapists = async () => {
           {/* Results */}
           <div className="mt-2">
             <p className="text-muted-foreground mb-6">
-              {isLoading ? 'Loading...' : `${therapists.length} therapists found`}
+              {isLoading ? 'Loading...' : `${filteredTherapists.length} therapists found`}
             </p>
             
             {isLoading ? (
@@ -293,7 +338,7 @@ const fetchTherapists = async () => {
                   </Card>
                 ))}
               </div>
-            ) : therapists.length === 0 ? (
+            ) : filteredTherapists.length === 0 ? (
               <div className="bg-card p-12 rounded-xl shadow-sm border border-border/50 text-center">
                 <div className="bg-accent/50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
                   <Search className="h-8 w-8 text-muted-foreground" />
@@ -304,7 +349,7 @@ const fetchTherapists = async () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {therapists.map(therapist => {
+                {filteredTherapists.map(therapist => {
                   const nextAvailable = getNextAvailable(therapist.availability);
                   const approaches = therapist.therapy_approaches || [];
                   
