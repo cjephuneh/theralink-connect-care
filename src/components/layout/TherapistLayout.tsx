@@ -140,6 +140,7 @@ const TherapistLayout = () => {
   const therapistNavItems: NavItem[] = [
     { path: '/therapist/dashboard', label: 'Dashboard', icon: BarChart3 },
     { path: '/therapist/appointments', label: 'Appointments', icon: Calendar },
+    { path: '/therapist/bookings', label: 'Bookings', icon: ClipboardList },
     { path: '/therapist/clients', label: 'Clients', icon: Users },
     { path: '/therapist/messages', label: 'Messages', icon: MessageCircle },
     { path: '/therapist/session-notes', label: 'Session Notes', icon: FileText },

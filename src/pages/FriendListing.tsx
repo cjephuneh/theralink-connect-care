@@ -1,12 +1,21 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Friend, FriendDetails, FriendWithDetails } from "@/types/friend";
+import { BookingModal } from "@/components/booking/BookingModal";
 
 const FriendListing = () => {
   const [friends, setFriends] = useState<FriendWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedFriend, setSelectedFriend] = useState<any>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  const handleBooking = (friend: FriendWithDetails) => {
+    setSelectedFriend(friend);
+    setIsBookingModalOpen(true);
+  };
 
   useEffect(() => {
     const fetchFriendsWithDetails = async () => {
@@ -101,31 +110,43 @@ const FriendListing = () => {
                 )}
 
                 <div className="flex justify-center mt-4 gap-2">
-                  <Link
-                    to={`/friends/${friend.id}`}
-                    className="inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  <Button variant="outline" asChild>
+                    <Link to={`/friends/${friend.id}`}>
+                      View Profile
+                    </Link>
+                  </Button>
+                  <Button 
+                    onClick={() => handleBooking(friend)}
+                    className="bg-primary hover:bg-primary/90"
                   >
-                    View Profile
-                  </Link>
-                  <button
-                    className="inline-block bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                    onClick={() => handleBooking(friend.id)}
-                  >
-                    Book
-                  </button>
+                    Book Session
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Booking Modal */}
+      {selectedFriend && (
+        <BookingModal
+          isOpen={isBookingModalOpen}
+          onClose={() => {
+            setIsBookingModalOpen(false);
+            setSelectedFriend(null);
+          }}
+          therapist={{
+            id: selectedFriend.id,
+            full_name: selectedFriend.full_name || 'Friend',
+            hourly_rate: 0, // Friends are typically free
+            is_community_therapist: true, // Friends are community-based
+            preferred_currency: 'USD'
+          }}
+        />
+      )}
     </div>
   );
-};
-
-// Dummy booking handler function (you can replace this with your actual booking logic)
-const handleBooking = (friendId: string) => {
-  alert(`Booking initiated for friend ID: ${friendId}`);
 };
 
 export default FriendListing;

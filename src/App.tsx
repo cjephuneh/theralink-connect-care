@@ -44,6 +44,7 @@ import ClientDashboard from "./pages/ClientDashboard";
 import ClientOverview from "./pages/client/ClientOverview";
 import ClientProfile from "./pages/client/ClientProfile";
 import ClientAppointments from "./pages/client/ClientAppointments";
+import { ClientBookings } from "./pages/client/ClientBookings";
 import ClientMessages from "./pages/client/ClientMessages";
 import ClientBilling from "./pages/client/ClientBilling";
 import ClientSettings from "./pages/client/ClientSettings";
@@ -57,6 +58,7 @@ import TherapistDashboard from "./pages/therapist/TherapistDashboard";
 import TherapistOnboarding from "./pages/therapist/TherapistOnboarding";
 import TherapistOnboardingPage from "./pages/TherapistOnboardingPage";
 import TherapistAppointments from "./pages/therapist/TherapistAppointments";
+import { TherapistBookings } from "./pages/therapist/TherapistBookings";
 import TherapistClients from "./pages/therapist/TherapistClients";
 import TherapistMessages from "./pages/therapist/TherapistMessages";
 import TherapistEarnings from "./pages/therapist/TherapistEarnings";
@@ -71,6 +73,7 @@ import SessionNotes from "./pages/therapist/SessionNotes";
 // Friend pages
 import FriendDashboard from "./pages/friend/FriendDashboard";
 import FriendOnboarding from "./pages/friend/FriendOnboarding";
+import FriendBookings from "./pages/friend/FriendBookings";
 import FriendClients from "./pages/friend/FriendClients";
 import FriendNotes from "./pages/friend/FriendNotes";
 import FriendMessages from "./pages/friend/FriendMessages";
@@ -125,6 +128,7 @@ const App = () => (
                 
                 {/* Booking routes */}
                <Route path="/therapists/:therapistId/book" element={<BookingPage />} />
+               <Route path="/friends/:friendId/book" element={<BookingPage />} />
 
                 {/* <Route path="booking/:therapistId/payment" element={<BookingPaymentPage />} /> */}
                 <Route path="booking/complete" element={<BookingComplete />} />
@@ -152,6 +156,7 @@ const App = () => (
                 <Route path="overview" element={<ClientOverview />} />
                 <Route path="profile" element={<ClientProfile />} />
                 <Route path="appointments" element={<ClientAppointments />} />
+                <Route path="bookings" element={<ClientBookings />} />
                 <Route path="messages" element={<ClientMessages />} />
                 <Route path="billing" element={<ClientBilling />} />
                 <Route path="settings" element={<ClientSettings />} />
@@ -166,6 +171,7 @@ const App = () => (
                 <Route path="dashboard" element={<TherapistDashboard />} />
                 <Route path="onboarding" element={<TherapistOnboarding />} />
                 <Route path="appointments" element={<TherapistAppointments />} />
+                <Route path="bookings" element={<TherapistBookings />} />
                 <Route path="clients" element={<TherapistClients />} />
                 <Route path="messages" element={<TherapistMessages />} />
                 <Route path="earnings" element={<TherapistEarnings />} />
@@ -182,6 +188,7 @@ const App = () => (
               <Route path="/friend" element={<FriendLayout />}>
                 <Route path="dashboard" element={<FriendDashboard />} />
                 <Route path="onboarding" element={<FriendOnboarding />} />
+                <Route path="bookings" element={<FriendBookings />} />
                 <Route path="clients" element={<FriendClients />} />
                 <Route path="notes" element={<FriendNotes />} />
                 <Route path="messages" element={<FriendMessages />} />

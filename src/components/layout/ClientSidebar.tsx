@@ -36,6 +36,11 @@ const menuItems = [
     icon: Calendar,
   },
   {
+    title: "My Bookings",
+    url: "/client/bookings",
+    icon: Calendar,
+  },
+  {
     title: "Find Therapists",
     url: "/client/therapists",
     icon: Users,
