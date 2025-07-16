@@ -55,7 +55,7 @@ export const BookingModal = ({ isOpen, onClose, therapist }: BookingModalProps) 
           message,
           payment_required: isPaid,
           payment_amount: amount,
-          currency: therapist.preferred_currency || 'NGN'
+          currency: therapist.preferred_currency || 'KES'
         })
         .select()
         .single();
@@ -71,7 +71,7 @@ export const BookingModal = ({ isOpen, onClose, therapist }: BookingModalProps) 
             user_id: user.id,
             therapist_id: therapist.id,
             amount,
-            currency: therapist.preferred_currency || 'NGN'
+            currency: therapist.preferred_currency || 'KES',
           });
 
         if (paymentError) throw paymentError;

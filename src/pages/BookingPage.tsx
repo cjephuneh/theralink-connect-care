@@ -9,11 +9,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, isValid, parseISO } from "date-fns";
+import { format, addDays, isAfter, isBefore, isSameDay, parseISO, isValid } from "date-fns";
 
 type AvailabilityDay = {
-  date: string;
-  slots: string[];
+  day: string;  // e.g. "monday", "tuesday"
+  slots: string[];  // e.g. ["10:00", "11:00"]
 };
 
 interface BookingTherapist {
@@ -66,11 +66,12 @@ const BookingPage = () => {
         try {
           availabilityData = typeof data.availability === 'string' 
             ? JSON.parse(data.availability) 
-            : data.availability;
+            : data.availability || [];
           
-          if (!Array.isArray(availabilityData)) {
-            availabilityData = [];
-          }
+          // Validate availability structure
+          availabilityData = availabilityData.filter(day => 
+            day.day && day.slots && Array.isArray(day.slots)
+          );
         } catch (e) {
           console.error('Error parsing availability:', e);
           availabilityData = [];
@@ -89,23 +90,15 @@ const BookingPage = () => {
 
         setTherapist(therapistData);
 
-        // Set initial date if availability exists
-        if (availabilityData.length > 0) {
-          const firstAvailableDate = parseISO(availabilityData[0].date);
-          if (isValid(firstAvailableDate)) {
-            setSelectedDate(firstAvailableDate);
-          } else {
-            setDefaultDate();
-          }
-        } else {
-          setDefaultDate();
-        }
+        // Set initial date to next available day
+        const nextAvailableDate = getNextAvailableDate(therapistData.availability);
+        setSelectedDate(nextAvailableDate);
 
       } catch (error) {
         console.error('Error fetching therapist:', error);
         toast({
           title: "Failed to load therapist",
-          description: error instanceof Error ? error.message : 'The therapist profile could not be found',
+          description: error instanceof Error ? error.message : 'Therapist profile could not be loaded',
           variant: "destructive",
         });
         navigate('/therapists');
@@ -114,34 +107,75 @@ const BookingPage = () => {
       }
     };
 
-    const setDefaultDate = () => {
-      const defaultDate = new Date();
-      defaultDate.setDate(defaultDate.getDate() + 1);
-      setSelectedDate(defaultDate);
+    const getNextAvailableDate = (availability: AvailabilityDay[]): Date => {
+      const today = new Date();
+      
+      // Check next 14 days for availability
+      for (let i = 1; i <= 14; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const dayName = format(date, 'EEEE').toLowerCase();
+        
+        if (availability.some(day => day.day.toLowerCase() === dayName)) {
+          return date;
+        }
+      }
+      
+      // Fallback to tomorrow if no availability found
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      return tomorrow;
     };
 
     if (therapistId) fetchTherapist();
   }, [therapistId, toast, navigate]);
+const handleDateSelect = (date: Date | undefined) => {
+  console.log('Selected Date:', date);
+  if (date && isValid(date)) {
+    setSelectedDate(date);
+    setSelectedTime(null); // Reset time when date changes
+  }
+};
 
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date && isValid(date)) {
-      setSelectedDate(date);
-      setSelectedTime(null); // Reset time when date changes
-    }
-  };
+const handleTimeSelect = (time: string) => {
+  console.log('Selected Time:', time);
+  setSelectedTime(time === selectedTime ? null : time); // Toggle selection
+};
 
-  const handleTimeSelect = (time: string) => {
-    console.log('Time selected:', time);
-    setSelectedTime(time === selectedTime ? null : time); // Toggle selection
-  };
-
-  const handleBookSession = async () => {
-    console.log('Booking attempt - Date:', selectedDate, 'Time:', selectedTime);
-    
-    if (!therapist || !selectedDate || !selectedTime || !user) {
+const handleBookSession = async () => {
+  console.log('Booking Attempt:', {
+    therapist: therapist,
+    selectedDate: selectedDate,
+    selectedTime: selectedTime,
+    user: user,
+  });
+  if (!therapist || !selectedDate || !selectedTime || !user) {
+    toast({
+      title: "Error",
+      description: "Please select both a date and time for your session",
+      variant: "destructive",
+    });
+    return;
+  }
+    if (!isValid(selectedDate)) {
       toast({
-        title: "Error",
-        description: "Please select both a date and time for your session",
+        title: "Invalid Date",
+        description: "Please select a valid date for your session.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verify the selected time is actually available
+    const dayName = format(selectedDate, 'EEEE').toLowerCase();
+    const dayAvailability = therapist.availability.find(
+      day => day.day.toLowerCase() === dayName
+    );
+    
+    if (!dayAvailability || !dayAvailability.slots.includes(selectedTime)) {
+      toast({
+        title: "Time not available",
+        description: "The selected time is no longer available. Please choose another time.",
         variant: "destructive",
       });
       return;
@@ -163,10 +197,10 @@ const BookingPage = () => {
         end_time: endDateTime.toISOString(),
         session_type: selectedSessionType,
         status: therapist.is_community_therapist ? 'confirmed' : 'pending',
-        client_notes: additionalNotes || null
+        client_notes: additionalNotes || null,
+        created_at: new Date().toISOString()
       };
 
-      console.log('Creating session:', sessionDetails);
       const { error } = await supabase
         .from('appointments')
         .insert([sessionDetails]);
@@ -197,16 +231,12 @@ const BookingPage = () => {
     return format(date, "EEE, MMM d");
   };
 
-  const formatDateForComparison = (date: Date) => {
-    return format(date, "yyyy-MM-dd");
-  };
-
   const getCurrentDateSlots = () => {
     if (!selectedDate || !therapist) return [];
     
-    const selectedDateStr = formatDateForComparison(selectedDate);
+    const dayName = format(selectedDate, 'EEEE').toLowerCase();
     const dayData = therapist.availability.find(
-      (day: AvailabilityDay) => formatDateForComparison(parseISO(day.date)) === selectedDateStr
+      day => day.day.toLowerCase() === dayName
     );
     
     return dayData?.slots || [];
@@ -215,9 +245,21 @@ const BookingPage = () => {
   const getAvailableDates = () => {
     if (!therapist) return [];
     
-    return therapist.availability
-      .map((day: AvailabilityDay) => parseISO(day.date))
-      .filter((date: Date) => isValid(date)) as Date[];
+    const dates: Date[] = [];
+    const today = new Date();
+    
+    // Show available dates for next 2 weeks
+    for (let i = 1; i <= 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      const dayName = format(date, 'EEEE').toLowerCase();
+      if (therapist.availability.some(day => day.day.toLowerCase() === dayName)) {
+        dates.push(date);
+      }
+    }
+    
+    return dates;
   };
 
   if (loading) {
@@ -342,9 +384,9 @@ const BookingPage = () => {
                       selected={selectedDate || undefined}
                       onSelect={handleDateSelect}
                       disabled={(date) => {
-                        const dateStr = formatDateForComparison(date);
-                        return !availableDates.some(availDate => 
-                          formatDateForComparison(availDate) === dateStr
+                        const dayName = format(date, 'EEEE').toLowerCase();
+                        return !therapist.availability.some(
+                          day => day.day.toLowerCase() === dayName
                         );
                       }}
                       initialFocus
@@ -358,7 +400,7 @@ const BookingPage = () => {
                       key={date.toString()}
                       onClick={() => handleDateSelect(date)}
                       className={`min-w-[120px] p-3 text-center rounded-lg ${
-                        selectedDate && formatDateForComparison(selectedDate) === formatDateForComparison(date)
+                        selectedDate && isSameDay(selectedDate, date)
                           ? 'bg-primary text-white'
                           : 'bg-muted/50 hover:bg-muted'
                       }`}
@@ -374,7 +416,7 @@ const BookingPage = () => {
 
             {/* Time Selection */}
             {selectedDate && currentDateSlots.length > 0 && (
-              <div>
+              <div className="mt-6">
                 <h3 className="flex items-center gap-2 font-medium mb-3">
                   <Clock className="h-4 w-4" />
                   Available Times for {formatDisplayDate(selectedDate)}
@@ -410,7 +452,10 @@ const BookingPage = () => {
           <Button variant="outline" asChild>
             <Link to={`/therapists/${therapist.id}`}>Cancel</Link>
           </Button>
-          <Button onClick={handleBookSession}>
+          <Button 
+            onClick={handleBookSession}
+            disabled={!selectedTime} // Disable if no time selected
+          >
             {therapist.is_community_therapist ? 'Confirm Booking' : 'Request Session'}
           </Button>
         </CardFooter>
@@ -426,6 +471,11 @@ const BookingPage = () => {
                 "50-minute video session via our secure platform" : 
                 "30-minute text chat session"}
             </p>
+            {selectedTime && (
+              <p className="text-sm mt-2">
+                Selected: {formatDisplayDate(selectedDate)} at {selectedTime}
+              </p>
+            )}
           </div>
         </div>
       </div>
