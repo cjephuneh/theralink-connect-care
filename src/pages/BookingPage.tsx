@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, isValid, parseISO } from "date-fns";
 
-type Availability = {
+type AvailabilityDay = {
   date: string;
   slots: string[];
 };
@@ -22,7 +22,7 @@ interface BookingTherapist {
   profile_image_url: string | null;
   hourly_rate: number;
   specialization: string;
-  availability: any;
+  availability: AvailabilityDay[];
   is_community_therapist: boolean;
   bio: string;
 }
@@ -61,47 +61,51 @@ const BookingPage = () => {
         if (error) throw error;
         if (!data) throw new Error('Therapist not found');
 
+        // Parse availability data
+        let availabilityData: AvailabilityDay[] = [];
+        try {
+          availabilityData = typeof data.availability === 'string' 
+            ? JSON.parse(data.availability) 
+            : data.availability;
+          
+          if (!Array.isArray(availabilityData)) {
+            availabilityData = [];
+          }
+        } catch (e) {
+          console.error('Error parsing availability:', e);
+          availabilityData = [];
+        }
+
         const therapistData: BookingTherapist = {
           id: data.id,
           full_name: data.profiles.full_name || '',
           profile_image_url: data.profiles.profile_image_url || null,
           hourly_rate: data.hourly_rate || 0,
           specialization: data.specialization || 'General Therapy',
-          availability: data.availability,
-          is_community_therapist: false,
+          availability: availabilityData,
+          is_community_therapist: data.is_community_therapist || false,
           bio: data.bio || 'Professional therapist.'
         };
 
         setTherapist(therapistData);
 
-        try {
-          const availabilityData = typeof data.availability === 'string' 
-            ? JSON.parse(data.availability) 
-            : data.availability;
-          
-          if (Array.isArray(availabilityData) && availabilityData.length > 0) {
-            const firstAvailableDate = parseISO(availabilityData[0].date);
-            if (isValid(firstAvailableDate)) {
-              setSelectedDate(firstAvailableDate);
-            } else {
-              setDefaultDate();
-            }
+        // Set initial date if availability exists
+        if (availabilityData.length > 0) {
+          const firstAvailableDate = parseISO(availabilityData[0].date);
+          if (isValid(firstAvailableDate)) {
+            setSelectedDate(firstAvailableDate);
           } else {
             setDefaultDate();
           }
-        } catch (e) {
+        } else {
           setDefaultDate();
         }
 
       } catch (error) {
         console.error('Error fetching therapist:', error);
-        let description = 'The therapist profile could not be found';
-        if (error instanceof Error && error.message) {
-          description = error.message;
-        }
         toast({
           title: "Failed to load therapist",
-          description: description,
+          description: error instanceof Error ? error.message : 'The therapist profile could not be found',
           variant: "destructive",
         });
         navigate('/therapists');
@@ -122,20 +126,22 @@ const BookingPage = () => {
   const handleDateSelect = (date: Date | undefined) => {
     if (date && isValid(date)) {
       setSelectedDate(date);
-      setSelectedTime(null);
-      setCalendarOpen(false);
+      setSelectedTime(null); // Reset time when date changes
     }
   };
 
   const handleTimeSelect = (time: string) => {
-    setSelectedTime(time);
+    console.log('Time selected:', time);
+    setSelectedTime(time === selectedTime ? null : time); // Toggle selection
   };
 
   const handleBookSession = async () => {
+    console.log('Booking attempt - Date:', selectedDate, 'Time:', selectedTime);
+    
     if (!therapist || !selectedDate || !selectedTime || !user) {
       toast({
         title: "Error",
-        description: "Please select a date and time for your session",
+        description: "Please select both a date and time for your session",
         variant: "destructive",
       });
       return;
@@ -156,10 +162,11 @@ const BookingPage = () => {
         start_time: startDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
         session_type: selectedSessionType,
-        status: therapist.is_community_therapist ? 'confirmed' : 'scheduled',
+        status: therapist.is_community_therapist ? 'confirmed' : 'pending',
         client_notes: additionalNotes || null
       };
 
+      console.log('Creating session:', sessionDetails);
       const { error } = await supabase
         .from('appointments')
         .insert([sessionDetails]);
@@ -170,19 +177,47 @@ const BookingPage = () => {
         title: "Booking successful!",
         description: therapist.is_community_therapist 
           ? "Your session has been confirmed." 
-          : "Your session has been scheduled.",
+          : "Your session request has been sent.",
       });
 
       navigate('/client/appointments');
 
     } catch (error) {
-      console.error('Error booking session:', error);
+      console.error('Booking error:', error);
       toast({
         title: "Booking failed",
-        description: "Could not complete your booking",
+        description: "Could not complete your booking. Please try again.",
         variant: "destructive",
       });
     }
+  };
+
+  const formatDisplayDate = (date: Date | null) => {
+    if (!date || !isValid(date)) return "Select a date";
+    return format(date, "EEE, MMM d");
+  };
+
+  const formatDateForComparison = (date: Date) => {
+    return format(date, "yyyy-MM-dd");
+  };
+
+  const getCurrentDateSlots = () => {
+    if (!selectedDate || !therapist) return [];
+    
+    const selectedDateStr = formatDateForComparison(selectedDate);
+    const dayData = therapist.availability.find(
+      (day: AvailabilityDay) => formatDateForComparison(parseISO(day.date)) === selectedDateStr
+    );
+    
+    return dayData?.slots || [];
+  };
+
+  const getAvailableDates = () => {
+    if (!therapist) return [];
+    
+    return therapist.availability
+      .map((day: AvailabilityDay) => parseISO(day.date))
+      .filter((date: Date) => isValid(date)) as Date[];
   };
 
   if (loading) {
@@ -203,63 +238,6 @@ const BookingPage = () => {
       </div>
     );
   }
-
-  const formatDisplayDate = (date: Date | null) => {
-    if (!date || !isValid(date)) return "Select a date";
-    return format(date, "EEE, MMM d");
-  };
-
-  const formatDateForComparison = (date: Date) => {
-    return format(date, "yyyy-MM-dd");
-  };
-
-  const formatCalendarDate = (date: Date | null) => {
-    if (!date || !isValid(date)) return <span>Pick a date</span>;
-    return format(date, "PPP");
-  };
-
-  const getCurrentDateSlots = () => {
-    if (!selectedDate) return [];
-    
-    try {
-      const availabilityData = typeof therapist.availability === 'string' 
-        ? JSON.parse(therapist.availability) 
-        : therapist.availability;
-      
-      if (Array.isArray(availabilityData)) {
-        const selectedDateStr = formatDateForComparison(selectedDate);
-        const dayData = availabilityData.find((day: any) => day.date === selectedDateStr);
-        return dayData?.slots || [];
-      }
-      return [];
-    } catch (e) {
-      return ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-    }
-  };
-
-  const getAvailableDates = () => {
-    try {
-      const availabilityData = typeof therapist.availability === 'string' 
-        ? JSON.parse(therapist.availability) 
-        : therapist.availability;
-      
-      if (Array.isArray(availabilityData)) {
-        return availabilityData.map((day: any) => {
-          const date = parseISO(day.date);
-          return isValid(date) ? date : null;
-        }).filter(Boolean) as Date[];
-      }
-      return [];
-    } catch (e) {
-      const defaultDates = [];
-      for (let i = 1; i <= 7; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() + i);
-        defaultDates.push(date);
-      }
-      return defaultDates;
-    }
-  };
 
   const currentDateSlots = getCurrentDateSlots();
   const availableDates = getAvailableDates();
@@ -285,9 +263,6 @@ const BookingPage = () => {
                 src={therapist.profile_image_url}
                 alt={therapist.full_name}
                 className="w-20 h-20 rounded-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150';
-                }}
               />
             ) : (
               <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
@@ -311,6 +286,7 @@ const BookingPage = () => {
           </div>
 
           <div className="mt-8 space-y-8">
+            {/* Session Type Selection */}
             <div>
               <h3 className="font-medium mb-3">Session Type</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -346,6 +322,7 @@ const BookingPage = () => {
               </div>
             </div>
 
+            {/* Date Selection */}
             <div>
               <h3 className="font-medium mb-3">Select Date</h3>
               <div className="flex flex-col gap-4">
@@ -356,7 +333,7 @@ const BookingPage = () => {
                       className="w-full justify-start text-left font-normal"
                     >
                       <CalendarClock className="mr-2 h-4 w-4" />
-                      {formatCalendarDate(selectedDate)}
+                      {selectedDate ? format(selectedDate, "PPP") : "Select a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -395,31 +372,32 @@ const BookingPage = () => {
               </div>
             </div>
 
+            {/* Time Selection */}
             {selectedDate && currentDateSlots.length > 0 && (
               <div>
-                <h3 className="font-medium mb-3">Select Time</h3>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                <h3 className="flex items-center gap-2 font-medium mb-3">
+                  <Clock className="h-4 w-4" />
+                  Available Times for {formatDisplayDate(selectedDate)}
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
                   {currentDateSlots.map((time) => (
-                    <button
+                    <Button
                       key={time}
+                      variant={selectedTime === time ? "default" : "outline"}
                       onClick={() => handleTimeSelect(time)}
-                      className={`p-3 text-center rounded-lg ${
-                        selectedTime === time
-                          ? 'bg-primary text-white'
-                          : 'bg-muted/50 hover:bg-muted'
-                      }`}
                     >
                       {time}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
             )}
 
+            {/* Additional Notes */}
             <div>
               <h3 className="font-medium mb-3">Additional Preferences (Optional)</h3>
               <Textarea
-                placeholder="Let the therapist know if you have any specific preferences or topics you'd like to focus on..."
+                placeholder="Let the therapist know if you have any specific preferences..."
                 value={additionalNotes}
                 onChange={(e) => setAdditionalNotes(e.target.value)}
                 className="min-h-[100px]"
@@ -430,14 +408,9 @@ const BookingPage = () => {
 
         <CardFooter className="flex justify-between border-t p-6">
           <Button variant="outline" asChild>
-            <Link to={`/therapists/${therapist.id}`}>
-              Cancel
-            </Link>
+            <Link to={`/therapists/${therapist.id}`}>Cancel</Link>
           </Button>
-          <Button 
-            onClick={handleBookSession}
-            disabled={!selectedDate || !selectedTime}
-          >
+          <Button onClick={handleBookSession}>
             {therapist.is_community_therapist ? 'Confirm Booking' : 'Request Session'}
           </Button>
         </CardFooter>
@@ -453,11 +426,6 @@ const BookingPage = () => {
                 "50-minute video session via our secure platform" : 
                 "30-minute text chat session"}
             </p>
-            {therapist.is_community_therapist && (
-              <p className="text-sm text-green-600 mt-2">
-                Community therapists offer free or discounted sessions
-              </p>
-            )}
           </div>
         </div>
       </div>
