@@ -217,13 +217,13 @@ const handleBookSession = async () => {
       navigate('/client/appointments');
 
     } catch (error) {
-      console.error('Booking error:', error);
-      toast({
-        title: "Booking failed",
-        description: "Could not complete your booking. Please try again.",
-        variant: "destructive",
-      });
-    }
+  console.error('Booking error details:', error);
+  toast({
+    title: "Booking failed",
+    description: `Could not complete your booking: ${error.message || 'Unknown error'}`,
+    variant: "destructive",
+  });
+}
   };
 
   const formatDisplayDate = (date: Date | null) => {
@@ -453,11 +453,11 @@ const handleBookSession = async () => {
             <Link to={`/therapists/${therapist.id}`}>Cancel</Link>
           </Button>
           <Button 
-            onClick={handleBookSession}
-            disabled={!selectedTime} // Disable if no time selected
-          >
-            {therapist.is_community_therapist ? 'Confirm Booking' : 'Request Session'}
-          </Button>
+  onClick={handleBookSession}
+  disabled={loading || !selectedDate || !selectedTime || !user}
+>
+  {therapist.is_community_therapist ? 'Confirm Booking' : 'Request Session'}
+</Button>
         </CardFooter>
       </Card>
 

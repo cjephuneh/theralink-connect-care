@@ -411,13 +411,10 @@ const ClientTherapists = () => {
                         <Link to={`/therapists/${therapist.id}`}>View Profile</Link>
                       </Button>
                       <Button asChild className="flex-1">
-                        <Link 
-                          to={`/booking/${therapist.id}`}
-                          state={{
-                            therapist,
-                          }}
-                        >
-                          Book Session
+                        <Link to={`/therapists/${therapist.id}/book`}>
+                          <Button variant="outline" className="flex-1">
+                               Book Session
+                           </Button>
                         </Link>
                       </Button>
                     </div>

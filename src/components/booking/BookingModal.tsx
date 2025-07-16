@@ -37,8 +37,95 @@ export const BookingModal = ({ isOpen, onClose, therapist }: BookingModalProps) 
   const amount = isPaid ? (therapist.hourly_rate * (parseInt(duration) / 60)) : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
+  console.log("handleSubmit triggered");
+  e.preventDefault();
+  if (!user) {
+    console.error("No user found");
+    return;
+  }
+  console.log("Form values:", { selectedDate, selectedTime, sessionType, duration, message });
+
+  setIsLoading(true);
+  try {
+    console.log("Inserting booking request...");
+    const { data: bookingData, error: bookingError } = await supabase
+      .from('booking_requests')
+      .insert({
+        client_id: user.id,
+        therapist_id: therapist.id,
+        requested_date: selectedDate,
+        requested_time: selectedTime,
+        session_type: sessionType,
+        duration: parseInt(duration),
+        message,
+        payment_required: isPaid,
+        payment_amount: amount,
+        currency: therapist.preferred_currency || 'KES'
+      })
+      .select()
+      .single();
+
+    if (bookingError) {
+      console.error("Booking error:", bookingError);
+      throw bookingError;
+    }
+    console.log("Booking data:", bookingData);
+
+    if (isPaid) {
+      console.log("Inserting payment intent...");
+      const { error: paymentError } = await supabase
+        .from('payment_intents')
+        .insert({
+          booking_request_id: bookingData.id,
+          user_id: user.id,
+          therapist_id: therapist.id,
+          amount,
+          currency: therapist.preferred_currency || 'KES',
+        });
+
+      if (paymentError) {
+        console.error("Payment error:", paymentError);
+        throw paymentError;
+      }
+    }
+
+    console.log("Inserting notification...");
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        id: crypto.randomUUID(),
+        user_id: therapist.id,
+        title: 'New Booking Request',
+        message: `You have a new booking request from a client`,
+        type: 'booking_request',
+        action_url: '/therapist/appointments'
+      });
+
+    if (notificationError) {
+      console.error("Notification error:", notificationError);
+      throw notificationError;
+    }
+
+    toast({
+      title: "Booking request sent!",
+      description: isPaid 
+        ? "Your booking request has been sent. Payment will be processed once the therapist accepts."
+        : "Your booking request has been sent to the therapist.",
+    });
+    
+    onClose();
+  } catch (error: any) {
+    console.error("Submission error:", error);
+    toast({
+      title: "Error",
+      description: error.message,
+      variant: "destructive",
+    });
+  } finally {
+    console.log("Finished submission attempt");
+    setIsLoading(false);
+  }
+
 
     setIsLoading(true);
     try {
@@ -224,7 +311,7 @@ export const BookingModal = ({ isOpen, onClose, therapist }: BookingModalProps) 
             </Button>
             <Button 
               type="submit" 
-              disabled={isLoading || !selectedDate || !selectedTime}
+              
               className="flex-1"
             >
               {isLoading ? "Sending..." : "Send Request"}
