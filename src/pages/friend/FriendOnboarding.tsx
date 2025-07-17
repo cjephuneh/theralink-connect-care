@@ -80,13 +80,13 @@ const FriendOnboarding = () => {
       });
 
       navigate('/friend/dashboard');
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      toast({
-        title: "Error",
-        description: "There was a problem saving your profile. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+    console.error('Full error:', error);
+    toast({
+      title: "Save failed",
+      description: error.message || "Check console for details",
+      variant: "destructive",
+    });
     } finally {
       setIsSubmitting(false);
     }

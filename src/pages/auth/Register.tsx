@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Eye, EyeOff, ArrowRight, Check } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Check, AlertCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,26 +25,108 @@ const Register = () => {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [errors, setErrors] = useState({
+    email: "",
+    password: "",
+    terms: ""
+  });
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false,
+    terms: false
+  });
+  const [termsChecked, setTermsChecked] = useState(false);
   
   const navigate = useNavigate();
   const { signUp, user } = useAuth();
 
+  // Email validation function
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  // Password validation function
+  const validatePassword = (password: string) => {
+    // At least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special character
+    const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+    return re.test(password);
+  };
+
+  // Validate form fields
+  const validateForm = () => {
+    const newErrors = {
+      email: "",
+      password: "",
+      terms: ""
+    };
+
+    let isValid = true;
+
+    if (!email) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!validateEmail(email)) {
+      newErrors.email = "Please enter a valid email address (e.g., name@example.com)";
+      isValid = false;
+    }
+
+    if (!password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters long";
+      isValid = false;
+    } else if (!validatePassword(password)) {
+      newErrors.password = "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character";
+      isValid = false;
+    }
+
+    if (!termsChecked) {
+      newErrors.terms = "You must accept the terms and conditions";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  // Handle blur events to mark fields as touched
+  const handleBlur = (field: keyof typeof touched) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    validateForm();
+  };
+
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      // Direct to the appropriate onboarding or dashboard
       if (accountType === "therapist") {
         navigate("/therapist/onboarding");
       } else if (accountType === "friend") {
         navigate("/friend/onboarding");
       } else {
-        navigate("/client/overview"); // Changed from "/dashboard"
+        navigate("/client/overview");
       }
     }
   }, [user, navigate, accountType]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    const isValid = validateForm();
+    
+    // Mark all fields as touched to show errors
+    setTouched({
+      email: true,
+      password: true,
+      terms: true
+    });
+
+    if (!isValid) {
+      return; // Stop the submission if validation fails
+    }
+
     setIsLoading(true);
     
     try {
@@ -55,8 +137,13 @@ const Register = () => {
 
       const { error } = await signUp(email, password, userData);
       
-      if (!error) {
-        // Navigation will happen via the useEffect when user state updates
+      if (error) {
+        // Handle specific sign-up errors
+        if (error.message.includes("Email")) {
+          setErrors(prev => ({ ...prev, email: error.message }));
+        } else if (error.message.includes("Password")) {
+          setErrors(prev => ({ ...prev, password: error.message }));
+        }
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -64,6 +151,8 @@ const Register = () => {
       setIsLoading(false);
     }
   };
+
+
 
   const handleGoogleSignUp = async () => {
     try {
@@ -74,7 +163,6 @@ const Register = () => {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-            // Pass account type as a custom parameter
             role: accountType,
           },
           redirectTo: `${window.location.origin}/dashboard`,
@@ -141,6 +229,7 @@ const Register = () => {
                   disabled={isLoading}
                 />
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input 
@@ -149,10 +238,19 @@ const Register = () => {
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => handleBlur("email")}
                   required
                   disabled={isLoading}
+                  className={touched.email && errors.email ? "border-red-500" : ""}
                 />
+                {touched.email && errors.email && (
+                  <div className="flex items-center text-red-500 text-sm">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.email}
+                  </div>
+                )}
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -162,9 +260,10 @@ const Register = () => {
                     placeholder="Create a strong password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onBlur={() => handleBlur("password")}
                     required
-                    minLength={8}
                     disabled={isLoading}
+                    className={touched.password && errors.password ? "border-red-500" : ""}
                   />
                   <button
                     type="button"
@@ -175,9 +274,16 @@ const Register = () => {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Password must be at least 8 characters long
-                </div>
+                {touched.password && errors.password ? (
+                  <div className="flex items-center text-red-500 text-sm">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {errors.password}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Password must be at least 8 characters with uppercase, lowercase, number, and special character
+                  </div>
+                )}
               </div>
               
               {accountType === "therapist" && (
@@ -220,21 +326,34 @@ const Register = () => {
                 </div>
               )}
               
-              <div className="flex items-center space-x-2">
-                <Checkbox id="terms" required />
-                <label
-                  htmlFor="terms"
-                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  I agree to the{" "}
-                  <Link to="/terms" className="text-thera-600 hover:underline">
-                    Terms of Service
-                  </Link>{" "}
-                  and{" "}
-                  <Link to="/privacy" className="text-thera-600 hover:underline">
-                    Privacy Policy
-                  </Link>
-                </label>
+              <div className="flex items-start space-x-2">
+                <Checkbox 
+                  id="terms" 
+                  checked={termsChecked}
+                  onCheckedChange={(checked) => setTermsChecked(checked as boolean)}
+                  onBlur={() => handleBlur("terms")}
+                />
+                <div>
+                  <label
+                    htmlFor="terms"
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    I agree to the{" "}
+                    <Link to="/terms" className="text-thera-600 hover:underline">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link to="/privacy" className="text-thera-600 hover:underline">
+                      Privacy Policy
+                    </Link>
+                  </label>
+                  {touched.terms && errors.terms && (
+                    <div className="flex items-center text-red-500 text-sm mt-1">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.terms}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <Button 
