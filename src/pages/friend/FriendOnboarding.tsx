@@ -18,7 +18,7 @@ const formSchema = z.object({
   experience_description: z.string().min(10, {
     message: "Experience description must be at least 10 characters.",
   }),
-  areas_of_experience: z.string().min(3, {
+  area_of_experience: z.string().min(3, {
     message: "Please specify at least one area of experience.",
   }),
   personal_story: z.string().min(50, {
@@ -42,7 +42,7 @@ const FriendOnboarding = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       experience_description: "",
-      areas_of_experience: "",
+      area_of_experience: "",
       personal_story: "",
       communication_preferences: "",
       termsAccepted: false,
@@ -67,7 +67,7 @@ const FriendOnboarding = () => {
         .upsert({
           friend_id: user.id,
           experience_description: values.experience_description,
-          areas_of_experience: values.areas_of_experience,
+          area_of_experience: values.area_of_experience,
           personal_story: values.personal_story,
           communication_preferences: values.communication_preferences,
         });
@@ -127,7 +127,7 @@ const FriendOnboarding = () => {
 
               <FormField
                 control={form.control}
-                name="areas_of_experience"
+                name="area_of_experience"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Areas of Experience</FormLabel>
