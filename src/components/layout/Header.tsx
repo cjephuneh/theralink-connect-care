@@ -265,7 +265,7 @@ const Header = () => {
                     className="justify-start"
                     asChild
                   >
-                    <Link to={profile?.role === 'therapist' ? '/therapist/dashboard' : '/client/dashboard'}>
+                    <Link to={profile?.role === 'therapist' ? '/therapist/dashboard' : '/client/overview'}>
                       <User className="h-4 w-4 mr-2" />
                       Dashboard
                     </Link>
