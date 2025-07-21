@@ -25,7 +25,7 @@ export const TherapistBookings = () => {
   const fetchBookingRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('booking_requests')
+        .from('appointments')
         .select(`
           *,
           profiles!booking_requests_client_id_fkey (

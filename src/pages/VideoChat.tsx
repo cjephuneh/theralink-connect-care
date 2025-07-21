@@ -220,54 +220,31 @@ const VideoChat = () => {
           <CardContent className="p-0">
             <div className="relative bg-gray-950 w-full" style={{ height: '70vh' }}>
               {/* Main video area */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                {!callActive && !connecting ? (
-                  <div className="text-center text-white">
-                    <div className="bg-primary/20 p-10 rounded-xl backdrop-blur-sm max-w-lg">
-                      <h2 className="text-2xl font-bold mb-2">Ready to connect with {therapist.name}?</h2>
-                      <p className="text-white/80 mb-6">
-                        Make sure your camera and microphone are working before starting the session.
-                      </p>
-                      <Button
-                        className="bg-white text-primary hover:bg-white/90"
-                        onClick={startCall}
-                      >
-                        <Video className="h-5 w-5 mr-2" />
-                        Start Video Session
-                      </Button>
-                    </div>
-                  </div>
-                ) : connecting ? (
-                  <div className="text-center text-white">
-                    <div className="bg-primary/20 p-10 rounded-xl backdrop-blur-sm animate-pulse-subtle max-w-lg">
-                      <div className="rounded-full w-24 h-24 mx-auto mb-4 bg-white/10 flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-full border-4 border-t-primary border-r-primary/50 border-b-primary/30 border-l-primary/10 animate-spin"></div>
-                      </div>
-                      <h2 className="text-2xl font-bold mb-2">Connecting to {therapist.name}...</h2>
-                      <p className="text-white/80">
-                        Wait time: {formatTime(waitTime)}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  // Therapist video (main)
-                  <div className="w-full h-full relative">
-                    {/* TODO: Replace with actual video stream */}
-                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                      <Video className="h-16 w-16 text-gray-500" />
-                    </div>
-                    {screenShareActive && (
-                      <div className="absolute inset-0 bg-white p-8 flex items-center justify-center z-10">
-                        <div className="text-center">
-                          <Laptop className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-                          <p className="text-xl font-medium">Screen Sharing Active</p>
-                          <p className="text-gray-500">You are sharing your screen</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+              <div className="w-full h-full bg-black relative">
+            {callActive ? (
+    <iframe
+      src={`https://meet.jit.si/thera-session-${therapistId}`}
+      allow="camera; microphone; fullscreen; display-capture"
+      className="w-full h-full border-0 rounded-xl"
+      title="Therapy Session"
+    ></iframe>
+  ) : (
+    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+      <Video className="h-16 w-16 text-gray-500" />
+    </div>
+  )}
+
+  {screenShareActive && (
+    <div className="absolute inset-0 bg-white p-8 flex items-center justify-center z-10">
+      <div className="text-center">
+        <Laptop className="h-16 w-16 text-gray-500 mx-auto mb-4" />
+        <p className="text-xl font-medium">Screen Sharing Active</p>
+        <p className="text-gray-500">You are sharing your screen</p>
+      </div>
+    </div>
+  )}
+</div>
+
               
               {/* Self-view (smaller) */}
               {callActive && (

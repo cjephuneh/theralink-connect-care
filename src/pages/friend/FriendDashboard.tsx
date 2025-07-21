@@ -17,13 +17,13 @@ const FriendDashboard = () => {
       if (!user?.id) return { activeClients: 0, totalSessions: 0 };
       
       const { data: appointments } = await supabase
-        .from('appointments')
+        .from('booking_requests')
         .select('*')
         .eq('therapist_id', user.id)
         .eq('status', 'completed');
       
       const { data: activeAppointments } = await supabase
-        .from('appointments')
+        .from('booking_requests')
         .select('client_id')
         .eq('therapist_id', user.id)
         .in('status', ['scheduled', 'confirmed']);
