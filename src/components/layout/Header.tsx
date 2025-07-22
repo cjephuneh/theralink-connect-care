@@ -60,7 +60,7 @@ const Header = () => {
     if (user) {
       const dashboardLink = profile?.role === 'therapist' 
         ? '/therapist/dashboard' 
-        : '/client/dashboard';
+        : '/client/overview';
         
       return (
         <div className="flex items-center gap-2">

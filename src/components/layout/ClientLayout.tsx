@@ -26,7 +26,7 @@ import {
 const menuItems = [
   {
     title: "Dashboard",
-    url: "/client/dashboard",
+    url: "/client/overview",
     icon: Home,
   },
   {

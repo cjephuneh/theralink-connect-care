@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -6,68 +5,67 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle, Send, User } from "lucide-react";
 
 const ClientMessages = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [therapists, setTherapists] = useState<any[]>([]);
+  const [friends, setFriends] = useState<any[]>([]); // Optional: if you want to support friends
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [selectedTherapistId, setSelectedTherapistId] = useState<string | null>(null);
+
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+  const [partnerType, setPartnerType] = useState<"therapist" | "friend" | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch the user's therapists and messages
+  // Fetch therapists
   useEffect(() => {
     if (!user) return;
 
     const fetchTherapists = async () => {
       try {
-        // Get therapists the client has had appointments with
-        // Modified query to avoid the problematic join
         const { data: appointmentsData, error: appointmentsError } = await supabase
-          .from('appointments')
-          .select('therapist_id')
-          .eq('client_id', user.id)
-          .order('created_at', { ascending: false });
+          .from("appointments")
+          .select("therapist_id")
+          .eq("client_id", user.id);
 
         if (appointmentsError) throw appointmentsError;
-        
-        if (!appointmentsData || appointmentsData.length === 0) {
-          setTherapists([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Extract unique therapist IDs
-        const uniqueTherapistIds = [...new Set(appointmentsData.map(a => a.therapist_id))];
-        
-        // Fetch therapist profiles separately
-        const { data: therapistProfiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, full_name, profile_image_url')
-          .in('id', uniqueTherapistIds);
-          
+
+        await supabase.from("notifications").insert([
+  {
+    user_id: receiverId,
+    type: "message",
+    message: `New message from ${user.full_name}`,
+    read: false,
+    created_at: new Date(),
+  },
+]);
+
+        const therapistIds = [...new Set(appointmentsData.map((a) => a.therapist_id))];
+
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, full_name, profile_image_url")
+          .in("id", therapistIds);
+
         if (profilesError) throw profilesError;
-        
-        if (therapistProfiles && therapistProfiles.length > 0) {
-          setTherapists(therapistProfiles);
-          // Select the first therapist by default
-          setSelectedTherapistId(therapistProfiles[0].id);
+
+        setTherapists(profiles);
+        if (profiles.length > 0) {
+          setSelectedPartnerId(profiles[0].id);
+          setPartnerType("therapist");
         }
       } catch (error) {
-        console.error('Error fetching therapists:', error);
+        console.error("Error fetching therapists:", error);
       } finally {
         setIsLoading(false);
       }
@@ -76,128 +74,118 @@ const ClientMessages = () => {
     fetchTherapists();
   }, [user]);
 
-  // Fetch messages when a therapist is selected
+  // Fetch messages
   useEffect(() => {
-    if (!user || !selectedTherapistId) return;
+    if (!user || !selectedPartnerId) return;
 
     const fetchMessages = async () => {
       try {
-        // Get messages between the client and the selected therapist
         const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedTherapistId}),and(sender_id.eq.${selectedTherapistId},receiver_id.eq.${user.id})`)
-          .order('created_at', { ascending: true });
+          .from("messages")
+          .select("*")
+          .or(
+            `and(sender_id.eq.${user.id},receiver_id.eq.${selectedPartnerId}),and(sender_id.eq.${selectedPartnerId},receiver_id.eq.${user.id})`
+          )
+          .order("created_at", { ascending: true });
 
         if (error) throw error;
+
         setMessages(data || []);
 
-        // Mark messages from therapist as read
-        const unreadMessages = data
-          .filter((msg: any) => msg.sender_id === selectedTherapistId && !msg.is_read)
+        // Mark unread messages as read
+        const unread = data
+          .filter((msg: any) => msg.sender_id === selectedPartnerId && !msg.is_read)
           .map((msg: any) => msg.id);
-        
-        if (unreadMessages.length > 0) {
-          await supabase
-            .from('messages')
-            .update({ is_read: true })
-            .in('id', unreadMessages);
+
+        if (unread.length > 0) {
+          await supabase.from("messages").update({ is_read: true }).in("id", unread);
         }
       } catch (error) {
-        console.error('Error fetching messages:', error);
+        console.error("Error fetching messages:", error);
       }
     };
 
     fetchMessages();
 
-    // Set up real-time subscription for new messages
+    // Real-time updates
     const channel = supabase
-      .channel('public:messages')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'messages',
-        filter: `sender_id=eq.${selectedTherapistId},receiver_id=eq.${user.id}`
-      }, payload => {
-        // Add the new message to state
-        setMessages(current => [...current, payload.new]);
-        
-        // Mark the message as read
-        supabase
-          .from('messages')
-          .update({ is_read: true })
-          .eq('id', payload.new.id);
-      })
+      .channel("public:messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (
+            payload.new.sender_id === selectedPartnerId ||
+            payload.new.receiver_id === selectedPartnerId
+          ) {
+            setMessages((prev) => [...prev, payload.new]);
+
+            // Auto-mark as read
+            supabase.from("messages").update({ is_read: true }).eq("id", payload.new.id);
+          }
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, selectedTherapistId]);
+  }, [user, selectedPartnerId]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedTherapistId) return;
+    if (!newMessage.trim() || !selectedPartnerId) return;
 
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          sender_id: user.id,
-          receiver_id: selectedTherapistId,
-          content: newMessage.trim(),
-          is_read: false
-        });
+      const { error } = await supabase.from("messages").insert({
+        sender_id: user.id,
+        receiver_id: selectedPartnerId,
+        content: newMessage.trim(),
+        is_read: false,
+      });
 
       if (error) throw error;
-      
-      // Clear the input
       setNewMessage("");
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("Send message failed:", error);
       toast({
-        title: "Failed to send message",
-        description: "Please try again",
+        title: "Error",
+        description: "Failed to send message.",
         variant: "destructive",
       });
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
-  const formatMessageTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit'
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString();
+  const formatTime = (dateString: string) =>
+    new Date(dateString).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
     });
-  };
 
-  const formatMessageDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  // Group messages by date
-  const groupMessagesByDate = () => {
-    const groups: Record<string, any[]> = {};
-    messages.forEach(message => {
-      const date = formatMessageDate(message.created_at);
-      if (!groups[date]) groups[date] = [];
-      groups[date].push(message);
-    });
-    return groups;
-  };
+  const groupedMessages = messages.reduce((acc: any, msg: any) => {
+    const date = formatDate(msg.created_at);
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(msg);
+    return acc;
+  }, {});
 
   if (isLoading) {
     return (
@@ -220,9 +208,6 @@ const ClientMessages = () => {
       </div>
     );
   }
-
-  const groupedMessages = groupMessagesByDate();
-
   return (
     <div className="flex flex-col h-[calc(100vh-200px)]">
       <h2 className="text-2xl font-bold mb-6">Messages</h2>

@@ -207,6 +207,16 @@ const handleBookSession = async () => {
 
       if (error) throw error;
 
+      await supabase.from("notifications").insert([
+  {
+    user_id: selectedTherapist.id, // therapist gets the notification
+    type: "appointment",
+    message: `New appointment booked by ${user.full_name}`,
+    read: false,
+    created_at: new Date(),
+  },
+]);
+
       toast({
         title: "Booking successful!",
         description: therapist.is_community_therapist 

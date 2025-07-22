@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import {
@@ -23,11 +23,32 @@ import {
   ScreenShare,
   Laptop,
   UserPlus,
+  Loader2,
 } from "lucide-react";
+
+interface Therapist {
+  id: string;
+  name: string;
+  image: string;
+  specialty: string;
+}
+
+interface JitsiMeetOptions {
+  roomName: string;
+  width: string;
+  height: string;
+  parentNode: HTMLElement;
+  userInfo?: {
+    displayName?: string;
+    email?: string;
+  };
+  configOverwrite?: Record<string, any>;
+  interfaceConfigOverwrite?: Record<string, any>;
+}
 
 const VideoChat = () => {
   const { therapistId } = useParams<{ therapistId: string }>();
-  const [therapist, setTherapist] = useState<any | null>(null);
+  const [therapist, setTherapist] = useState<Therapist | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [callActive, setCallActive] = useState(false);
@@ -38,7 +59,34 @@ const VideoChat = () => {
   const [volume, setVolume] = useState(2); // 0: muted, 1: low, 2: normal
   const [screenShareActive, setScreenShareActive] = useState(false);
   const [networkQuality, setNetworkQuality] = useState(3); // 1-3 scale
-  
+  const jitsiContainer = useRef<HTMLDivElement>(null);
+  const [jitsi, setJitsi] = useState<any>(null);
+
+  // Load therapist data
+  useEffect(() => {
+    const fetchTherapist = async () => {
+      setLoading(true);
+      try {
+        // Replace with your actual API call
+        // const response = await fetch(`/api/therapists/${therapistId}`);
+        // const data = await response.json();
+        // setTherapist(data);
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('role','therapist')
+          .single();
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTherapist();
+  }, [therapistId]);
+
   // Timing interval for session duration
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -55,71 +103,148 @@ const VideoChat = () => {
     
     return () => clearInterval(interval);
   }, [callActive, connecting]);
-  
+
   // Format time display (MM:SS)
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-  
-  // Load therapist data
+
+  // Load Jitsi Meet API and initialize
   useEffect(() => {
-    setLoading(true);
-    // TODO: Replace with API call to fetch therapist details
-    const fetchTherapist = async () => {
-      try {
-        // const response = await fetch(`/api/therapists/${therapistId}`);
-        // const data = await response.json();
-        // setTherapist(data);
-      } catch (error) {
-        console.error("Error fetching therapist:", error);
-      } finally {
-        setLoading(false);
-      }
+    if (!therapistId || !jitsiContainer.current) return;
+
+    const loadJitsiScript = () => {
+      const script = document.createElement('script');
+      script.src = 'https://meet.jit.si/external_api.js';
+      script.async = true;
+      script.onload = initializeJitsi;
+      document.body.appendChild(script);
+    };
+
+    const initializeJitsi = () => {
+      if (!window.JitsiMeetExternalAPI || !jitsiContainer.current) return;
+      
+      const domain = 'meet.jit.si';
+      const options: JitsiMeetOptions = {
+        roomName: `thera-session-${therapistId}`,
+        width: '100%',
+        height: '100%',
+        parentNode: jitsiContainer.current,
+        configOverwrite: {
+          startWithAudioMuted: !audioEnabled,
+          startWithVideoMuted: !videoEnabled,
+          disableSimulcast: false,
+          enableNoAudioDetection: true,
+          enableNoisyMicDetection: true,
+          enableClosePage: false,
+          prejoinPageEnabled: false,
+          disableRemoteMute: true,
+          toolbarButtons: [
+            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+            'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+            'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+            'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+            'tileview', 'select-background', 'download', 'help'
+          ],
+        },
+        interfaceConfigOverwrite: {
+          DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+          SHOW_CHROME_EXTENSION_BANNER: false,
+          MOBILE_APP_PROMO: false,
+          HIDE_INVITE_MORE_HEADER: true,
+          DEFAULT_BACKGROUND: '#f3f4f6',
+        },
+        userInfo: {
+          displayName: 'Patient',
+        }
+      };
+      
+      const _jitsi = new window.JitsiMeetExternalAPI(domain, options);
+      setJitsi(_jitsi);
+      
+      // Event listeners
+      _jitsi.addListener('videoConferenceJoined', () => {
+        setCallActive(true);
+        setConnecting(false);
+      });
+      
+      _jitsi.addListener('readyToClose', () => {
+        endCall();
+      });
     };
     
-    fetchTherapist();
-  }, [therapistId]);
+    loadJitsiScript();
+    
+    return () => {
+      if (jitsi) {
+        jitsi.dispose();
+      }
+      const script = document.querySelector('script[src="https://meet.jit.si/external_api.js"]');
+      if (script) {
+        document.body.removeChild(script);
+      }
+    };
+  }, [therapistId, audioEnabled, videoEnabled]);
+
+  // Update Jitsi when audio/video toggles change
+  useEffect(() => {
+    if (!jitsi) return;
+    
+    jitsi.executeCommand('toggleAudio');
+  }, [audioEnabled, jitsi]);
   
+  useEffect(() => {
+    if (!jitsi) return;
+    
+    jitsi.executeCommand('toggleVideo');
+  }, [videoEnabled, jitsi]);
+
   // Start video call
   const startCall = () => {
     setConnecting(true);
-    
-    // TODO: Replace with WebRTC connection setup
-    setTimeout(() => {
-      setConnecting(false);
-      setCallActive(true);
-    }, 3000);
+    // The actual connection is handled by Jitsi's videoConferenceJoined event
   };
-  
+
   // End video call
   const endCall = () => {
+    if (jitsi) {
+      jitsi.executeCommand('hangup');
+    }
     setCallActive(false);
+    setConnecting(false);
     setSessionTime(0);
     setWaitTime(0);
   };
-  
+
   // Toggle video
   const toggleVideo = () => {
     setVideoEnabled(!videoEnabled);
   };
-  
+
   // Toggle audio
   const toggleAudio = () => {
     setAudioEnabled(!audioEnabled);
   };
-  
+
   // Toggle screen share
   const toggleScreenShare = () => {
+    if (!jitsi) return;
+    
+    if (screenShareActive) {
+      jitsi.executeCommand('stopScreenSharing');
+    } else {
+      jitsi.executeCommand('startScreenSharing');
+    }
     setScreenShareActive(!screenShareActive);
   };
-  
+
   // Cycle through volume settings
   const cycleVolume = () => {
     setVolume(prev => (prev + 1) % 3);
   };
-  
+
   // Get volume icon based on current volume
   const getVolumeIcon = () => {
     switch(volume) {
@@ -129,7 +254,7 @@ const VideoChat = () => {
       default: return <Volume2 className="h-5 w-5" />;
     }
   };
-  
+
   // Network quality indicator
   const getNetworkIndicator = () => {
     const bars = [];
@@ -147,7 +272,7 @@ const VideoChat = () => {
       </div>
     );
   };
-  
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-12 flex justify-center items-center animation-fade-in">
@@ -162,7 +287,7 @@ const VideoChat = () => {
       </div>
     );
   }
-  
+
   if (!therapist) {
     return (
       <div className="container mx-auto px-4 py-12 animation-fade-in">
@@ -176,7 +301,7 @@ const VideoChat = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto px-4 py-8 animation-fade-in">
       <div className="max-w-5xl mx-auto">
@@ -219,40 +344,45 @@ const VideoChat = () => {
           
           <CardContent className="p-0">
             <div className="relative bg-gray-950 w-full" style={{ height: '70vh' }}>
-              {/* Main video area */}
-              <div className="w-full h-full bg-black relative">
-            {callActive ? (
-    <iframe
-      src={`https://meet.jit.si/thera-session-${therapistId}`}
-      allow="camera; microphone; fullscreen; display-capture"
-      className="w-full h-full border-0 rounded-xl"
-      title="Therapy Session"
-    ></iframe>
-  ) : (
-    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-      <Video className="h-16 w-16 text-gray-500" />
-    </div>
-  )}
-
-  {screenShareActive && (
-    <div className="absolute inset-0 bg-white p-8 flex items-center justify-center z-10">
-      <div className="text-center">
-        <Laptop className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-        <p className="text-xl font-medium">Screen Sharing Active</p>
-        <p className="text-gray-500">You are sharing your screen</p>
-      </div>
-    </div>
-  )}
-</div>
-
+              {/* Jitsi container */}
+              <div 
+                ref={jitsiContainer} 
+                className="w-full h-full bg-black"
+                style={{ display: callActive ? 'block' : 'none' }}
+              />
+              
+              {/* Pre-call view */}
+              {!callActive && (
+                <div className="w-full h-full bg-gray-800 flex flex-col items-center justify-center">
+                  <div className="bg-gray-700 rounded-full p-6 mb-6">
+                    <Video className="h-12 w-12 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white mb-2">
+                    {connecting ? 'Connecting to session...' : 'Ready to join session'}
+                  </h2>
+                  <p className="text-gray-300 mb-6">
+                    {connecting ? 'Please wait while we connect you' : 'Click below to start your therapy session'}
+                  </p>
+                  {!connecting && (
+                    <Button 
+                      size="lg" 
+                      onClick={startCall}
+                      disabled={connecting}
+                    >
+                      <Video className="h-5 w-5 mr-2" />
+                      Start Video Session
+                    </Button>
+                  )}
+                </div>
+              )}
               
               {/* Self-view (smaller) */}
               {callActive && (
                 <div className="absolute top-4 right-4 w-52 h-40 bg-gray-800 rounded-lg overflow-hidden border border-primary/50 shadow-lg">
                   {videoEnabled ? (
                     <div className="bg-gray-700 w-full h-full flex items-center justify-center text-white">
-                      {/* TODO: Replace with actual self-view video */}
-                      <p>Your camera view</p>
+                      {/* Self-view would be handled by Jitsi */}
+                      <Video className="h-10 w-10 opacity-50" />
                     </div>
                   ) : (
                     <div className="bg-gray-800 w-full h-full flex items-center justify-center text-white">

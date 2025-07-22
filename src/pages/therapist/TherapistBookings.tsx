@@ -90,6 +90,16 @@ export const TherapistBookings = () => {
 
       if (error) throw error;
 
+      await supabase.from("notifications").insert([
+  {
+    user_id: receiverId,
+    type: "message",
+    message: `New message from ${user.full_name}`,
+    read: false,
+    created_at: new Date(),
+  },
+]);
+
       toast({
         title: "Appointment cancelled",
         description: "The appointment has been cancelled and the client has been notified.",
