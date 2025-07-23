@@ -209,9 +209,9 @@ const handleBookSession = async () => {
 
       await supabase.from("notifications").insert([
   {
-    user_id: selectedTherapist.id, // therapist gets the notification
+    user_id: therapist.id, // therapist gets the notification
     type: "appointment",
-    message: `New appointment booked by ${user.full_name}`,
+    message: `New appointment booked by ${client.full_name}`,
     read: false,
     created_at: new Date(),
   },

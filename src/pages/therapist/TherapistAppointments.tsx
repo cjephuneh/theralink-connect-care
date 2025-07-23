@@ -355,7 +355,7 @@ const TherapistAppointments = () => {
                       </div>
                       <div className="mt-4 md:mt-0 flex items-center space-x-2">
                       // In your TherapistAppointments component, modify the video button:
-{appointment.type === 'video' ? (
+ {appointment.type === 'video' ? (
   <Button 
     variant="default" 
     className="bg-thera-600 hover:bg-thera-700"
