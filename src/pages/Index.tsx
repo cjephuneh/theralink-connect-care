@@ -306,19 +306,19 @@ const Index = () => {
                 <Button asChild size="lg" variant="secondary" className="bg-white text-primary hover:bg-white/90">
                   <Link to="/therapists">Find Support</Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                <Button asChild size="lg" variant="outline" className="border-white text-primary hover:bg-white/90">
                   <Link to="/auth/register">Create an Account</Link>
                 </Button>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-                <Button asChild size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10">
+                <Button asChild size="lg" variant="outline" className="border-white/50 text-primary hover:bg-white/90">
                   <Link to="/for-therapists" className="flex items-center justify-center">
                     Join as a Therapist
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="border-white/50 text-white hover:bg-white/10">
+                <Button asChild size="lg" variant="outline" className="border-white/50 text-primary hover:bg-white/10">
                   <Link to="/for-friends" className="flex items-center justify-center">
                     Become a Friend
                     <ArrowRight className="ml-2 h-4 w-4" />

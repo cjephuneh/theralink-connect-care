@@ -27,7 +27,12 @@ const FriendListing = () => {
           .from("profiles")
           .select(`
             *,
-            friend_details (*)
+            friend_details:profiles (
+              experience_description,
+              area_of_experience,
+              personal_story,
+              communication_preferences
+    )
           `)
           .eq("role", "friend");
 

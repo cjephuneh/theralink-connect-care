@@ -40,15 +40,7 @@ const ClientMessages = () => {
 
         if (appointmentsError) throw appointmentsError;
 
-        await supabase.from("notifications").insert([
-  {
-    user_id: receiverId,
-    type: "message",
-    message: `New message from ${user.full_name}`,
-    read: false,
-    created_at: new Date(),
-  },
-]);
+ 
 
         const therapistIds = [...new Set(appointmentsData.map((a) => a.therapist_id))];
 
