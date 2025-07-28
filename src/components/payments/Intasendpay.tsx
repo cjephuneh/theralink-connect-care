@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 
 declare global {
   interface Window {
@@ -51,32 +51,35 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
     const script = document.createElement("script");
     script.src = "https://cdn.intasend.com/js/intasend-inline.js";
     script.async = true;
-    document.body.appendChild(script);
 
     script.onload = () => {
       if (window.IntaSend) {
         const inta = new window.IntaSend({
-          publicAPIKey: import.meta.env.VITE_INTASEND_PUBLIC_KEY!,
+           publicAPIKey: import.meta.env.VITE_INTASEND_PUBLISHABLE_KEY,
           live: false,
         });
-
+        
         inta.on("COMPLETE", onComplete);
         inta.on("FAILED", onFailed);
-        inta.on("IN-PROGRESS", (res) => {
-          console.log("⏳ Payment In Progress", res);
+        inta.on("IN-PROGRESS", (results) => {
+          console.log("Payment in progress status", results);
         });
 
         if (buttonRef.current) {
           // Setup after DOM is ready
           window.setup?.();
         }
+      } else {
+        console.error("IntaSend library did not load properly.");
       }
     };
+
+    document.body.appendChild(script);
 
     return () => {
       document.body.removeChild(script);
     };
-  }, [amount, email, firstName, lastName]);
+  }, [onComplete, onFailed]);
 
   return (
     <div className="p-4 border rounded-md mt-4">
