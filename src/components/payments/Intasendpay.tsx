@@ -29,40 +29,48 @@ interface IntaSendPayProps {
   email: string;
   firstName: string;
   lastName: string;
+  onComplete: (res: IntaSendResult) => void;
+  onFailed: (res: IntaSendResult) => void;
 }
 
-const IntaSendPay: React.FC<IntaSendPayProps> = ({
+const IntasendPay: React.FC<IntaSendPayProps> = ({
   amount,
   email,
   firstName,
   lastName,
+  onComplete,
+  onFailed
 }) => {
   useEffect(() => {
-    if (window.IntaSend) {
-      const inta = new window.IntaSend({
-        publicAPIKey: import.meta.env.VITE_INTASEND_PUBLIC_KEY as string,
-        live: false,
-      });
+    const script = document.createElement("script");
+    script.src = "https://cdn.intasend.com/js/intasend-inline.js";
+    script.async = true;
+    document.body.appendChild(script);
 
-      inta.on("COMPLETE", (results) => {
-        console.log("✅ Payment Complete:", results);
-        // Optional: Update Supabase, redirect, etc.
-      });
+    script.onload = () => {
+      if (window.IntaSend) {
+        const inta = new window.IntaSend({
+          publicAPIKey: import.meta.env.VITE_INTASEND_PUBLIC_KEY as string,
+          live: false,
+        });
 
-      inta.on("FAILED", (results) => {
-        console.error("❌ Payment Failed:", results);
-      });
+        inta.on("COMPLETE", onComplete);
+        inta.on("FAILED", onFailed);
+        inta.on("IN-PROGRESS", (res) => {
+          console.log("⏳ Payment In Progress", res);
+        });
+      }
+    };
 
-      inta.on("IN-PROGRESS", (results) => {
-        console.log("⏳ Payment In Progress:", results);
-      });
-    }
-  }, []);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, [amount, email, firstName, lastName]);
 
   return (
-    <div>
+    <div className="p-4 border rounded-md mt-4">
       <button
-        className="intaSendPayButton"
+        className="intaSendPayButton bg-primary text-white px-4 py-2 rounded"
         data-amount={amount}
         data-currency="KES"
         data-email={email}
@@ -70,10 +78,10 @@ const IntaSendPay: React.FC<IntaSendPayProps> = ({
         data-last_name={lastName}
         data-country="KE"
       >
-        Pay Now
+        Pay with IntaSend
       </button>
     </div>
   );
 };
 
-export default IntaSendPay;
+export default IntasendPay;
