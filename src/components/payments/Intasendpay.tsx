@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 declare global {
   interface Window {
     IntaSend?: new (options: IntaSendOptions) => IntaSendInstance;
+    setup?: () => void;
   }
 }
 
@@ -21,7 +22,10 @@ interface IntaSendResult {
 }
 
 interface IntaSendInstance {
-  on: (event: "COMPLETE" | "FAILED" | "IN-PROGRESS", callback: (results: IntaSendResult) => void) => void;
+  on: (
+    event: "COMPLETE" | "FAILED" | "IN-PROGRESS",
+    callback: (results: IntaSendResult) => void
+  ) => void;
 }
 
 interface IntaSendPayProps {
@@ -39,8 +43,10 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
   firstName,
   lastName,
   onComplete,
-  onFailed
+  onFailed,
 }) => {
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://cdn.intasend.com/js/intasend-inline.js";
@@ -50,7 +56,7 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
     script.onload = () => {
       if (window.IntaSend) {
         const inta = new window.IntaSend({
-          publicAPIKey: import.meta.env.VITE_INTASEND_PUBLIC_KEY as string,
+          publicAPIKey: import.meta.env.VITE_INTASEND_PUBLIC_KEY!,
           live: false,
         });
 
@@ -59,6 +65,11 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
         inta.on("IN-PROGRESS", (res) => {
           console.log("⏳ Payment In Progress", res);
         });
+
+        if (buttonRef.current) {
+          // Setup after DOM is ready
+          window.setup?.();
+        }
       }
     };
 
@@ -70,6 +81,7 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
   return (
     <div className="p-4 border rounded-md mt-4">
       <button
+        ref={buttonRef}
         className="intaSendPayButton bg-primary text-white px-4 py-2 rounded"
         data-amount={amount}
         data-currency="KES"
@@ -78,7 +90,7 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
         data-last_name={lastName}
         data-country="KE"
       >
-        Pay with IntaSend
+        Pay Now
       </button>
     </div>
   );
