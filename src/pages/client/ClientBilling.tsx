@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, CreditCard, Wallet, CalendarClock, CheckCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import IntasendPayment from "@/components/payments/Intasendpay";
+import IntasendPay from "@/components/payments/IntasendPay"; // Ensure this path is correct
 
 const ClientBilling = () => {
   const { user } = useAuth();
@@ -171,13 +171,13 @@ const ClientBilling = () => {
       </div>
 
       {showIntasend && user && (
-        <IntasendPayment
+        <IntasendPay
           email={user.email}
           firstName={user.user_metadata?.first_name || "Theralink"}
           lastName={user.user_metadata?.last_name || "User"}
           amount={paymentAmount}
           onComplete={(res) => {
-            toast({ title: "Payment Completed", description: res.invoice, variant: "default" });
+            toast({ title: "Payment Completed", description: res.reference, variant: "default" });
             setShowIntasend(false);
           }}
           onFailed={(res) => {

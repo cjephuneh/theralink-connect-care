@@ -48,34 +48,53 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
   const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
+    // Create a script element to add the IntaSend script
     const script = document.createElement("script");
-    script.src = "https://cdn.intasend.com/js/intasend-inline.js";
+    script.src = "https://unpkg.com/intasend-inlinejs-sdk@4.0.7/build/intasend-inline.js";
     script.async = true;
 
+    // When the script loads successfully
     script.onload = () => {
       if (window.IntaSend) {
+        console.log("IntaSend script loaded successfully.");
         const inta = new window.IntaSend({
-           publicAPIKey: import.meta.env.VITE_INTASEND_PUBLISHABLE_KEY,
+          // Replace with your actual publishable key
+          publicAPIKey: process.env.VITE_INTASEND_PUBLISHABLE_KEY,
           live: false,
         });
-        
-        inta.on("COMPLETE", onComplete);
-        inta.on("FAILED", onFailed);
-        inta.on("IN-PROGRESS", (results) => {
-          console.log("Payment in progress status", results);
+
+        // Set up event listeners
+        inta.on("COMPLETE", (results) => {
+          console.log("Payment Completed", results);
+          onComplete(results);
         });
 
+        inta.on("FAILED", (results) => {
+          console.log("Payment Failed", results);
+          onFailed(results);
+        });
+
+        inta.on("IN-PROGRESS", (results) => {
+          console.log("Payment In Progress", results);
+        });
+
+        // Set up the button event listener for the IntaSend setup
         if (buttonRef.current) {
-          // Setup after DOM is ready
-          window.setup?.();
+          console.log("Button ref is set. Setting up IntaSend...");
+          buttonRef.current.addEventListener('click', () => {
+            console.log("Button clicked. Calling window.setup.");
+            window.setup?.();
+          });
         }
       } else {
         console.error("IntaSend library did not load properly.");
       }
     };
 
+    // Append the script to the document body
     document.body.appendChild(script);
 
+    // Clean up by removing the script when the component unmounts
     return () => {
       document.body.removeChild(script);
     };
