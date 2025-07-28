@@ -56,8 +56,9 @@ const Header = () => {
   });
   ListItem.displayName = "ListItem";
 
+ 
   const renderAuthLinks = () => {
-    if (user) {
+    if (user && profile) {
       const dashboardLink = profile?.role === 'therapist' 
         ? '/therapist/dashboard' 
         : '/client/overview';

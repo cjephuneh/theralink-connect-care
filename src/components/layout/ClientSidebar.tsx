@@ -26,6 +26,11 @@ import {
 
 const menuItems = [
   {
+    title: "Home",
+    url: "/",
+    icon: Home,
+  },
+  {
     title: "Dashboard",
     url: "/client/overview",
     icon: Home,

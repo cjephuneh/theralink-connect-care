@@ -153,6 +153,7 @@ const App = () => (
               {/* Client dashboard routes */}
               <Route path="/client" element={<ClientLayout />}>
                 <Route index element={<ClientDashboard />} />
+
                 <Route path="overview" element={<ClientOverview />} />
                 <Route path="profile" element={<ClientProfile />} />
                 <Route path="appointments" element={<ClientAppointments />} />
