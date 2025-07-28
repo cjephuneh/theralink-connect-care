@@ -59,7 +59,7 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
         console.log("IntaSend script loaded successfully.");
         const inta = new window.IntaSend({
           // Replace with your actual publishable key
-          publicAPIKey: process.env.VITE_INTASEND_PUBLISHABLE_KEY,
+          publicAPIKey: import.meta.env.VITE_INTASEND_PUBLISHABLE_KEY,
           live: false,
         });
 

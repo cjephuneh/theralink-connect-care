@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, CreditCard, Wallet, CalendarClock, CheckCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import IntasendPay from "@/components/payments/IntasendPay"; // Ensure this path is correct
+import IntasendPay from "@/components/payments/Intasendpay"; // Ensure this path is correct
 
 const ClientBilling = () => {
   const { user } = useAuth();
