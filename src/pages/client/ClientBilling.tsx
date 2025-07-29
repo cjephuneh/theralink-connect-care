@@ -181,7 +181,7 @@ const ClientBilling = () => {
             setShowIntasend(false);
           }}
           onFailed={(res) => {
-            toast({ title: "Payment Failed", description: res.message, variant: "destructive" });
+            toast({ title: "Payment Failed", description: typeof res.message === 'string' ? res.message : 'Payment failed', variant: "destructive" });
             setShowIntasend(false);
           }}
         />

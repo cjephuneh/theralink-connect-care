@@ -54,15 +54,21 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
     script.async = true;
 
     // When the script loads successfully
-    script.onload = () => {
+     script.onload = () => {
       if (window.IntaSend) {
         console.log("IntaSend script loaded successfully.");
-        const inta = new window.IntaSend({
-          // Replace with your actual publishable key
-          publicAPIKey: import.meta.env.VITE_INTASEND_PUBLIC_KEY,
-          secretAPIKey: import.meta.env.VITE_INTASEND_SECRET_KEY,
-          live: false,
-        });
+        try {
+          const publicAPIKey = import.meta.env.VITE_INTASEND_PUBLIC_KEY;
+          if (!publicAPIKey) {
+            throw new Error("IntaSend public API key is undefined. Please check the environment variable VITE_INTASEND_PUBLISHABLE_KEY.");
+          }
+          console.log("Using API Key:", publicAPIKey);
+          console.log("Sending Payload:", { amount, email, firstName, lastName });
+
+          const inta = new window.IntaSend({
+            publicAPIKey: publicAPIKey,
+            live: false,
+          });
 
         // Set up event listeners
         inta.on("COMPLETE", (results) => {
@@ -80,12 +86,18 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
         });
 
         // Set up the button event listener for the IntaSend setup
-        if (buttonRef.current) {
-          console.log("Button ref is set. Setting up IntaSend...");
-          buttonRef.current.addEventListener('click', () => {
-            console.log("Button clicked. Calling window.setup.");
-            window.setup?.();
-          });
+       buttonRef.current.addEventListener('click', () => {
+  console.log("Sending payment with:", {
+    amount,
+    email,
+    firstName,
+    lastName,
+  });
+  window.setup?.();
+});
+        } catch (error) {
+          console.error("Error initializing IntaSend:", error);
+          onFailed({ status: "error", reference: "initialization_error" });
         }
       } else {
         console.error("IntaSend library did not load properly.");
@@ -104,17 +116,21 @@ const IntasendPay: React.FC<IntaSendPayProps> = ({
   return (
     <div className="p-4 border rounded-md mt-4">
       <button
-        ref={buttonRef}
-        className="intaSendPayButton bg-primary text-white px-4 py-2 rounded"
-        data-amount={amount}
-        data-currency="KES"
-        data-email={email}
-        data-first_name={firstName}
-        data-last_name={lastName}
-        data-country="KE"
-      >
-        Pay Now
-      </button>
+  ref={buttonRef}
+  className="intaSendPayButton bg-primary text-white px-4 py-2 rounded"
+  data-amount={amount}
+  data-currency="KES"
+  data-email={email}
+  data-first_name={firstName}
+  data-last_name={lastName}
+  data-country="KE"
+  data-payment_methods="MPESA,CARD,BANK"  // ✅ REQUIRED!
+>
+  Pay Now
+</button>
+
+
+
     </div>
   );
 };
