@@ -92,11 +92,11 @@ const TherapistSettings = () => {
           
         if (therapistError && therapistError.code !== 'PGRST116') throw therapistError;
         
-        // Get therapist details
+        // Get therapist details (now in therapists table)
         const { data: detailsData, error: detailsError } = await supabase
-          .from("therapist_details")
+          .from("therapists")
           .select("*")
-          .eq("therapist_id", user.id)
+          .eq("id", user.id)
           .maybeSingle();
           
         if (detailsError && detailsError.code !== 'PGRST116') throw detailsError;

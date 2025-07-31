@@ -34,12 +34,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         console.error('Error fetching profile:', error);
-        return;
+        return null;
       }
       
       setProfile(data);
+      return data;
     } catch (error) {
       console.error('Error fetching profile:', error);
+      return null;
     }
   };
 
@@ -50,54 +52,91 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener first
+    let isMounted = true;
+
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log('Auth state change:', event);
+      (event, currentSession) => {
+        console.log('Auth state change:', event, currentSession?.user?.id);
+        
+        if (!isMounted) return;
+        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          // For OAuth logins, we might need to update the profile with the role
+          // Only fetch profile and handle redirects for SIGNED_IN event, not token refreshes
           if (event === 'SIGNED_IN') {
-            const queryParams = new URLSearchParams(window.location.search);
-            const role = queryParams.get('role');
-            
-            // If we have a role in the URL and it's a new OAuth sign-in
-            if (role && ['client', 'therapist', 'friend'].includes(role)) {
-              try {
-                await supabase.from('profiles')
-                  .update({ role })
-                  .eq('id', currentSession.user.id);
-              } catch (error) {
-                console.error('Error updating profile role:', error);
+            setTimeout(async () => {
+              if (!isMounted) return;
+              
+              const profile = await fetchProfile(currentSession.user.id);
+              
+              // Handle dashboard redirect after successful sign in
+              if (profile?.role) {
+                const currentPath = window.location.pathname;
+                if (currentPath.includes('/auth/login') || currentPath === '/') {
+                  switch (profile.role) {
+                    case 'therapist':
+                      window.location.href = '/therapist/dashboard';
+                      break;
+                    case 'friend':
+                      window.location.href = '/friend/dashboard';
+                      break;
+                    case 'admin':
+                      window.location.href = '/admin/dashboard';
+                      break;
+                    default:
+                      window.location.href = '/client/overview';
+                      break;
+                  }
+                }
               }
-            }
+            }, 100);
+          } else if (event === 'INITIAL_SESSION') {
+            // For initial session, just fetch profile without redirect
+            setTimeout(async () => {
+              if (!isMounted) return;
+              await fetchProfile(currentSession.user.id);
+            }, 0);
           }
-          
-          // Fetch the profile
-          setTimeout(() => {
-            fetchProfile(currentSession.user.id);
-          }, 0);
         } else {
           setProfile(null);
         }
-        setIsLoading(false);
+        
+        // Only set loading to false for non-token-refresh events
+        if (event !== 'TOKEN_REFRESHED') {
+          setIsLoading(false);
+        }
       }
     );
 
-    // Then check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        fetchProfile(currentSession.user.id);
+    // THEN check for existing session
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (isMounted && currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          await fetchProfile(currentSession.user.id);
+        }
+        
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -209,10 +248,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+// ✅ Correct: Named hook export (recommended for hooks)
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };
+
+

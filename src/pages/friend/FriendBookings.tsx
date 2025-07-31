@@ -25,7 +25,7 @@ export default function FriendBookings() {
     queryFn: async () => {
       if (!user?.id) return [];
       const { data, error } = await supabase
-        .from("appointments")
+        .from("booking_requests")
         .select("*, client:client_id(*, profile:profiles(*))")
         .eq("therapist_id", user.id)
         .order("start_time", { ascending: false });

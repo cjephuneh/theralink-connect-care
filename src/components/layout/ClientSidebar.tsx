@@ -26,13 +26,23 @@ import {
 
 const menuItems = [
   {
+    title: "Home",
+    url: "/",
+    icon: Home,
+  },
+  {
     title: "Dashboard",
-    url: "/client/dashboard",
+    url: "/client/overview",
     icon: Home,
   },
   {
     title: "My Appointments",
     url: "/client/appointments",
+    icon: Calendar,
+  },
+  {
+    title: "My Bookings",
+    url: "/client/bookings",
     icon: Calendar,
   },
   {

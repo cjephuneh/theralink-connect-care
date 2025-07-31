@@ -38,7 +38,7 @@ const Login = () => {
           navigate("/admin/dashboard");
           break;
         default:
-          // Redirect "client" to overview
+          // Redirect "client" to client overview
           navigate("/client/overview");
           break;
       }

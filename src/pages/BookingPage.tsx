@@ -1,471 +1,491 @@
-
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import {
-  CalendarClock,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle,
-  Shield,
-  Clock,
-  CreditCard,
-  ArrowRight,
-} from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { CalendarClock, ChevronLeft, Clock, User, Video, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, addDays, isAfter, isBefore, isSameDay, parseISO, isValid } from "date-fns";
 
-// Remove all mock therapist data and fetch from Supabase
+type AvailabilityDay = {
+  day: string;  // e.g. "monday", "tuesday"
+  slots: string[];  // e.g. ["10:00", "11:00"]
+};
+
+interface BookingTherapist {
+  id: string;
+  full_name: string;
+  profile_image_url: string | null;
+  hourly_rate: number;
+  specialization: string;
+  availability: AvailabilityDay[];
+  is_community_therapist: boolean;
+  bio: string;
+}
 
 const BookingPage = () => {
   const { therapistId } = useParams<{ therapistId: string }>();
-  const [therapist, setTherapist] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [selectedSession, setSelectedSession] = useState<any | null>(null);
-  const [bookingStep, setBookingStep] = useState(1);
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Fetch therapist profile, therapist (session) details, and availability from DB
+  const [therapist, setTherapist] = useState<BookingTherapist | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedSessionType, setSelectedSessionType] = useState<'video' | 'chat'>('video');
+  const [additionalNotes, setAdditionalNotes] = useState('');
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
   useEffect(() => {
-    if (!therapistId) return;
-
     const fetchTherapist = async () => {
       setLoading(true);
       try {
-        // Ensure therapistId is always a string for Supabase
-        const therapistIdString = typeof therapistId === "string" ? therapistId : String(therapistId);
+        const { data, error } = await supabase
+          .from('therapists')
+          .select(`
+            *,
+            profiles!inner (
+              id,
+              full_name,
+              profile_image_url
+            )
+          `)
+          .eq('id', therapistId)
+          .single();
 
-        // Therapist profile
-        const { data: profile, error: pErr } = await supabase
-          .from("profiles")
-          .select("id, full_name, email, profile_image_url, location, role")
-          .eq("id", therapistIdString)
-          .maybeSingle();
-        if (pErr) throw pErr;
-        if (!profile) {
-          setTherapist(null);
-          setLoading(false);
-          return;
-        }
+        if (error) throw error;
+        if (!data) throw new Error('Therapist not found');
 
-        // Therapist core
-        const { data: therapistRow, error: tErr } = await supabase
-          .from("therapists")
-          .select("hourly_rate, availability, specialization, years_experience, bio")
-          .eq("id", therapistIdString)
-          .maybeSingle();
-        if (tErr) throw tErr;
-
-        // Therapist details (get session formats)
-        const { data: details, error: dErr } = await supabase
-          .from("therapist_details")
-          .select("session_formats")
-          .eq("therapist_id", therapistIdString)
-          .maybeSingle();
-
-        // Parse session formats if present (comma separated)
-        let sessionTypes: any[] = [];
-        if (details?.session_formats) {
-          sessionTypes = details.session_formats
-            .split(",")
-            .map((s: string) => s.trim())
-            .filter(Boolean)
-            .map((s: string, idx: number) => ({
-              id: s.toLowerCase().replace(/\s/g, "_"),
-              name: s,
-              description: "",
-              duration: 50,
-              price: therapistRow?.hourly_rate || 80,
-            }));
-        }
-
-        const rawAvail = therapistRow?.availability || [];
-        let availability: any[] = [];
+        // Parse availability data
+        let availabilityData: AvailabilityDay[] = [];
         try {
-          availability = Array.isArray(rawAvail) ? rawAvail : JSON.parse(JSON.stringify(rawAvail) || "[]");
-        } catch {
-          availability = [];
+          availabilityData = typeof data.availability === 'string' 
+            ? JSON.parse(data.availability) 
+            : data.availability || [];
+          
+          // Validate availability structure
+          availabilityData = availabilityData.filter(day => 
+            day.day && day.slots && Array.isArray(day.slots)
+          );
+        } catch (e) {
+          console.error('Error parsing availability:', e);
+          availabilityData = [];
         }
 
-        setTherapist({
-          ...profile,
-          ...therapistRow,
-          sessions: sessionTypes,
-          availability: availability,
-        });
+        const therapistData: BookingTherapist = {
+          id: data.id,
+          full_name: data.profiles.full_name || '',
+          profile_image_url: data.profiles.profile_image_url || null,
+          hourly_rate: data.hourly_rate || 0,
+          specialization: data.specialization || 'General Therapy',
+          availability: availabilityData,
+          is_community_therapist: data.is_community_therapist || false,
+          bio: data.bio || 'Professional therapist.'
+        };
 
-        if (sessionTypes.length > 0) setSelectedSession(sessionTypes[0]);
-        if (availability.length > 0) setSelectedDate(availability[0].date);
+        setTherapist(therapistData);
+
+        // Set initial date to next available day
+        const nextAvailableDate = getNextAvailableDate(therapistData.availability);
+        setSelectedDate(nextAvailableDate);
+
       } catch (error) {
+        console.error('Error fetching therapist:', error);
         toast({
           title: "Failed to load therapist",
-          description: "Therapist not found or unavailable.",
+          description: error instanceof Error ? error.message : 'Therapist profile could not be loaded',
           variant: "destructive",
         });
-        setTherapist(null);
+        navigate('/therapists');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTherapist();
-    // eslint-disable-next-line
-  }, [therapistId]);
+    const getNextAvailableDate = (availability: AvailabilityDay[]): Date => {
+      const today = new Date();
+      
+      // Check next 14 days for availability
+      for (let i = 1; i <= 14; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const dayName = format(date, 'EEEE').toLowerCase();
+        
+        if (availability.some(day => day.day.toLowerCase() === dayName)) {
+          return date;
+        }
+      }
+      
+      // Fallback to tomorrow if no availability found
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      return tomorrow;
+    };
 
-  const handleDateSelect = (date: string) => {
+    if (therapistId) fetchTherapist();
+  }, [therapistId, toast, navigate]);
+const handleDateSelect = (date: Date | undefined) => {
+  console.log('Selected Date:', date);
+  if (date && isValid(date)) {
     setSelectedDate(date);
-    setSelectedTime(null);
-  };
-  const handleTimeSelect = (time: string) => setSelectedTime(time);
-  const handleSessionSelect = (session: any) => setSelectedSession(session);
-  const handleProceed = () => setBookingStep(bookingStep + 1);
-  const handleBack = () => setBookingStep(bookingStep - 1);
+    setSelectedTime(null); // Reset time when date changes
+  }
+};
 
-  const canProceed = () => {
-    switch (bookingStep) {
-      case 1: return selectedSession !== null;
-      case 2: return selectedDate !== null && selectedTime !== null;
-      default: return true;
+const handleTimeSelect = (time: string) => {
+  console.log('Selected Time:', time);
+  setSelectedTime(time === selectedTime ? null : time); // Toggle selection
+};
+
+const handleBookSession = async () => {
+  console.log('Booking Attempt:', {
+    therapist: therapist,
+    selectedDate: selectedDate,
+    selectedTime: selectedTime,
+    user: user,
+  });
+  if (!therapist || !selectedDate || !selectedTime || !user) {
+    toast({
+      title: "Error",
+      description: "Please select both a date and time for your session",
+      variant: "destructive",
+    });
+    return;
+  }
+    if (!isValid(selectedDate)) {
+      toast({
+        title: "Invalid Date",
+        description: "Please select a valid date for your session.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    // Verify the selected time is actually available
+    const dayName = format(selectedDate, 'EEEE').toLowerCase();
+    const dayAvailability = therapist.availability.find(
+      day => day.day.toLowerCase() === dayName
+    );
+    
+    if (!dayAvailability || !dayAvailability.slots.includes(selectedTime)) {
+      toast({
+        title: "Time not available",
+        description: "The selected time is no longer available. Please choose another time.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const sessionDuration = selectedSessionType === 'video' ? 50 : 30;
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      
+      const startDateTime = new Date(selectedDate);
+      startDateTime.setHours(hours, minutes, 0, 0);
+      
+      const endDateTime = new Date(startDateTime.getTime() + sessionDuration * 60000);
+
+      const sessionDetails = {
+        client_id: user.id,
+        therapist_id: therapist.id,
+        start_time: startDateTime.toISOString(),
+        end_time: endDateTime.toISOString(),
+        session_type: selectedSessionType,
+        status: therapist.is_community_therapist ? 'confirmed' : 'pending',
+        client_notes: additionalNotes || null,
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('appointments')
+        .insert([sessionDetails]);
+
+      if (error) throw error;
+
+      await supabase.from("notifications").insert([
+  {
+    user_id: therapist.id, // therapist gets the notification
+    type: "appointment",
+    message: `New appointment booked by ${client.full_name}`,
+    read: false,
+    created_at: new Date(),
+  },
+]);
+
+      toast({
+        title: "Booking successful!",
+        description: therapist.is_community_therapist 
+          ? "Your session has been confirmed." 
+          : "Your session request has been sent.",
+      });
+
+      navigate('/client/appointments');
+
+    } catch (error) {
+  console.error('Booking error details:', error);
+  toast({
+    title: "Booking failed",
+    description: `Could not complete your booking: ${error.message || 'Unknown error'}`,
+    variant: "destructive",
+  });
+}
+  };
+
+  const formatDisplayDate = (date: Date | null) => {
+    if (!date || !isValid(date)) return "Select a date";
+    return format(date, "EEE, MMM d");
+  };
+
+  const getCurrentDateSlots = () => {
+    if (!selectedDate || !therapist) return [];
+    
+    const dayName = format(selectedDate, 'EEEE').toLowerCase();
+    const dayData = therapist.availability.find(
+      day => day.day.toLowerCase() === dayName
+    );
+    
+    return dayData?.slots || [];
+  };
+
+  const getAvailableDates = () => {
+    if (!therapist) return [];
+    
+    const dates: Date[] = [];
+    const today = new Date();
+    
+    // Show available dates for next 2 weeks
+    for (let i = 1; i <= 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      const dayName = format(date, 'EEEE').toLowerCase();
+      if (therapist.availability.some(day => day.day.toLowerCase() === dayName)) {
+        dates.push(date);
+      }
+    }
+    
+    return dates;
   };
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12 flex justify-center items-center animation-fade-in">
-        <div className="w-full max-w-4xl h-96 flex items-center justify-center">
-          <div className="flex flex-col items-center animate-pulse-subtle">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
-              <CalendarClock className="h-8 w-8 text-primary/40" />
-            </div>
-            <p className="text-muted-foreground">Loading booking page...</p>
-          </div>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (!therapist) {
     return (
-      <div className="container mx-auto px-4 py-12 animation-fade-in">
-        <div className="bg-card p-8 rounded-xl shadow-sm text-center">
-          <h2 className="text-2xl font-bold mb-4">Therapist Not Found</h2>
-          <p className="text-muted-foreground mb-6">We couldn't find the therapist you're looking for.</p>
-          <Button asChild>
-            <Link to="/therapists">Back to Therapist Directory</Link>
-          </Button>
-        </div>
+      <div className="text-center p-8">
+        <h2 className="text-2xl font-bold mb-4">Therapist Not Found</h2>
+        <Button asChild>
+          <Link to="/therapists">Back to Therapists</Link>
+        </Button>
       </div>
     );
   }
 
-  // Format date for booking header
-  const formatDate = (date: string) => {
-    try {
-      const d = new Date(date);
-      const day = d.getDate();
-      const month = d.toLocaleString("default", { month: "short" });
-      const weekday = d.toLocaleString("default", { weekday: "short" });
-      return { fullDate: `${weekday}, ${month} ${day}`, weekday, month, day };
-    } catch {
-      return { fullDate: date, weekday: "", month: "", day: "" };
-    }
-  };
+  const currentDateSlots = getCurrentDateSlots();
+  const availableDates = getAvailableDates();
 
   return (
-    <div className="container mx-auto px-4 py-8 animation-fade-in">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <Link to={`/therapists/${String(therapistId)}`} className="text-primary hover:underline flex items-center">
-            <ChevronLeft className="h-4 w-4 mr-1" /> Back to profile
+    <div className="max-w-3xl mx-auto p-4">
+      <div className="flex items-center mb-6 gap-4">
+        <Button variant="outline" size="icon" asChild>
+          <Link to={`/therapists/${therapist.id}`}>
+            <ChevronLeft className="h-4 w-4" />
           </Link>
-          <h1 className="text-3xl font-bold mt-2">
-            Book a Session with {therapist.full_name}
-          </h1>
-          <p className="text-muted-foreground">Select session type, date and time</p>
-        </div>
-        <div className="mb-8">
-          {/* Progress Steps */}
-          <div className="flex items-center">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    step < bookingStep
-                      ? 'bg-primary text-white'
-                      : step === bookingStep
-                      ? 'bg-primary text-white'
-                      : 'bg-muted text-muted-foreground'
+        </Button>
+        <h1 className="text-2xl font-bold">
+          Book Session with {therapist.full_name}
+        </h1>
+      </div>
+
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-6">
+            {therapist.profile_image_url ? (
+              <img
+                src={therapist.profile_image_url}
+                alt={therapist.full_name}
+                className="w-20 h-20 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center">
+                <User className="h-10 w-10 text-gray-500" />
+              </div>
+            )}
+            
+            <div>
+              <h2 className="text-xl font-bold">{therapist.full_name}</h2>
+              <p className="text-muted-foreground mb-2">{therapist.specialization}</p>
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-1 text-xs rounded-full ${
+                  therapist.is_community_therapist 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {therapist.is_community_therapist ? 'Community Therapist' : `ksh${therapist.hourly_rate}/hr`}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 space-y-8">
+            {/* Session Type Selection */}
+            <div>
+              <h3 className="font-medium mb-3">Session Type</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setSelectedSessionType('video')}
+                  className={`p-4 border rounded-lg flex flex-col items-center ${
+                    selectedSessionType === 'video' 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border hover:bg-muted/50'
                   }`}
                 >
-                  {step < bookingStep ? (
-                    <CheckCircle className="h-5 w-5" />
-                  ) : (
-                    <span>{step}</span>
-                  )}
-                </div>
-                <div className="text-sm ml-2">
-                  {step === 1 && 'Session Type'}
-                  {step === 2 && 'Date & Time'}
-                  {step === 3 && 'Confirmation'}
-                </div>
-                {step < 3 && (
-                  <div
-                    className={`h-0.5 w-16 mx-4 ${
-                      step < bookingStep ? 'bg-primary' : 'bg-muted'
-                    }`}
-                  ></div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-        <Card className="rounded-xl card-shadow">
-          <CardContent className="p-6">
-            {/* Step 1 */}
-            {bookingStep === 1 && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-bold">Select Session Type</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {therapist.sessions?.length > 0 ? (
-                    therapist.sessions.map((session: any) => (
-                      <div
-                        key={session.id}
-                        className={`border rounded-xl p-4 cursor-pointer transition-all ${
-                          selectedSession?.id === session.id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                        onClick={() => handleSessionSelect(session)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{session.name}</h3>
-                          <div
-                            className={`w-5 h-5 rounded-full border ${
-                              selectedSession?.id === session.id
-                                ? 'border-primary bg-primary'
-                                : 'border-muted'
-                            } flex items-center justify-center`}
-                          >
-                            {selectedSession?.id === session.id && (
-                              <div className="w-2 h-2 rounded-full bg-white"></div>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">{session.description || 'Online Therapy Session.'}</p>
-                        <div className="flex justify-between items-center mt-3">
-                          <div className="flex items-center text-sm">
-                            <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <span>{session.duration} minutes</span>
-                          </div>
-                          <div className="font-medium">
-                            ${session.price}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p>No session types available.</p>
-                  )}
-                </div>
-                <div className="bg-muted/30 p-4 rounded-lg">
-                  <div className="flex items-start">
-                    <Shield className="h-5 w-5 text-primary mt-0.5 mr-2" />
-                    <div>
-                      <p className="text-sm">All sessions are confidential and secure. Your privacy is our priority.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* Step 2 */}
-            {bookingStep === 2 && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-xl font-bold mb-1">Select Date & Time</h2>
-                  <p className="text-sm text-muted-foreground">All times shown are in your local timezone</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Date Selection */}
-                  <div>
-                    <h3 className="font-medium mb-3">Date</h3>
-                    <div className="grid grid-cols-5 gap-2">
-                      {therapist.availability?.map((avail: any) => {
-                        const dateInfo = formatDate(avail.date);
-                        return (
-                          <div
-                            key={avail.date}
-                            className={`text-center p-2 rounded-lg cursor-pointer transition-all ${
-                              selectedDate === avail.date
-                                ? 'bg-primary text-white'
-                                : 'bg-muted/50 hover:bg-muted'
-                            }`}
-                            onClick={() => handleDateSelect(avail.date)}
-                          >
-                            <p className="text-xs">{dateInfo.weekday}</p>
-                            <p className="font-bold text-lg">{dateInfo.day}</p>
-                            <p className="text-xs">{dateInfo.month}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  {/* Time Selection */}
-                  <div>
-                    <h3 className="font-medium mb-3">Time</h3>
-                    {selectedDate ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {therapist.availability
-                          .find((a: any) => a.date === selectedDate)
-                          ?.slots.map((time: string) => (
-                            <div
-                              key={time}
-                              className={`text-center p-3 rounded-lg cursor-pointer transition-all ${
-                                selectedTime === time
-                                  ? 'bg-primary text-white'
-                                  : 'bg-muted/50 hover:bg-muted'
-                              }`}
-                              onClick={() => handleTimeSelect(time)}
-                            >
-                              {time}
-                            </div>
-                          ))}
-                      </div>
-                    ) : (
-                      <div className="text-center p-4 bg-muted/30 rounded-lg">
-                        <p className="text-muted-foreground">Please select a date first</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* Step 3 */}
-            {bookingStep === 3 && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-bold">Confirm Your Booking</h2>
-                <div className="bg-muted/30 rounded-xl p-6">
-                  <div className="flex items-center mb-6">
-                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-3xl font-bold select-none">
-                      {therapist.profile_image_url ? (
-                        <img
-                          src={therapist.profile_image_url}
-                          alt={therapist.full_name}
-                          className="w-full h-full object-cover rounded-full"
-                        />
-                      ) : (
-                        therapist.full_name
-                          ? therapist.full_name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()
-                          : ""
-                      )}
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="font-medium">{therapist.full_name}</h3>
-                      <p className="text-sm text-muted-foreground">{therapist.specialization}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-border">
-                      <div className="flex items-center">
-                        <CalendarClock className="h-5 w-5 mr-2 text-primary" />
-                        <span className="font-medium">Session Details</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Session Type</p>
-                        <p className="font-medium">{selectedSession?.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Duration</p>
-                        <p className="font-medium">{selectedSession?.duration} minutes</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Date</p>
-                        <p className="font-medium">{selectedDate && formatDate(selectedDate).fullDate}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Time</p>
-                        <p className="font-medium">{selectedTime}</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center pt-4 border-t border-border">
-                      <span className="font-medium">Total Amount</span>
-                      <span className="text-xl font-bold">${selectedSession?.price}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-muted/30 rounded-xl p-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-border">
-                      <div className="flex items-center">
-                        <CreditCard className="h-5 w-5 mr-2 text-primary" />
-                        <span className="font-medium">Payment Method</span>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground mb-4">Add your payment details to complete the booking.</p>
-                      <Button className="w-full">
-                        <CreditCard className="h-5 w-5 mr-2" /> Add Payment Method
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="bg-muted/30 p-6 flex justify-between">
-            {bookingStep > 1 ? (
-              <Button
-                variant="outline"
-                onClick={handleBack}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" /> Back
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                asChild
-              >
-                <Link to={`/therapists/${String(therapistId)}`}>Cancel</Link>
-              </Button>
-            )}
-            {bookingStep < 3 ? (
-              <Button
-                onClick={handleProceed}
-                disabled={!canProceed()}
-              >
-                Continue <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            ) : (
-              <Button asChild>
-                <Link
-                  to={
-                    selectedDate && selectedTime
-                      ? `/booking/complete/${String(therapistId)}/${encodeURIComponent(selectedDate)}/${encodeURIComponent(selectedTime)}`
-                      : "#"
-                  }
+                  <Video className="h-6 w-6 mb-2" />
+                  <span>Video Session</span>
+                  <span className="text-sm text-muted-foreground">
+                    {therapist.is_community_therapist ? 'Free' : `ksh${therapist.hourly_rate}`}
+                  </span>
+                </button>
+                
+                <button
+                  onClick={() => setSelectedSessionType('chat')}
+                  className={`p-4 border rounded-lg flex flex-col items-center ${
+                    selectedSessionType === 'chat' 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-border hover:bg-muted/50'
+                  }`}
                 >
-                  Complete Booking <ArrowRight className="h-4 w-4 ml-1" />
-                </Link>
-              </Button>
+                  <MessageCircle className="h-6 w-6 mb-2" />
+                  <span>Chat Session</span>
+                  <span className="text-sm text-muted-foreground">
+                    {therapist.is_community_therapist ? 'Free' : `ksh${Math.round(therapist.hourly_rate * 0.7)}`}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Date Selection */}
+            <div>
+              <h3 className="font-medium mb-3">Select Date</h3>
+              <div className="flex flex-col gap-4">
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarClock className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "PPP") : "Select a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate || undefined}
+                      onSelect={handleDateSelect}
+                      disabled={(date) => {
+                        const dayName = format(date, 'EEEE').toLowerCase();
+                        return !therapist.availability.some(
+                          day => day.day.toLowerCase() === dayName
+                        );
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <div className="flex overflow-x-auto gap-2 pb-2">
+                  {availableDates.map((date) => (
+                    <button
+                      key={date.toString()}
+                      onClick={() => handleDateSelect(date)}
+                      className={`min-w-[120px] p-3 text-center rounded-lg ${
+                        selectedDate && isSameDay(selectedDate, date)
+                          ? 'bg-primary text-white'
+                          : 'bg-muted/50 hover:bg-muted'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">
+                        {formatDisplayDate(date)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Time Selection */}
+            {selectedDate && currentDateSlots.length > 0 && (
+              <div className="mt-6">
+                <h3 className="flex items-center gap-2 font-medium mb-3">
+                  <Clock className="h-4 w-4" />
+                  Available Times for {formatDisplayDate(selectedDate)}
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {currentDateSlots.map((time) => (
+                    <Button
+                      key={time}
+                      variant={selectedTime === time ? "default" : "outline"}
+                      onClick={() => handleTimeSelect(time)}
+                    >
+                      {time}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             )}
-          </CardFooter>
-        </Card>
-        <div className="mt-6 rounded-lg p-4 bg-accent text-center">
-          <div className="flex items-center justify-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <p className="text-sm">Secure, encrypted booking | Cancel up to 24 hours before without charge.</p>
+
+            {/* Additional Notes */}
+            <div>
+              <h3 className="font-medium mb-3">Additional Preferences (Optional)</h3>
+              <Textarea
+                placeholder="Let the therapist know if you have any specific preferences..."
+                value={additionalNotes}
+                onChange={(e) => setAdditionalNotes(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter className="flex justify-between border-t p-6">
+          <Button variant="outline" asChild>
+            <Link to={`/therapists/${therapist.id}`}>Cancel</Link>
+          </Button>
+          <Button 
+  onClick={handleBookSession}
+  disabled={loading || !selectedDate || !selectedTime || !user}
+>
+  {therapist.is_community_therapist ? 'Confirm Booking' : 'Request Session'}
+</Button>
+        </CardFooter>
+      </Card>
+
+      <div className="bg-muted/50 p-4 rounded-lg">
+        <div className="flex items-start gap-3">
+          <Clock className="h-5 w-5 mt-0.5 text-primary" />
+          <div>
+            <h4 className="font-medium mb-1">Session Details</h4>
+            <p className="text-sm text-muted-foreground">
+              {selectedSessionType === 'video' ? 
+                "50-minute video session via our secure platform" : 
+                "30-minute text chat session"}
+            </p>
+            {selectedTime && (
+              <p className="text-sm mt-2">
+                Selected: {formatDisplayDate(selectedDate)} at {selectedTime}
+              </p>
+            )}
           </div>
         </div>
       </div>

@@ -11,7 +11,7 @@ import {
   Search, 
   MoreVertical, 
   Mail, 
-  Phone, 
+  Phone,
   MapPin,
   Calendar,
   CheckCircle,
@@ -36,8 +36,9 @@ import { TherapistDetailsModal } from '@/components/admin/TherapistDetailsModal'
 import { TherapistAppointmentsModal } from '@/components/admin/TherapistAppointmentsModal';
 import { TherapistEarningsModal } from '@/components/admin/TherapistEarningsModal';
 import { SendEmailModal } from '@/components/admin/SendEmailModal';
+import TherapistListing from '../TherapistListing';
 
-interface Therapist {
+interface TherapistAdmin {
   id: string;
   full_name: string;
   email: string;
@@ -51,24 +52,45 @@ interface Therapist {
   hourly_rate?: number;
   rating?: number;
   preferred_currency?: string;
+  license_number?: string;
+  license_type?: string;
+  therapy_approaches?: string[];
+  languages?: string[];
+  application_status?: string;
+  is_verified?: boolean;
+  has_insurance?: boolean;
+  insurance_info?: string;
+  session_formats?: string[];
+  is_community_therapist?: boolean;
+  availability?: any;
   therapist_details?: {
     license_number?: string;
     license_type?: string;
-    therapy_approaches?: string;
-    languages?: string;
+    therapy_approaches?: string[];
+    languages?: string[];
     application_status?: string;
     is_verified?: boolean;
     preferred_currency?: string;
+    bio?: string;
+    specialization?: string;
+    years_experience?: number;
+    hourly_rate?: number;
+    rating?: number;
+    has_insurance?: boolean;
+    insurance_info?: string;
+    session_formats?: string[];
+    is_community_therapist?: boolean;
+    availability?: any;
   };
 }
 
 const AdminTherapists = () => {
-  const [therapists, setTherapists] = useState<Therapist[]>([]);
-  const [filteredTherapists, setFilteredTherapists] = useState<Therapist[]>([]);
+  const [therapists, setTherapists] = useState<TherapistAdmin[]>([]);
+  const [filteredTherapists, setFilteredTherapists] = useState<TherapistAdmin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
+  const [selectedTherapist, setSelectedTherapist] = useState<TherapistAdmin | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAppointmentsModalOpen, setIsAppointmentsModalOpen] = useState(false);
   const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false);
@@ -100,22 +122,13 @@ const AdminTherapists = () => {
 
       if (therapistError) throw therapistError;
 
-      // Fetch therapist details
-      const { data: therapistDetailsData, error: detailsError } = await supabase
-        .from('therapist_details')
-        .select('*');
-
-      if (detailsError) throw detailsError;
-
-      // Combine all data
+      // Combine all data - therapist data now contains all details
       const combinedData = profilesData.map(profile => {
         const therapistInfo = therapistData.find(t => t.id === profile.id);
-        const detailsInfo = therapistDetailsData.find(d => d.therapist_id === profile.id);
         
         return {
           ...profile,
-          ...therapistInfo,
-          therapist_details: detailsInfo
+          ...therapistInfo
         };
       });
 
@@ -136,23 +149,23 @@ const AdminTherapists = () => {
     let filtered = therapists;
 
     if (searchTerm) {
-      filtered = filtered.filter(therapist =>
-        therapist.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        therapist.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        therapist.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        therapist.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(therapists =>
+        therapists.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        therapists.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        therapists.specialization?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        therapists.location?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(therapist => {
+      filtered = filtered.filter(therapists => {
         switch (statusFilter) {
           case 'verified':
-            return therapist.therapist_details?.is_verified;
+            return therapists.is_verified;
           case 'pending':
-            return therapist.therapist_details?.application_status === 'pending';
+            return therapists.application_status === 'pending';
           case 'active':
-            return therapist.therapist_details?.is_verified && therapist.therapist_details?.license_number;
+            return therapists.is_verified && therapists.license_number;
           default:
             return true;
         }
@@ -162,7 +175,7 @@ const AdminTherapists = () => {
     setFilteredTherapists(filtered);
   };
 
-  const getStatusBadge = (therapist: Therapist) => {
+  const getStatusBadge = (therapist: TherapistAdmin) => {
     if (therapist.therapist_details?.is_verified) {
       return <Badge variant="default" className="bg-green-100 text-green-800">Verified</Badge>;
     } else if (therapist.therapist_details?.application_status === 'pending') {
@@ -175,12 +188,12 @@ const AdminTherapists = () => {
   const updateTherapistStatus = async (therapistId: string, isVerified: boolean) => {
     try {
       const { error } = await supabase
-        .from('therapist_details')
+        .from('therapists')
         .update({ 
           is_verified: isVerified,
           application_status: isVerified ? 'approved' : 'rejected'
         })
-        .eq('therapist_id', therapistId);
+        .eq('id', therapistId);
 
       if (error) throw error;
 
@@ -200,22 +213,22 @@ const AdminTherapists = () => {
     }
   };
 
-  const openTherapistDetails = (therapist: Therapist) => {
+  const openTherapistDetails = (therapist: TherapistAdmin) => {
     setSelectedTherapist(therapist);
     setIsModalOpen(true);
   };
 
-  const openAppointments = (therapist: Therapist) => {
+  const openAppointments = (therapist: TherapistAdmin) => {
     setSelectedTherapist(therapist);
     setIsAppointmentsModalOpen(true);
   };
 
-  const openEarnings = (therapist: Therapist) => {
+  const openEarnings = (therapist: TherapistAdmin) => {
     setSelectedTherapist(therapist);
     setIsEarningsModalOpen(true);
   };
 
-  const openSendEmail = (therapist: Therapist) => {
+  const openSendEmail = (therapist: TherapistAdmin) => {
     setSelectedTherapist(therapist);
     setIsEmailModalOpen(true);
   };

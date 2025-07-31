@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       admin_emails: {
@@ -44,6 +49,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          booking_request_id: string | null
           client_id: string
           created_at: string
           end_time: string
@@ -57,6 +63,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          booking_request_id?: string | null
           client_id: string
           created_at?: string
           end_time: string
@@ -70,6 +77,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          booking_request_id?: string | null
           client_id?: string
           created_at?: string
           end_time?: string
@@ -83,6 +91,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_booking_request_id_fkey"
+            columns: ["booking_request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_requests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_payment_id_fkey"
             columns: ["payment_id"]
@@ -130,6 +145,60 @@ export type Database = {
           image_url?: string | null
           published?: boolean
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      booking_requests: {
+        Row: {
+          client_id: string
+          created_at: string
+          currency: string | null
+          duration: number
+          id: string
+          message: string | null
+          payment_amount: number | null
+          payment_required: boolean
+          rejected_reason: string | null
+          requested_date: string
+          requested_time: string
+          session_type: string
+          status: string
+          therapist_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          currency?: string | null
+          duration?: number
+          id?: string
+          message?: string | null
+          payment_amount?: number | null
+          payment_required?: boolean
+          rejected_reason?: string | null
+          requested_date: string
+          requested_time: string
+          session_type: string
+          status?: string
+          therapist_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          currency?: string | null
+          duration?: number
+          id?: string
+          message?: string | null
+          payment_amount?: number | null
+          payment_required?: boolean
+          rejected_reason?: string | null
+          requested_date?: string
+          requested_time?: string
+          session_type?: string
+          status?: string
+          therapist_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -235,7 +304,7 @@ export type Database = {
       }
       friend_details: {
         Row: {
-          areas_of_experience: string | null
+          area_of_experience: string | null
           communication_preferences: string | null
           created_at: string
           experience_description: string | null
@@ -245,7 +314,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          areas_of_experience?: string | null
+          area_of_experience?: string | null
           communication_preferences?: string | null
           created_at?: string
           experience_description?: string | null
@@ -255,7 +324,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          areas_of_experience?: string | null
+          area_of_experience?: string | null
           communication_preferences?: string | null
           created_at?: string
           experience_description?: string | null
@@ -264,7 +333,15 @@ export type Database = {
           personal_story?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "friend_details_friend_id_fkey"
+            columns: ["friend_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -325,6 +402,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payment_intents: {
+        Row: {
+          amount: number
+          booking_request_id: string
+          created_at: string
+          currency: string
+          id: string
+          payment_method: string
+          payment_reference: string | null
+          status: string
+          therapist_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          booking_request_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string
+          payment_reference?: string | null
+          status?: string
+          therapist_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          booking_request_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string
+          payment_reference?: string | null
+          status?: string
+          therapist_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_intents_booking_request_id_fkey"
+            columns: ["booking_request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_settings: {
         Row: {
@@ -489,106 +616,85 @@ export type Database = {
           },
         ]
       }
-      therapist_details: {
+      therapists: {
         Row: {
           application_status: string | null
-          created_at: string
+          availability: Json | null
+          bio: string | null
+          created_at: string | null
           education: string | null
           has_insurance: boolean | null
+          hourly_rate: number | null
           id: string
           insurance_info: string | null
+          is_community_therapist: boolean | null
           is_verified: boolean | null
-          languages: string | null
+          languages: string[] | null
           license_number: string | null
           license_type: string | null
           preferred_currency: string | null
-          session_formats: string | null
-          therapist_id: string
-          therapy_approaches: string | null
-          updated_at: string
-        }
-        Insert: {
-          application_status?: string | null
-          created_at?: string
-          education?: string | null
-          has_insurance?: boolean | null
-          id?: string
-          insurance_info?: string | null
-          is_verified?: boolean | null
-          languages?: string | null
-          license_number?: string | null
-          license_type?: string | null
-          preferred_currency?: string | null
-          session_formats?: string | null
-          therapist_id: string
-          therapy_approaches?: string | null
-          updated_at?: string
-        }
-        Update: {
-          application_status?: string | null
-          created_at?: string
-          education?: string | null
-          has_insurance?: boolean | null
-          id?: string
-          insurance_info?: string | null
-          is_verified?: boolean | null
-          languages?: string | null
-          license_number?: string | null
-          license_type?: string | null
-          preferred_currency?: string | null
-          session_formats?: string | null
-          therapist_id?: string
-          therapy_approaches?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "therapist_details_therapist_id_fkey"
-            columns: ["therapist_id"]
-            isOneToOne: false
-            referencedRelation: "therapists"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      therapists: {
-        Row: {
-          availability: Json | null
-          bio: string | null
-          created_at: string
-          hourly_rate: number | null
-          id: string
-          preferred_currency: string | null
           rating: number | null
+          session_formats: string[] | null
           specialization: string | null
-          updated_at: string
+          therapy_approaches: string[] | null
+          updated_at: string | null
           years_experience: number | null
         }
         Insert: {
+          application_status?: string | null
           availability?: Json | null
           bio?: string | null
-          created_at?: string
+          created_at?: string | null
+          education?: string | null
+          has_insurance?: boolean | null
           hourly_rate?: number | null
           id: string
+          insurance_info?: string | null
+          is_community_therapist?: boolean | null
+          is_verified?: boolean | null
+          languages?: string[] | null
+          license_number?: string | null
+          license_type?: string | null
           preferred_currency?: string | null
           rating?: number | null
+          session_formats?: string[] | null
           specialization?: string | null
-          updated_at?: string
+          therapy_approaches?: string[] | null
+          updated_at?: string | null
           years_experience?: number | null
         }
         Update: {
+          application_status?: string | null
           availability?: Json | null
           bio?: string | null
-          created_at?: string
+          created_at?: string | null
+          education?: string | null
+          has_insurance?: boolean | null
           hourly_rate?: number | null
           id?: string
+          insurance_info?: string | null
+          is_community_therapist?: boolean | null
+          is_verified?: boolean | null
+          languages?: string[] | null
+          license_number?: string | null
+          license_type?: string | null
           preferred_currency?: string | null
           rating?: number | null
+          session_formats?: string[] | null
           specialization?: string | null
-          updated_at?: string
+          therapy_approaches?: string[] | null
+          updated_at?: string | null
           years_experience?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "therapists_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
@@ -628,6 +734,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_sessions: {
+        Row: {
+          appointment_id: string
+          client_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          room_id: string
+          room_token: string | null
+          started_at: string | null
+          status: string
+          therapist_id: string
+        }
+        Insert: {
+          appointment_id: string
+          client_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          room_id: string
+          room_token?: string | null
+          started_at?: string | null
+          status?: string
+          therapist_id: string
+        }
+        Update: {
+          appointment_id?: string
+          client_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          room_id?: string
+          room_token?: string | null
+          started_at?: string | null
+          status?: string
+          therapist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallets: {
         Row: {
@@ -682,6 +835,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_therapist_community_status: {
+        Args: { p_therapist_id: string; p_is_community_therapist: boolean }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
@@ -692,21 +849,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -724,14 +885,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -747,14 +910,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -770,14 +935,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -785,14 +952,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never

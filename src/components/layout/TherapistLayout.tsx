@@ -82,9 +82,9 @@ const TherapistLayout = () => {
         if (profile.role === 'therapist') {
           try {
             const { data, error } = await supabase
-              .from('therapist_details')
+              .from('therapists')
               .select('*')
-              .eq('therapist_id', user.id)
+              .eq('id', user.id)
               .single();
             
             // If no data or empty important fields, onboarding is incomplete
@@ -140,6 +140,7 @@ const TherapistLayout = () => {
   const therapistNavItems: NavItem[] = [
     { path: '/therapist/dashboard', label: 'Dashboard', icon: BarChart3 },
     { path: '/therapist/appointments', label: 'Appointments', icon: Calendar },
+    { path: '/therapist/bookings', label: 'Bookings', icon: ClipboardList },
     { path: '/therapist/clients', label: 'Clients', icon: Users },
     { path: '/therapist/messages', label: 'Messages', icon: MessageCircle },
     { path: '/therapist/session-notes', label: 'Session Notes', icon: FileText },

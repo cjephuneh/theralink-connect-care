@@ -22,7 +22,9 @@ import {
   Shield,
   Zap,
   Activity,
-  Edit3
+  Edit3,
+  Stethoscope,
+  UserCheck
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +37,7 @@ const AdminDashboard = () => {
     therapists: 0,
     friends: 0,
     clients: 0,
+    admins: 0,
     appointments: 0,
     transactions: 0,
     sessionNotes: 0,
@@ -58,28 +61,30 @@ const AdminDashboard = () => {
     const fetchStats = async () => {
       setIsLoading(true);
       try {
-        // Count all users
+        // Count all users by role
         const { count: usersCount } = await supabase
           .from("profiles")
           .select("*", { count: "exact", head: true });
 
-        // Count therapists
         const { count: therapistsCount } = await supabase
           .from("profiles")
           .select("*", { count: "exact", head: true })
           .eq("role", "therapist");
           
-        // Count friends
         const { count: friendsCount } = await supabase
           .from("profiles")
           .select("*", { count: "exact", head: true })
           .eq("role", "friend");
 
-        // Count clients
         const { count: clientsCount } = await supabase
           .from("profiles")
           .select("*", { count: "exact", head: true })
           .eq("role", "client");
+
+        const { count: adminsCount } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "admin");
 
         // Count appointments
         const { count: appointmentsCount } = await supabase
@@ -139,7 +144,7 @@ const AdminDashboard = () => {
 
         // Count pending therapists
         const { count: pendingTherapistsCount } = await supabase
-          .from("therapist_details")
+          .from("therapists")
           .select("*", { count: "exact", head: true })
           .or("application_status.is.null,application_status.eq.pending");
 
@@ -172,6 +177,7 @@ const AdminDashboard = () => {
           therapists: therapistsCount || 0,
           friends: friendsCount || 0,
           clients: clientsCount || 0,
+          admins: adminsCount || 0,
           appointments: appointmentsCount || 0,
           transactions: transactionsCount || 0,
           sessionNotes: sessionNotesCount || 0,
@@ -260,8 +266,8 @@ const AdminDashboard = () => {
         </Card>
       )}
 
-      {/* Main Statistics Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* Enhanced Main Statistics Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-blue-700">Total Users</CardTitle>
@@ -274,17 +280,43 @@ const AdminDashboard = () => {
               </div>
               <div className="text-xs text-blue-600 space-y-1">
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>{stats.clients} clients</span>
+                  <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                  <span>{stats.admins} admins</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <span>{stats.therapists} therapists</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <span>{stats.friends} friends</span>
                 </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span>{stats.clients} clients</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-indigo-700">Therapists</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Stethoscope className="h-5 w-5 text-indigo-600 mr-3" />
+                <p className="text-3xl font-bold text-indigo-800">{stats.therapists}</p>
+              </div>
+              <div className="text-xs text-indigo-600">
+                {stats.pendingTherapists > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>{stats.pendingTherapists} pending</span>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -292,13 +324,78 @@ const AdminDashboard = () => {
         
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Appointments</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-700">Friends</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Calendar className="h-5 w-5 text-green-600 mr-3" />
-                <p className="text-3xl font-bold text-green-800">{stats.appointments}</p>
+                <Heart className="h-5 w-5 text-green-600 mr-3" />
+                <p className="text-3xl font-bold text-green-800">{stats.friends}</p>
+              </div>
+              <div className="text-xs text-green-600">
+                {stats.pendingFriends > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span>{stats.pendingFriends} pending</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-purple-700">Clients</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <UserCheck className="h-5 w-5 text-purple-600 mr-3" />
+                <p className="text-3xl font-bold text-purple-800">{stats.clients}</p>
+              </div>
+              <div className="text-xs text-purple-600">
+                <div className="flex items-center gap-1">
+                  <Activity className="h-3 w-3" />
+                  <span>Service users</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-amber-700">Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <DollarSign className="h-5 w-5 text-amber-600 mr-3" />
+                <p className="text-3xl font-bold text-amber-800">₦{stats.totalRevenue.toLocaleString()}</p>
+              </div>
+              <div className="text-xs text-amber-600">
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>{stats.transactions} transactions</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Additional Stats Row */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-orange-700">Appointments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Calendar className="h-5 w-5 text-orange-600 mr-3" />
+                <p className="text-3xl font-bold text-orange-800">{stats.appointments}</p>
               </div>
               <div className="text-xs space-y-1">
                 <div className="flex items-center gap-1">
@@ -313,84 +410,21 @@ const AdminDashboard = () => {
             </div>
           </CardContent>
         </Card>
-        
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700">Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <DollarSign className="h-5 w-5 text-purple-600 mr-3" />
-                <p className="text-3xl font-bold text-purple-800">₦{stats.totalRevenue.toLocaleString()}</p>
-              </div>
-              <div className="text-xs text-purple-600">
-                <div className="flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>{stats.transactions} transactions</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700">Reviews & Rating</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Star className="h-5 w-5 text-orange-600 mr-3" />
-                <p className="text-3xl font-bold text-orange-800">{stats.averageRating.toFixed(1)}</p>
-              </div>
-              <div className="text-xs text-orange-600">
-                <div className="flex items-center gap-1">
-                  <Activity className="h-3 w-3" />
-                  <span>{stats.reviews} reviews</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Additional Stats Row */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-indigo-700">Contact Messages</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Mail className="h-5 w-5 text-indigo-600 mr-3" />
-                <p className="text-3xl font-bold text-indigo-800">{stats.contactMessages}</p>
-              </div>
-              <div className="text-xs text-indigo-600">
-                <div className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  <span>{stats.unreadContactMessages} unread</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200 hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-pink-700">Blog Posts</CardTitle>
+            <CardTitle className="text-sm font-medium text-pink-700">Reviews & Rating</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Edit3 className="h-5 w-5 text-pink-600 mr-3" />
-                <p className="text-3xl font-bold text-pink-800">{stats.blogs}</p>
+                <Star className="h-5 w-5 text-pink-600 mr-3" />
+                <p className="text-3xl font-bold text-pink-800">{stats.averageRating.toFixed(1)}</p>
               </div>
               <div className="text-xs text-pink-600">
                 <div className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  <span>{stats.publishedBlogs} published</span>
+                  <Activity className="h-3 w-3" />
+                  <span>{stats.reviews} reviews</span>
                 </div>
               </div>
             </div>
@@ -411,7 +445,7 @@ const AdminDashboard = () => {
           <CardContent className="grid grid-cols-2 gap-3">
             <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center relative hover:bg-blue-50">
               <Link to="/admin/therapists">
-                <UserCog className="h-5 w-5 mb-1" />
+                <Stethoscope className="h-5 w-5 mb-1" />
                 <span className="text-xs">Therapists</span>
                 {stats.pendingTherapists > 0 && (
                   <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
@@ -421,7 +455,7 @@ const AdminDashboard = () => {
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-16 flex flex-col items-center justify-center hover:bg-blue-50">
-              <Link to="/admin/users">
+              <Link to="/admin/friends">
                 <Users className="h-5 w-5 mb-1" />
                 <span className="text-xs">All Users</span>
               </Link>

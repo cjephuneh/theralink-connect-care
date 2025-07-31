@@ -1,73 +1,174 @@
-# Welcome to your Lovable project
+# 🧠 Theralink - Mental Health & Support Platform
 
-## Project info
+**Theralink** is a full-stack mental health support and therapy platform designed to connect clients with therapists **and** support friends. It enables users to **book therapy sessions**, **chat with friends**, and even **initiate video meetings**, all hosted securely on the **Azure Cloud**.
 
-**URL**: https://lovable.dev/projects/2e9ccf0f-3260-4e6f-86d7-2acfde4fd69b
+## 🔗 Live Hosting
 
-## How can I edit this code?
+The project is hosted on **Azure** and supports video calls through **Google Meet integration**.
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## 🚀 Key Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/2e9ccf0f-3260-4e6f-86d7-2acfde4fd69b) and start prompting.
+### 👥 Authentication
 
-Changes made via Lovable will be committed automatically to this repo.
+- Secure login/register using **Supabase Auth**.
+- Role-based access (client,friend, therapist, admin).
 
-**Use your preferred IDE**
+### 💼 Therapist Management
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Onboarding flow for therapists.
+- Manage and complete bookings.
+- View client profiles and session history.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 🤝 Friend Support System
 
-Follow these steps:
+- Clients can book sessions with friends for peer support.
+- Integrated **chat system** for client-friend communication.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 📆 Booking System
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- Book sessions with both therapists and friends.
+- Session completion tracking.
+- Booking status updates.
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 🎥 Google Meet Integration
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+- Automatically generates Google Meet links for virtual sessions.
+
+### 💳 Payments (via IntaSend)
+
+- Clients pay therapists after session completion.
+- Integration with **IntaSend API** for secure transactions.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer      | Technology                                |
+| ---------- | ----------------------------------------- |
+| Frontend   | React + TypeScript + Tailwind CSS         |
+| Backend    | Supabase (Database, Auth, Edge Functions) |
+| Payment    | IntaSend API                              |
+| Deployment | Azure Cloud                               |
+| Video Call | Google Meet API                           |
+
+---
+
+## 📁 Project Structure
+
+```
+
+src/
+├── components/
+│ ├── admin/
+│ ├── booking/
+│ ├── feedback/
+│ ├── friend/
+│ ├── layout/
+│ ├── payments/
+│ ├── profile/
+│ ├── reviews/
+│ ├── sections/
+│ ├── seo/
+│ ├── therapist/
+│ ├── ui/
+│ └── video/
+├── contexts/
+│ └── AuthContext.tsx
+├── hooks/
+├── integrations/
+├── lib/
+├── pages/
+│ ├── admin/
+│ ├── auth/
+│ ├── client/
+│ ├── friend/
+│ ├── therapist/
+│ └── various pages like:
+│ ├── AboutPage.tsx
+│ ├── ClientDashboard.tsx
+│ ├── TherapistOnboardingPage.tsx
+│ ├── ChatPage.tsx
+│ ├── ContactPage.tsx
+│ └── BookingPage.tsx
+├── supabase/
+│ ├── functions/
+│ ├── config.toml
+│ └── supabaseClient.ts
+
+```
+
+---
+
+## 📄 .env Setup
+
+Create a `.env` file in the root directory and include:
+
+```env
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_INTASEND_PUBLIC_KEY=your-intasend-pub-key
+VITE_INTASEND_SECRET_KEY=your-intasend-secret-key
+VITE_GOOGLE_MEET_API_KEY=your-google-api-key
+```
+
+---
+
+## 🧪 Installation & Running Locally
+
+1. **Clone the repository:**
+
+```bash
+git clone https://github.com/Bricklabsai/theralink.git
+cd theralink
+```
+
+2. **Install dependencies:**
+
+```bash
+npm install
+```
+
+3. **Add `.env` config as shown above.**
+
+4. **Run the development server:**
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🧾 Contribution Guidelines
 
-**Use GitHub Codespaces**
+We welcome contributions! If you're taking over development or making a feature improvement:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. Clone the repository.
+2. Create a new branch:
 
-## What technologies are used for this project?
+```bash
+git checkout -b your-branch-name
+```
 
-This project is built with:
+3. Commit and push your changes:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```bash
+git push origin your-branch-name
+```
 
-## How can I deploy this project?
+4. Go to [GitHub repo](https://github.com/Bricklabsai/theralink.git), and create a **Pull Request** to `main`.
 
-Simply open [Lovable](https://lovable.dev/projects/2e9ccf0f-3260-4e6f-86d7-2acfde4fd69b) and click on Share -> Publish.
+---
 
-## Can I connect a custom domain to my Lovable project?
+## ✅ Suggested Improvements
 
-Yes, you can!
+- [ ] Add session review/ratings.
+- [ ] Enhance chat (real-time via WebSockets).
+- [ ] Integrate notification system (email/SMS).
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 📜 License
+
+This project is licensed under the MIT License.

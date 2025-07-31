@@ -1,26 +1,20 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, CreditCard, Wallet, CalendarClock, CheckCircle } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import IntasendPay from "@/components/payments/Intasendpay"; // Ensure this path is correct
 
 const ClientBilling = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [activeTab, setActiveTab] = useState("transactions");
   const [transactions, setTransactions] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -28,105 +22,80 @@ const ClientBilling = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [therapistData, setTherapistData] = useState({});
+  const [paymentAmount, setPaymentAmount] = useState(500); // default amount
+  const [showIntasend, setShowIntasend] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
-    const fetchTransactionData = async () => {
-      setIsLoading(true);
+    const fetchData = async () => {
       try {
-        // Fetch transactions - modified to avoid foreign key issue
+        setIsLoading(true);
+
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('transactions')
           .select(`
-            id,
-            amount,
-            description,
-            reference,
-            status,
-            created_at,
-            transaction_type,
-            therapist_id
+            id, amount, description, reference, status, created_at, transaction_type, therapist_id
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (transactionsError) throw transactionsError;
-        
-        // Fetch therapist profiles separately if needed
-        if (transactionsData && transactionsData.length > 0) {
-          const therapistIds = [...new Set(transactionsData
-            .filter(tx => tx.therapist_id)
-            .map(tx => tx.therapist_id))];
-            
-          if (therapistIds.length > 0) {
-            const { data: therapists } = await supabase
-              .from('profiles')
-              .select('id, full_name')
-              .in('id', therapistIds);
-              
-            if (therapists) {
-              const therapistMap = therapists.reduce((acc, therapist) => {
-                acc[therapist.id] = therapist;
-                return acc;
-              }, {});
-              
-              setTherapistData(therapistMap);
-            }
-          }
+
+        const therapistIds = [...new Set(transactionsData.filter(tx => tx.therapist_id).map(tx => tx.therapist_id))];
+        if (therapistIds.length > 0) {
+          const { data: therapists } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', therapistIds);
+
+          const therapistMap = therapists?.reduce((acc, therapist) => {
+            acc[therapist.id] = therapist;
+            return acc;
+          }, {}) || {};
+
+          setTherapistData(therapistMap);
         }
-        
+
         setTransactions(transactionsData || []);
 
-        // Fetch wallet balance
-        const { data: walletData, error: walletError } = await supabase
+        const { data: walletData } = await supabase
           .from('wallets')
           .select('balance')
           .eq('user_id', user.id)
           .single();
 
-        if (walletError && walletError.code !== 'PGRST116') { // Ignore "no rows returned" error
-          throw walletError;
-        }
-        
         setWalletBalance(walletData?.balance || 0);
-
       } catch (error) {
-        console.error('Error fetching billing data:', error);
+        console.error(error);
         toast({
-          title: "Failed to load billing information",
-          description: "Please try refreshing the page",
-          variant: "destructive",
+          title: "Billing load failed",
+          description: "Try refreshing the page.",
+          variant: "destructive"
         });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchTransactionData();
+    fetchData();
   }, [user, toast]);
 
-  const formatAmount = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+  const formatAmount = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KES' }).format(amount);
+
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const handlePayNow = () => {
+    setShowIntasend(true);
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  const closeDialog = () => setIsDialogOpen(false);
 
-  const openTransactionDetails = (transaction) => {
-    setSelectedTransaction(transaction);
-    setIsDialogOpen(true);
-  };
+  const getTherapistName = (id: string) => therapistData[id]?.full_name || 'Therapist';
 
-  const getTransactionStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'success':
@@ -141,231 +110,82 @@ const ClientBilling = () => {
     }
   };
 
-  const getTherapistName = (therapist_id) => {
-    return therapistData[therapist_id]?.full_name || 'Therapist';
-  };
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
-        </div>
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-4">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="space-y-6">
+      <Skeleton className="h-8 w-48" />
+      <Skeleton className="h-40 w-full" />
+      <Skeleton className="h-40 w-full" />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Billing & Payments</h1>
-        <p className="text-muted-foreground">Manage your payments and transaction history</p>
-      </div>
+      <h1 className="text-2xl font-bold">Billing & Payments</h1>
+      <p className="text-muted-foreground">Manage your billing and add funds securely.</p>
 
-      {/* Balance Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Wallet className="h-5 w-5" />
-              <span>Your Balance</span>
+            <CardTitle className="flex gap-2 items-center">
+              <Wallet className="w-5 h-5" /> Wallet Balance
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{formatAmount(walletBalance)}</p>
-            <p className="text-sm text-muted-foreground mt-1">Available for future sessions</p>
           </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">
+          <CardFooter className="flex-col gap-3 items-start">
+            <input
+              type="number"
+              min={10}
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount(Number(e.target.value))}
+              className="border p-2 w-full rounded-md"
+              placeholder="Enter amount (KES)"
+            />
+            <Button className="w-full" onClick={handlePayNow}>
               <CreditCard className="mr-2 h-4 w-4" />
-              Add Funds
+              Pay Now
             </Button>
           </CardFooter>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CalendarClock className="h-5 w-5" />
-              <span>Next Payment</span>
+            <CardTitle className="flex gap-2 items-center">
+              <CalendarClock className="w-5 h-5" /> Next Payment
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {transactions.length > 0 && transactions[0].status === 'scheduled' ? (
+            {transactions[0]?.status === 'scheduled' ? (
               <>
                 <p className="text-2xl font-bold">{formatAmount(transactions[0].amount)}</p>
-                <p className="text-sm text-muted-foreground mt-1">Due on {formatDate(transactions[0].created_at)}</p>
+                <p className="text-sm mt-1 text-muted-foreground">
+                  Due on {formatDate(transactions[0].created_at)}
+                </p>
               </>
             ) : (
-              <>
-                <p className="text-2xl font-bold">No scheduled payments</p>
-                <p className="text-sm text-muted-foreground mt-1">Book a session to schedule your next payment</p>
-              </>
+              <p>No scheduled payments</p>
             )}
           </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full" asChild>
-              <a href="/therapists">
-                Book a Session
-              </a>
-            </Button>
-          </CardFooter>
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="transactions">Transaction History</TabsTrigger>
-          <TabsTrigger value="payment-methods">Payment Methods</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="transactions" className="mt-6">
-          {transactions.length > 0 ? (
-            <Card>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {transactions.map((transaction) => (
-                    <div 
-                      key={transaction.id}
-                      className="flex items-center justify-between p-4 hover:bg-accent/50 cursor-pointer"
-                      onClick={() => openTransactionDetails(transaction)}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className={`p-2 rounded-full ${
-                          transaction.transaction_type === 'payment' ? 'bg-red-100' : 'bg-green-100'
-                        }`}>
-                          {transaction.transaction_type === 'payment' ? (
-                            <CreditCard className="h-5 w-5 text-red-600" />
-                          ) : (
-                            <Wallet className="h-5 w-5 text-green-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">
-                            {transaction.transaction_type === 'payment' 
-                              ? `Payment to ${getTherapistName(transaction.therapist_id)}`
-                              : 'Wallet Deposit'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{formatDate(transaction.created_at)}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge className={getTransactionStatusColor(transaction.status)}>
-                          {transaction.status}
-                        </Badge>
-                        <p className={`font-semibold ${
-                          transaction.transaction_type === 'payment' ? 'text-red-600' : 'text-green-600'
-                        }`}>
-                          {transaction.transaction_type === 'payment' ? '- ' : '+ '}
-                          {formatAmount(transaction.amount)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <FileText className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
-                <p className="mt-4 text-lg font-medium">No transaction history yet</p>
-                <p className="text-muted-foreground">Your payment history will appear here</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="payment-methods" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Methods</CardTitle>
-              <CardDescription>Manage your payment options</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="border rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-5 w-5" />
-                    <div>
-                      <p className="font-medium">Visa ending in 4242</p>
-                      <p className="text-sm text-muted-foreground">Expires 12/25</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
-                    Default
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full">
-                Add Payment Method
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Transaction Details Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        {selectedTransaction && (
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Transaction Details</DialogTitle>
-              <DialogDescription>
-                {formatDate(selectedTransaction.created_at)}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Amount</p>
-                  <p className="font-medium">{formatAmount(selectedTransaction.amount)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge className={getTransactionStatusColor(selectedTransaction.status)}>
-                    {selectedTransaction.status}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
-                  <p className="font-medium capitalize">{selectedTransaction.transaction_type}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Reference</p>
-                  <p className="font-medium">{selectedTransaction.reference}</p>
-                </div>
-              </div>
-              {selectedTransaction.description && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Description</p>
-                  <p>{selectedTransaction.description}</p>
-                </div>
-              )}
-              {selectedTransaction.therapist_id && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Therapist</p>
-                  <p>{getTherapistName(selectedTransaction.therapist_id)}</p>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        )}
-      </Dialog>
+      {showIntasend && user && (
+        <IntasendPay
+          email={user.email}
+          firstName={user.user_metadata?.first_name || "Theralink"}
+          lastName={user.user_metadata?.last_name || "User"}
+          amount={paymentAmount}
+          onComplete={(res) => {
+            toast({ title: "Payment Completed", description: res.reference, variant: "default" });
+            setShowIntasend(false);
+          }}
+          onFailed={(res) => {
+            toast({ title: "Payment Failed", description: typeof res.message === 'string' ? res.message : 'Payment failed', variant: "destructive" });
+            setShowIntasend(false);
+          }}
+        />
+      )}
     </div>
   );
 };

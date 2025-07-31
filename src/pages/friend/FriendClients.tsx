@@ -20,7 +20,7 @@ const FriendClients = () => {
       if (!user?.id) return [];
 
       const { data: appointments, error: apptError } = await supabase
-        .from("appointments")
+        .from("booking_requests")
         .select("client_id")
         .eq("therapist_id", user.id);
       

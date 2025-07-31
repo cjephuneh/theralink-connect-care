@@ -1,8 +1,10 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star, Calendar, Languages, CheckCircle, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BookingModal } from "@/components/booking/BookingModal";
 
 interface TherapistCardProps {
   therapist: {
@@ -23,8 +25,11 @@ interface TherapistCardProps {
 }
 
 const TherapistCard = ({ therapist, featured = false }: TherapistCardProps) => {
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  
   return (
-    <Card 
+    <>
+      <Card
       className={`overflow-hidden rounded-xl hover:shadow-elevation-2 transition-all duration-300 hover:-translate-y-1 group border border-border/50 h-full ${
         featured ? "bg-gradient-to-br from-primary/5 to-secondary/5" : ""
       }`}
@@ -126,16 +131,27 @@ const TherapistCard = ({ therapist, featured = false }: TherapistCardProps) => {
           </Link>
         </Button>
         <Button 
-          asChild
           variant="outline" 
           className="flex-1"
+          onClick={() => setShowBookingModal(true)}
         >
-          <Link to={`/therapists/${therapist.id}/book`}>
-            Book Session
-          </Link>
+          Book Session
         </Button>
       </CardFooter>
     </Card>
+
+    <BookingModal
+      isOpen={showBookingModal}
+      onClose={() => setShowBookingModal(false)}
+      therapist={{
+        id: therapist.id.toString(),
+        full_name: therapist.name,
+        hourly_rate: therapist.price,
+        is_community_therapist: therapist.price === 0,
+        preferred_currency: 'NGN'
+      }}
+    />
+    </>
   );
 };
 

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Heart, DollarSign, Info } from "lucide-react";
+import { Heart, DollarSign, Info, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import ProfileImageUpload from "@/components/profile/ProfileImageUpload";
@@ -35,15 +35,24 @@ const formSchema = z.object({
   license_type: z.string().min(3, {
     message: "License type is required.",
   }),
-  therapy_approaches: z.string().min(10, {
-    message: "Please describe your therapy approaches.",
+  therapy_approaches: z.array(z.string()).min(1, {
+    message: "Please select at least one therapy approach.",
   }),
-  languages: z.string().min(3, {
-    message: "Please specify languages you speak.",
+  languages: z.array(z.string()).min(1, {
+    message: "Please select at least one language.",
   }),
-  session_formats: z.string().min(3, {
-    message: "Please specify your preferred session formats.",
+  session_formats: z.array(z.string()).min(1, {
+    message: "Please select at least one session format.",
   }),
+  specializations: z.array(z.string()).min(1, {
+    message: "Please select at least one specialization.",
+  }),
+  bio: z.string().min(50, {
+    message: "Bio must be at least 50 characters.",
+  }),
+  hourly_rate: z.number().min(0, {
+    message: "Hourly rate must be a positive number.",
+  }).optional(),
   therapist_type: z.enum(["paid", "community"], {
     required_error: "Please select therapist type.",
   }),
@@ -70,9 +79,12 @@ const TherapistOnboarding = () => {
       education: "",
       license_number: "",
       license_type: "",
-      therapy_approaches: "",
-      languages: "",
-      session_formats: "",
+      therapy_approaches: [],
+      languages: [],
+      session_formats: [],
+      specializations: [],
+      bio: "",
+      hourly_rate: undefined,
       therapist_type: "paid",
       preferred_currency: "NGN",
       insurance_info: "",
@@ -93,6 +105,142 @@ const TherapistOnboarding = () => {
     { value: "ZAR", label: "ZAR - South African Rand" },
   ];
 
+  const availableLanguages = [
+    "English",
+    "Spanish",
+    "French",
+    "German",
+    "Italian",
+    "Portuguese",
+    "Chinese (Mandarin)",
+    "Japanese",
+    "Korean",
+    "Arabic",
+    "Hindi",
+    "Russian",
+    "Dutch",
+    "Swedish",
+    "Norwegian",
+    "Danish",
+    "Finnish",
+    "Polish",
+    "Czech",
+    "Hungarian",
+    "Greek",
+    "Turkish",
+    "Hebrew",
+    "Thai",
+    "Vietnamese",
+    "Indonesian",
+    "Malay",
+    "Tagalog",
+    "Swahili",
+    "Amharic",
+    "Yoruba",
+    "Igbo",
+    "Hausa",
+    "Zulu",
+    "Afrikaans",
+  ];
+
+  const availableSessionFormats = [
+    "Individual Therapy",
+    "Couples Therapy",
+    "Family Therapy",
+    "Group Therapy",
+    "Online Therapy",
+    "In-Person Therapy",
+    "Child Therapy",
+    "Adolescent Therapy",
+    "Adult Therapy",
+    "Senior Therapy",
+    "Crisis Intervention",
+    "EMDR Therapy",
+    "Cognitive Behavioral Therapy (CBT)",
+    "Dialectical Behavior Therapy (DBT)",
+    "Psychodynamic Therapy",
+    "Mindfulness-Based Therapy",
+    "Art Therapy",
+    "Play Therapy",
+    "Music Therapy",
+    "Sand Tray Therapy",
+  ];
+
+  const availableTherapyApproaches = [
+    "Cognitive Behavioral Therapy (CBT)",
+    "Dialectical Behavior Therapy (DBT)",
+    "Acceptance and Commitment Therapy (ACT)",
+    "Psychodynamic Therapy",
+    "Humanistic Therapy",
+    "Solution-Focused Brief Therapy (SFBT)",
+    "Mindfulness-Based Cognitive Therapy (MBCT)",
+    "Eye Movement Desensitization and Reprocessing (EMDR)",
+    "Narrative Therapy",
+    "Family Systems Therapy",
+    "Gestalt Therapy",
+    "Interpersonal Therapy (IPT)",
+    "Trauma-Informed Care",
+    "Somatic Experiencing",
+    "Internal Family Systems (IFS)",
+    "Emotionally Focused Therapy (EFT)",
+    "Cognitive Processing Therapy (CPT)",
+    "Exposure and Response Prevention (ERP)",
+    "Motivational Interviewing",
+    "Person-Centered Therapy",
+    "Psychoanalytic Therapy",
+    "Behavioral Activation",
+    "Mindfulness-Based Stress Reduction (MBSR)",
+    "Art Therapy",
+    "Music Therapy",
+    "Play Therapy",
+    "Sand Tray Therapy",
+    "Integrative Approach",
+    "Eclectic Approach",
+  ];
+
+  const availableSpecializations = [
+    "Anxiety Disorders",
+    "Depression",
+    "Trauma and PTSD",
+    "Relationship Issues",
+    "Marriage Counseling",
+    "Family Therapy",
+    "Child Psychology",
+    "Adolescent Therapy",
+    "Addiction and Substance Abuse",
+    "Eating Disorders",
+    "Bipolar Disorder",
+    "ADHD",
+    "Autism Spectrum Disorders",
+    "Grief and Loss",
+    "Anger Management",
+    "Stress Management",
+    "Career Counseling",
+    "Life Transitions",
+    "Self-Esteem Issues",
+    "Social Anxiety",
+    "Panic Disorders",
+    "OCD (Obsessive-Compulsive Disorder)",
+    "Phobias",
+    "Sleep Disorders",
+    "Chronic Pain Management",
+    "LGBTQ+ Issues",
+    "Cultural and Multicultural Issues",
+    "Women's Issues",
+    "Men's Issues",
+    "Parenting Support",
+    "Divorce and Separation",
+    "Domestic Violence",
+    "Sexual Abuse Recovery",
+    "Body Image Issues",
+    "Borderline Personality Disorder",
+    "Narcissistic Personality Disorder",
+    "Workplace Issues",
+    "Academic Stress",
+    "Retirement Planning",
+    "Chronic Illness Coping",
+  ];
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!user) {
       toast({
@@ -111,34 +259,24 @@ const TherapistOnboarding = () => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.rpc('insert_therapist_details', {
-        p_therapist_id: user.id,
-        p_education: values.education,
-        p_license_number: values.license_number,
-        p_license_type: values.license_type,
-        p_therapy_approaches: values.therapy_approaches,
-        p_languages: values.languages,
-        p_insurance_info: values.insurance_info || '',
-        p_session_formats: values.session_formats,
-        p_has_insurance: values.has_insurance,
-      });
-
-      if (error) throw error;
-
-      // Update therapist details with currency
-      await supabase
-        .from('therapist_details')
-        .update({ preferred_currency: values.preferred_currency })
-        .eq('therapist_id', user.id);
-
       // Update the therapist profile to indicate type and currency
       await supabase
         .from('therapists')
         .upsert({
           id: user.id,
-          hourly_rate: values.therapist_type === 'community' ? 0 : null,
+          education: values.education,
+          license_number: values.license_number,
+          license_type: values.license_type,
+          therapy_approaches: values.therapy_approaches,
+          languages: values.languages,
+          insurance_info: values.insurance_info,
+          session_formats: values.session_formats,
+          specialization: values.specializations.join(', '),
+          bio: values.bio,
+          has_insurance: values.has_insurance,
           preferred_currency: values.preferred_currency,
-          availability: availability as any,
+          hourly_rate: values.therapist_type === 'community' ? 0 : values.hourly_rate,
+          availability: JSON.parse(JSON.stringify(availability)),
         });
 
       toast({
@@ -332,15 +470,49 @@ const TherapistOnboarding = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Therapy Approaches</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Describe your therapy approaches and techniques..."
-                            className="min-h-[80px] sm:min-h-[100px] resize-none"
-                            {...field}
-                          />
-                        </FormControl>
+                        <Select
+                          onValueChange={(value) => {
+                            if (!field.value.includes(value)) {
+                              field.onChange([...field.value, value]);
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select therapy approaches" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableTherapyApproaches
+                              .filter(approach => !field.value.includes(approach))
+                              .map((approach) => (
+                              <SelectItem key={approach} value={approach}>
+                                {approach}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {field.value.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {field.value.map((approach, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {approach}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newApproaches = field.value.filter((_, i) => i !== index);
+                                    field.onChange(newApproaches);
+                                  }}
+                                  className="ml-2 hover:text-destructive"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         <FormDescription className="text-sm">
-                          Explain your methods and how you tailor therapy to individual needs.
+                          Select the therapy approaches and techniques you use.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -354,9 +526,47 @@ const TherapistOnboarding = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Languages</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., English, Spanish, French" {...field} />
-                          </FormControl>
+                          <Select
+                            onValueChange={(value) => {
+                              if (!field.value.includes(value)) {
+                                field.onChange([...field.value, value]);
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select languages" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availableLanguages
+                                .filter(lang => !field.value.includes(lang))
+                                .map((language) => (
+                                <SelectItem key={language} value={language}>
+                                  {language}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {field.value.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {field.value.map((language, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {language}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newLanguages = field.value.filter((_, i) => i !== index);
+                                      field.onChange(newLanguages);
+                                    }}
+                                    className="ml-2 hover:text-destructive"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                           <FormDescription className="text-sm">
                             Languages you can provide therapy in.
                           </FormDescription>
@@ -371,9 +581,47 @@ const TherapistOnboarding = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Session Formats</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Individual, Couples, Family, Group" {...field} />
-                          </FormControl>
+                          <Select
+                            onValueChange={(value) => {
+                              if (!field.value.includes(value)) {
+                                field.onChange([...field.value, value]);
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select session formats" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availableSessionFormats
+                                .filter(format => !field.value.includes(format))
+                                .map((format) => (
+                                <SelectItem key={format} value={format}>
+                                  {format}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {field.value.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {field.value.map((format, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {format}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newFormats = field.value.filter((_, i) => i !== index);
+                                      field.onChange(newFormats);
+                                    }}
+                                    className="ml-2 hover:text-destructive"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                           <FormDescription className="text-sm">
                             Types of therapy sessions you offer.
                           </FormDescription>
@@ -382,6 +630,108 @@ const TherapistOnboarding = () => {
                       )}
                     />
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Professional Bio</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Write a brief professional bio that clients will see. Describe your experience, approach to therapy, and what clients can expect when working with you..."
+                            className="min-h-[120px] sm:min-h-[140px] resize-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-sm">
+                          This will be displayed on your profile to help clients understand your background and approach.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="specializations"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Specializations</FormLabel>
+                        <Select
+                          onValueChange={(value) => {
+                            if (!field.value.includes(value)) {
+                              field.onChange([...field.value, value]);
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your specializations" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableSpecializations
+                              .filter(spec => !field.value.includes(spec))
+                              .map((specialization) => (
+                              <SelectItem key={specialization} value={specialization}>
+                                {specialization}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {field.value.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {field.value.map((specialization, index) => (
+                              <Badge key={index} variant="secondary" className="text-xs">
+                                {specialization}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newSpecs = field.value.filter((_, i) => i !== index);
+                                    field.onChange(newSpecs);
+                                  }}
+                                  className="ml-2 hover:text-destructive"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <FormDescription className="text-sm">
+                          Select the areas you specialize in treating.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {watchTherapistType === "paid" && (
+                    <FormField
+                      control={form.control}
+                      name="hourly_rate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Hourly Rate ({form.getValues("preferred_currency")})</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Enter your hourly rate"
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                            />
+                          </FormControl>
+                          <FormDescription className="text-sm">
+                            Set your hourly rate for therapy sessions. This can be updated later.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   <FormField
                     control={form.control}

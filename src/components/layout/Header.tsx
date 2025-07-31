@@ -56,11 +56,12 @@ const Header = () => {
   });
   ListItem.displayName = "ListItem";
 
+ 
   const renderAuthLinks = () => {
-    if (user) {
+    if (user && profile) {
       const dashboardLink = profile?.role === 'therapist' 
         ? '/therapist/dashboard' 
-        : '/client/dashboard';
+        : '/client/overview';
         
       return (
         <div className="flex items-center gap-2">
@@ -265,7 +266,7 @@ const Header = () => {
                     className="justify-start"
                     asChild
                   >
-                    <Link to={profile?.role === 'therapist' ? '/therapist/dashboard' : '/client/dashboard'}>
+                    <Link to={profile?.role === 'therapist' ? '/therapist/dashboard' : '/client/overview'}>
                       <User className="h-4 w-4 mr-2" />
                       Dashboard
                     </Link>

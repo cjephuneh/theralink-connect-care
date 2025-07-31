@@ -9,42 +9,60 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-const FriendMessages = () => {
-  const { user } = useAuth();
+
+
+ const FriendMessages = () => {
+  const { user } = useAuth(); // Friend is logged in
   const { toast } = useToast();
+
   const [message, setMessage] = useState("");
   const [sendLoading, setSendLoading] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null); // Target client
 
-  // Fetch all messages where user is sender OR receiver
+  // Fetch messages between this friend and the selected client
   const { data: messages = [], refetch, isLoading } = useQuery({
-    queryKey: ["friend-messages-list", user?.id],
+    queryKey: ["friend-messages-list", user?.id, selectedClientId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id || !selectedClientId) return [];
+
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order("created_at", { ascending: false })
+        .or(
+          `and(sender_id.eq.${user.id},receiver_id.eq.${selectedClientId}),and(sender_id.eq.${selectedClientId},receiver_id.eq.${user.id})`
+        )
+        .order("created_at", { ascending: true })
         .limit(50);
 
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!selectedClientId,
   });
 
-  // Send new message (for demo: send to self)
+  // Send new message to the selected client
   const handleSend = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !selectedClientId) {
+      toast({
+        title: "Cannot send message",
+        description: "Client not selected or message is empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSendLoading(true);
+
     const { error } = await supabase.from("messages").insert([
       {
         sender_id: user.id,
-        receiver_id: user.id, // For demo, send to self. Update logic to send to others.
-        content: message,
+        receiver_id: selectedClientId,
+        content: message.trim(),
       },
     ]);
+
     setSendLoading(false);
+
     if (!error) {
       setMessage("");
       refetch();
@@ -56,7 +74,6 @@ const FriendMessages = () => {
       });
     }
   };
-
   return (
     <div className="max-w-2xl mx-auto py-8">
       <Card>
